@@ -89,6 +89,7 @@ export default function PublicPortal() {
           <a href="/buildout-tracker" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>🏗️ Buildout</a>
           <a href="/legal-contracts" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>📜 Contracts</a>
           <a href="/cash-concierge" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>🔒 Cash Concierge</a>
+          <a href="/payouts" style={{ color: '#f59e0b', textDecoration: 'none', fontWeight: '600' }}>💸 Payouts</a>
           <a href="/promoter" style={{ color: '#f59e0b', textDecoration: 'none', fontWeight: '600' }}>🤝 Promoter</a>
           <a href="/investor" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>💼 Investor</a>
           <a href="/kam-dashboard" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>👨‍💼 KAM</a>

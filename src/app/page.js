@@ -77,8 +77,9 @@ export default function PublicPortal() {
           </div>
         </div>
 
-        <nav style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <a href="#projects" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: '500' }}>Active Outlets</a>
+        <nav style={{ display: 'flex', gap: '0.7rem', alignItems: 'center' }}>
+          <a href="/showcase" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '700' }}>⭐ Deal Showcase</a>
+          <a href="/funding-rounds" style={{ color: '#a855f7', textDecoration: 'none', fontWeight: '600' }}>🎯 Funding Rounds</a>
           <a href="/secondary-market" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>🔄 Secondary Orderbook</a>
           <a href="/pos-sync" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>📊 POS Sync</a>
           <a href="/ai-assistant" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>✨ AI Assistant</a>
@@ -87,6 +88,7 @@ export default function PublicPortal() {
           <a href="/cash-concierge" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>🔒 Cash Concierge</a>
           <a href="/promoter" style={{ color: '#f59e0b', textDecoration: 'none', fontWeight: '600' }}>🤝 Promoter</a>
           <a href="/investor" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>💼 Investor</a>
+          <a href="/kam-dashboard" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>👨‍💼 KAM</a>
           <a href="/admin" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>⚡ Admin</a>
         </nav>
 

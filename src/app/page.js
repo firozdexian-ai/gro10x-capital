@@ -80,6 +80,7 @@ export default function PublicPortal() {
         <nav style={{ display: 'flex', gap: '0.7rem', alignItems: 'center' }}>
           <a href="/showcase" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '700' }}>⭐ Deal Showcase</a>
           <a href="/funding-rounds" style={{ color: '#a855f7', textDecoration: 'none', fontWeight: '600' }}>🎯 Funding Rounds</a>
+          <a href="/telegram" style={{ color: '#0088cc', textDecoration: 'none', fontWeight: '600' }}>✈️ Telegram Bot</a>
           <a href="/secondary-market" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>🔄 Secondary Orderbook</a>
           <a href="/pos-sync" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>📊 POS Sync</a>
           <a href="/ai-assistant" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>✨ AI Assistant</a>

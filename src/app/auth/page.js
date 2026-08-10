@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { supabase } from '../../lib/supabase';
-import { ShieldCheck, Mail, LogIn, UserPlus, ArrowRight, KeyRound, CheckCircle2, Bot, Phone } from 'lucide-react';
+import { ShieldCheck, Mail, LogIn, UserPlus, ArrowRight, KeyRound, CheckCircle2, Bot } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 
@@ -87,11 +87,9 @@ function AuthContent() {
       return cleanId;
     }
 
-    // Normalise phone
     let phoneClean = cleanId.replace(/[\s\-\+\(\)]/g, '');
     if (phoneClean.startsWith('880')) phoneClean = '0' + phoneClean.slice(3);
 
-    // Search team table
     const { data: teamMembers } = await supabase.from('team').select('email, phone');
     if (teamMembers && teamMembers.length > 0) {
       const found = teamMembers.find(t => {
@@ -102,7 +100,6 @@ function AuthContent() {
       if (found && found.email) return found.email;
     }
 
-    // Search investors table
     const { data: invs } = await supabase.from('investors').select('email, phone');
     if (invs && invs.length > 0) {
       const found = invs.find(i => {
@@ -137,94 +134,59 @@ function AuthContent() {
     }
 
     try {
-      // 1. Resolve email
-      const targetEmail = await resolveTargetEmail(identifier);
-      if (!targetEmail) {
-        throw new Error(`Could not find a registered account for '${identifier}'. Please contact admin.`);
-      }
-
-      // 2. Check telegram_auth_pins in DB
-      const { data: pins, error: pinErr } = await supabase
-        .from('telegram_auth_pins')
-        .select('*')
-        .eq('temp_pin', pinString)
-        .eq('is_verified', false)
-        .order('created_at', { ascending: false });
-
-      if (pinErr) throw pinErr;
-
-      if (!pins || pins.length === 0) {
-        throw new Error('Invalid or expired Telegram temporary PIN. Please request a new PIN from your bot.');
-      }
-
-      const activePin = pins[0];
-      if (new Date(activePin.pin_expires_at) < new Date()) {
-        throw new Error('This temporary PIN has expired (valid for 15 mins). Please request a new PIN from your bot.');
-      }
-
-      // 3. Resolve user details from team table
-      let userRole = activePin.user_role || 'admin';
-      let userName = 'Team Member';
-
-      const { data: teamMember } = await supabase.from('team').select('*').eq('email', targetEmail).single();
-      if (teamMember) {
-        userRole = teamMember.team_type === 'promoter' ? 'promoter' : 'admin';
-        userName = teamMember.full_name;
-      }
-
-      // 4. Create or Sign In Supabase Auth user
-      let authUser = null;
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-        email: targetEmail,
-        password: pinString,
-        options: {
-          data: { first_login: true, full_name: userName }
-        }
+      // 1. Server-side verification & credential synchronization
+      const res = await fetch('/api/telegram-auth/verify-and-onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: identifier,
+          temp_pin: pinString
+        })
       });
 
-      if (signUpErr) {
-        // If user already exists, sign in with temp PIN
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+
+      const targetEmail = data.email;
+
+      // 2. Sign in to Supabase Auth
+      let { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email: targetEmail,
+        password: pinString
+      });
+
+      if (signInErr) {
+        // Fallback: try signUp if user does not exist in auth.users
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
           email: targetEmail,
-          password: pinString
+          password: pinString,
+          options: {
+            data: { first_login: true, full_name: data.name }
+          }
         });
 
-        if (signInErr) {
-          throw new Error('Authentication error. Please request a fresh temporary PIN from your Telegram bot.');
-        } else {
-          authUser = signInData.user;
+        if (signUpErr) {
+          throw new Error('Authentication failed. Please verify your temporary PIN or request a new one from Telegram.');
         }
-      } else {
-        authUser = signUpData.user;
       }
 
+      // 3. Upsert user_roles
+      const authUser = (await supabase.auth.getUser())?.data?.user;
       if (authUser) {
-        // 5. Assign role in user_roles
         await supabase.from('user_roles').upsert({
           user_id: authUser.id,
-          role: userRole
+          role: data.role
         }, { onConflict: 'user_id' });
-
-        // Update team table user_id
-        if (teamMember) {
-          await supabase.from('team').update({ user_id: authUser.id }).eq('id', teamMember.id);
-        }
-
-        // 6. Mark PIN as verified
-        await supabase.from('telegram_auth_pins').update({
-          is_verified: true,
-          verified_at: new Date().toISOString()
-        }).eq('id', activePin.id);
-
-        setVerifiedUserInfo({
-          chatId: activePin.telegram_chat_id,
-          name: userName,
-          role: userRole
-        });
-
-        setIsFirstLogin(true);
-        setSuccessMsg(`✓ Temporary PIN verified for ${userName}! Please set your permanent 4-digit security PIN below.`);
       }
+
+      setVerifiedUserInfo({
+        chatId: data.chatId,
+        name: data.name,
+        role: data.role
+      });
+
+      setIsFirstLogin(true);
+      setSuccessMsg(`✓ Temporary PIN verified for ${data.name}! Please set your permanent 4-digit security PIN below.`);
     } catch (err) {
       setErrorMsg(err.message || 'Onboarding authentication failed.');
     } finally {

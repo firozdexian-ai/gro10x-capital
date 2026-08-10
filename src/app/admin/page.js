@@ -6,7 +6,7 @@ import {
   Filter, Search, RefreshCw, BarChart2, Layers, Award, Sparkles, Lock, ShieldCheck, Loader2,
   MessageSquare, Globe, LogOut, Eye, Activity, AlertCircle, XCircle, Calendar, Image,
   FileUp, Link as LinkIcon, CheckCircle2, ChevronDown, UserCheck, Shield, ChevronUp, AlertTriangle,
-  Bot, MapPin, X
+  Bot, MapPin, X, ChevronLeft
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
@@ -27,6 +27,9 @@ export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState('dashboard'); // Default landing: Command Center
   const [investorSubTab, setInvestorSubTab] = useState('all-investors'); // 'all-investors' | 'kyc' | 'payments'
   const [pipelineView, setPipelineView] = useState('kanban'); // 'kanban' | 'table'
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
   
   // Data states
   const [projects, setProjects] = useState([]);
@@ -1916,58 +1919,77 @@ export default function AdminPortal() {
   const pendingCashTicketsCount = cashTickets.filter(t => t.status === 'Pending_Review').length;
   const pendingCohortCount = cohortApplications.filter(a => ['New_Submission', 'Under_Director_Review', 'KAM_Assigned', 'Diligence_In_Progress'].includes(a.status)).length;
 
+  // Global Search Items Computation
+  const searchResults = globalSearchQuery.trim() === '' ? [] : [
+    ...allInvestors.filter(i => (i.alias_name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (i.phone || '').includes(globalSearchQuery) || (i.email || '').toLowerCase().includes(globalSearchQuery.toLowerCase())).slice(0, 3).map(i => ({ type: 'Investor', title: i.alias_name || 'Investor', sub: i.phone || i.email || 'KYC User', tab: 'investors', item: i })),
+    ...projects.filter(p => (p.project_title || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (p.businesses?.brand_name || '').toLowerCase().includes(globalSearchQuery.toLowerCase())).slice(0, 3).map(p => ({ type: 'Project', title: p.project_title, sub: p.businesses?.brand_name || 'Deal', tab: 'kanban', item: p })),
+    ...inquiryLeads.filter(l => (l.name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (l.phone || '').includes(globalSearchQuery)).slice(0, 3).map(l => ({ type: 'Lead', title: l.name, sub: l.phone || 'Inquiry Lead', tab: 'leads-marketing', item: l }))
+  ];
+
   return (
-    <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', display: 'flex' }}>
+    <div className="admin-shell">
       
-      {/* SIDEBAR NAVIGATION (13 TABS) */}
-      <aside style={{ width: '270px', background: 'rgba(15, 23, 42, 0.95)', borderRight: '1px solid rgba(212,175,55,0.2)', padding: '1.75rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
+      {/* SIDEBAR NAVIGATION */}
+      <aside className={`admin-sidebar ${sidebarCollapsed ? 'admin-sidebar--collapsed' : ''}`}>
         
-        {/* LOGO & TITLE */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#070a14', fontWeight: '900', fontSize: '1.2rem' }}>G</div>
-            <div>
+        {/* LOGO & COLLAPSE TOGGLE */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#070a14', fontWeight: '900', fontSize: '1.2rem', flexShrink: 0 }}>G</div>
+            <div className="sidebar-hide-on-collapse">
               <span style={{ fontWeight: '900', fontSize: '1.15rem', letterSpacing: '-0.02em' }}>GRO10X <span style={{ color: '#D4AF37' }}>ADMIN</span></span>
-              <p style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', margin: 0, fontWeight: '700' }}>Command Center v0.5.0</p>
+              <p style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', margin: 0, fontWeight: '700' }}>Command Center v0.5.0</p>
             </div>
           </div>
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+            className="admin-sidebar-toggle"
+            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
 
         {/* ADMIN USER BAR */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ overflow: 'hidden' }}>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#D4AF37', fontWeight: 'bold' }}>{user?.email}</p>
-            <span style={{ fontSize: '0.65rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.4rem', borderRadius: '4px', textTransform: 'uppercase', fontWeight: '800' }}>
-              Director Access
-            </span>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0.65rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
+            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(212,175,55,0.2)', border: '1px solid #D4AF37', display: 'grid', placeItems: 'center', color: '#D4AF37', fontWeight: 'bold', fontSize: '0.75rem', flexShrink: 0 }}>
+              {(user?.email?.[0] || 'A').toUpperCase()}
+            </div>
+            <div className="sidebar-hide-on-collapse" style={{ overflow: 'hidden' }}>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#D4AF37', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</p>
+              <span className="status-badge status-badge--success" style={{ fontSize: '0.6rem', padding: '0.05rem 0.35rem' }}>
+                Director Access
+              </span>
+            </div>
           </div>
-          <button onClick={signOut} title="Sign Out" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer' }}>
+          <button onClick={signOut} title="Sign Out" className="sidebar-hide-on-collapse" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '0.4rem', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}>
             <LogOut size={16} />
           </button>
         </div>
 
         {/* 13-TAB GROUPED NAVIGATION */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
           
           {/* GROUP 1: OVERVIEW */}
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>OVERVIEW</p>
-            <button onClick={() => setActiveTab('dashboard')} style={navBtnStyle(activeTab === 'dashboard')}>
-              <Activity size={18} /> Command Center
+            <p className="admin-nav-group-label sidebar-hide-on-collapse">OVERVIEW</p>
+            <button onClick={() => setActiveTab('dashboard')} className={`admin-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`} title="Command Center">
+              <Activity size={18} /> <span className="sidebar-hide-on-collapse">Command Center</span>
             </button>
           </div>
 
           {/* GROUP 2: DEAL OPERATIONS */}
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>DEAL OPERATIONS</p>
+            <p className="admin-nav-group-label sidebar-hide-on-collapse">DEAL OPERATIONS</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <button onClick={() => setActiveTab('kanban')} style={navBtnStyle(activeTab === 'kanban')}>
-                <Layers size={18} /> Deal Pipeline
+              <button onClick={() => setActiveTab('kanban')} className={`admin-nav-btn ${activeTab === 'kanban' ? 'active' : ''}`} title="Deal Pipeline">
+                <Layers size={18} /> <span className="sidebar-hide-on-collapse">Deal Pipeline</span>
               </button>
-              <button onClick={() => setActiveTab('business-registry')} style={navBtnStyle(activeTab === 'business-registry')}>
-                <Building2 size={18} /> Business Registry
+              <button onClick={() => setActiveTab('business-registry')} className={`admin-nav-btn ${activeTab === 'business-registry' ? 'active' : ''}`} title="Business Registry">
+                <Building2 size={18} /> <span className="sidebar-hide-on-collapse">Business Registry</span>
                 {pendingCohortCount > 0 && (
-                  <span style={{ background: '#D4AF37', color: '#000', padding: '0.1rem 0.4rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', marginLeft: 'auto' }}>
+                  <span className="status-badge status-badge--gold sidebar-hide-on-collapse" style={{ marginLeft: 'auto' }}>
                     {pendingCohortCount}
                   </span>
                 )}
@@ -1975,39 +1997,38 @@ export default function AdminPortal() {
             </div>
           </div>
 
-
           {/* GROUP 3: INVESTOR OPERATIONS */}
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>INVESTOR OPERATIONS</p>
+            <p className="admin-nav-group-label sidebar-hide-on-collapse">INVESTOR OPERATIONS</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <button onClick={() => setActiveTab('investors')} style={navBtnStyle(activeTab === 'investors')}>
-                <Users size={18} /> Investor Hub 
+              <button onClick={() => setActiveTab('investors')} className={`admin-nav-btn ${activeTab === 'investors' ? 'active' : ''}`} title="Investor Hub">
+                <Users size={18} /> <span className="sidebar-hide-on-collapse">Investor Hub</span>
                 {(pendingKycCount > 0 || pendingPaymentsCount > 0) && (
-                  <span style={{ background: '#ef4444', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', marginLeft: 'auto' }}>
+                  <span className="status-badge status-badge--danger sidebar-hide-on-collapse" style={{ marginLeft: 'auto' }}>
                     {pendingKycCount + pendingPaymentsCount}
                   </span>
                 )}
               </button>
-              <button onClick={() => setActiveTab('dividend')} style={navBtnStyle(activeTab === 'dividend')}>
-                <TrendingUp size={18} /> Yield Engine
+              <button onClick={() => setActiveTab('dividend')} className={`admin-nav-btn ${activeTab === 'dividend' ? 'active' : ''}`} title="Yield Engine">
+                <TrendingUp size={18} /> <span className="sidebar-hide-on-collapse">Yield Engine</span>
               </button>
-              <button onClick={() => setActiveTab('cash-pipeline')} style={navBtnStyle(activeTab === 'cash-pipeline')}>
-                <ArrowUpRight size={18} /> Cash Concierge
+              <button onClick={() => setActiveTab('cash-pipeline')} className={`admin-nav-btn ${activeTab === 'cash-pipeline' ? 'active' : ''}`} title="Cash Concierge">
+                <ArrowUpRight size={18} /> <span className="sidebar-hide-on-collapse">Cash Concierge</span>
               </button>
             </div>
           </div>
 
           {/* GROUP 4: TEAM & GROWTH */}
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>TEAM & GROWTH</p>
+            <p className="admin-nav-group-label sidebar-hide-on-collapse">TEAM & GROWTH</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <button onClick={() => setActiveTab('team-promoters')} style={navBtnStyle(activeTab === 'team-promoters')}>
-                <Award size={18} /> Team & Promoters
+              <button onClick={() => setActiveTab('team-promoters')} className={`admin-nav-btn ${activeTab === 'team-promoters' ? 'active' : ''}`} title="Team & Promoters">
+                <Award size={18} /> <span className="sidebar-hide-on-collapse">Team & Promoters</span>
               </button>
-              <button onClick={() => setActiveTab('leads-marketing')} style={navBtnStyle(activeTab === 'leads-marketing')}>
-                <MessageSquare size={18} /> Leads & Marketing
+              <button onClick={() => setActiveTab('leads-marketing')} className={`admin-nav-btn ${activeTab === 'leads-marketing' ? 'active' : ''}`} title="Leads & Marketing">
+                <MessageSquare size={18} /> <span className="sidebar-hide-on-collapse">Leads & Marketing</span>
                 {pendingLeadsCount > 0 && (
-                  <span style={{ background: '#3b82f6', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold', marginLeft: 'auto' }}>
+                  <span className="status-badge status-badge--info sidebar-hide-on-collapse" style={{ marginLeft: 'auto' }}>
                     {pendingLeadsCount}
                   </span>
                 )}
@@ -2017,26 +2038,26 @@ export default function AdminPortal() {
 
           {/* GROUP 5: COMPLIANCE */}
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>COMPLIANCE</p>
+            <p className="admin-nav-group-label sidebar-hide-on-collapse">COMPLIANCE</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <button onClick={() => setActiveTab('legal')} style={navBtnStyle(activeTab === 'legal')}>
-                <FileText size={18} /> Legal & Compliance
+              <button onClick={() => setActiveTab('legal')} className={`admin-nav-btn ${activeTab === 'legal' ? 'active' : ''}`} title="Legal & Compliance">
+                <FileText size={18} /> <span className="sidebar-hide-on-collapse">Legal & Compliance</span>
               </button>
-              <button onClick={() => setActiveTab('analytics')} style={navBtnStyle(activeTab === 'analytics')}>
-                <BarChart2 size={18} /> Analytics
+              <button onClick={() => setActiveTab('analytics')} className={`admin-nav-btn ${activeTab === 'analytics' ? 'active' : ''}`} title="Analytics">
+                <BarChart2 size={18} /> <span className="sidebar-hide-on-collapse">Analytics</span>
               </button>
             </div>
           </div>
 
           {/* GROUP 6: PLATFORM */}
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>PLATFORM</p>
+            <p className="admin-nav-group-label sidebar-hide-on-collapse">PLATFORM</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <button onClick={() => setActiveTab('bot-management')} style={navBtnStyle(activeTab === 'bot-management')}>
-                <Bot size={18} /> Bots & Access Control
+              <button onClick={() => setActiveTab('bot-management')} className={`admin-nav-btn ${activeTab === 'bot-management' ? 'active' : ''}`} title="Bots & Access Control">
+                <Bot size={18} /> <span className="sidebar-hide-on-collapse">Bots & Access Control</span>
               </button>
-              <button onClick={() => setActiveTab('settings')} style={navBtnStyle(activeTab === 'settings')}>
-                <Sparkles size={18} /> Settings
+              <button onClick={() => setActiveTab('settings')} className={`admin-nav-btn ${activeTab === 'settings' ? 'active' : ''}`} title="Settings">
+                <Sparkles size={18} /> <span className="sidebar-hide-on-collapse">Settings</span>
               </button>
             </div>
           </div>
@@ -2044,41 +2065,105 @@ export default function AdminPortal() {
         </nav>
 
         {/* BOTTOM SPREAD CAPTURE WIDGET */}
-        <div style={{ marginTop: 'auto', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', padding: '1rem', borderRadius: '12px' }}>
-          <p style={{ color: '#D4AF37', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.2rem' }}>5% Deal Spread Target</p>
-          <p style={{ fontSize: '1.1rem', fontWeight: '800', color: '#10b981', margin: 0 }}>{formatCurrency(totalFeeSpreadCaptured, currency)}</p>
+        <div className="sidebar-hide-on-collapse" style={{ marginTop: 'auto', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.25)', padding: '0.85rem', borderRadius: '12px', width: '100%' }}>
+          <p style={{ color: '#D4AF37', fontSize: '0.72rem', fontWeight: '700', margin: '0 0 0.2rem 0' }}>5% Deal Spread Target</p>
+          <p style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981', margin: 0 }}>{formatCurrency(totalFeeSpreadCaptured, currency)}</p>
         </div>
 
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main style={{ flex: 1, padding: '2.5rem 3rem', overflowY: 'auto' }}>
+      <main className="admin-main">
         
         {/* HEADER BAR */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <header className="admin-header">
           <div>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: '800', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '600', marginBottom: '0.2rem' }}>
+              <span>GRO10X OS</span>
+              <ChevronRight size={12} />
+              <span>Admin</span>
+              <ChevronRight size={12} />
+              <span style={{ color: '#D4AF37' }}>
+                {activeTab === 'dashboard' && 'Command Center'}
+                {activeTab === 'kanban' && 'Deal Pipeline'}
+                {activeTab === 'business-registry' && 'Business Registry'}
+                {activeTab === 'investors' && 'Investor Hub'}
+                {activeTab === 'dividend' && 'Yield Engine'}
+                {activeTab === 'cash-pipeline' && 'Cash Concierge'}
+                {activeTab === 'team-promoters' && 'Team & Promoters'}
+                {activeTab === 'leads-marketing' && 'Leads & Marketing'}
+                {activeTab === 'legal' && 'Legal & Compliance'}
+                {activeTab === 'analytics' && 'Analytics'}
+                {activeTab === 'bot-management' && 'Bots & Access'}
+                {activeTab === 'settings' && 'Settings'}
+              </span>
+            </div>
+
+            <h1 style={{ fontSize: '1.6rem', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
               {activeTab === 'dashboard' && 'Command Center Overview'}
               {activeTab === 'kanban' && '100-Project Onboarding Pipeline'}
               {activeTab === 'business-registry' && 'Business Registry & Cohort Applications'}
               {activeTab === 'investors' && 'Investor Operations Hub'}
               {activeTab === 'dividend' && 'Dividend & Yield Distribution Engine'}
               {activeTab === 'cash-pipeline' && 'Restricted Cash Concierge Advisory Pipeline'}
-              {activeTab === 'legal' && 'SPV Legal Contracts & Compliance'}
+              {activeTab === 'team-promoters' && 'Team & Promoter Operations'}
               {activeTab === 'leads-marketing' && 'Public Prospective Lead Center'}
+              {activeTab === 'legal' && 'SPV Legal Contracts & Compliance'}
+              {activeTab === 'analytics' && 'Platform Analytics & Growth'}
+              {activeTab === 'bot-management' && 'Telegram Bot Ecosystem & Access Control'}
               {activeTab === 'settings' && 'Platform Settings & Telegram Integration'}
             </h1>
-
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            
+            {/* GLOBAL IN-MEMORY SEARCH BAR */}
+            <div className="admin-search-box">
+              <Search size={15} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search investors, deals, leads..."
+                value={globalSearchQuery}
+                onChange={(e) => {
+                  setGlobalSearchQuery(e.target.value);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                className="admin-search-input"
+              />
+              {showSearchResults && searchResults.length > 0 && (
+                <div className="admin-search-results">
+                  {searchResults.map((res, idx) => (
+                    <div
+                      key={idx}
+                      className="admin-search-item"
+                      onClick={() => {
+                        setActiveTab(res.tab);
+                        setGlobalSearchQuery('');
+                        setShowSearchResults(false);
+                      }}
+                    >
+                      <div>
+                        <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>{res.title}</p>
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{res.sub}</span>
+                      </div>
+                      <span className={`status-badge ${res.type === 'Investor' ? 'status-badge--gold' : res.type === 'Project' ? 'status-badge--info' : 'status-badge--purple'}`}>
+                        {res.type}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* CURRENCY SELECTOR */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', padding: '0.45rem 0.75rem', borderRadius: '8px' }}>
               <Globe size={16} style={{ color: '#D4AF37' }} />
               <select 
                 value={currency} 
                 onChange={(e) => setCurrency(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem', outline: 'none' }}
+                style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', outline: 'none' }}
               >
                 {Object.keys(CURRENCY_RATES).map(code => (
                   <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
@@ -2089,8 +2174,8 @@ export default function AdminPortal() {
             </div>
 
             {activeTab === 'kanban' && (
-              <button onClick={() => handleOpenProjectModal()} className="btn-gold" style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
-                <PlusCircle size={18} /> Onboard Project
+              <button onClick={() => handleOpenProjectModal()} className="btn-gold" style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
+                <PlusCircle size={16} /> Onboard Project
               </button>
             )}
           </div>
@@ -2100,7 +2185,7 @@ export default function AdminPortal() {
         {/* TAB 1: COMMAND CENTER (dashboard) */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'dashboard' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             
             {/* ZONE 1: KPI STRIP */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem' }}>
@@ -2306,7 +2391,7 @@ export default function AdminPortal() {
         {/* TAB 2: DEAL PIPELINE (kanban) */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'kanban' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             
             {/* VIEW MODE TOGGLE */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -10,6 +10,26 @@
   --accent-green: #10b981;
   --accent-blue: #3b82f6;
   --glass-border: rgba(212, 175, 55, 0.22);
+
+  /* Phase 1 Semantic Tokens */
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --info: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.12);
+  --purple: #8b5cf6;
+  --purple-bg: rgba(139, 92, 246, 0.12);
+  --pink: #ec4899;
+  --pink-bg: rgba(236, 72, 153, 0.12);
+
+  /* Layout Variables */
+  --sidebar-expanded-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --sidebar-bg: rgba(8, 12, 26, 0.98);
+  --header-height: 72px;
 }
 
 * {
@@ -51,12 +71,16 @@ main {
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 2rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
 
-.glass-card:hover {
+.glass-card-interactive {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-interactive:hover {
   transform: translateY(-5px);
   border-color: rgba(212, 175, 55, 0.5);
   box-shadow: 0 20px 40px -15px var(--primary-glow);
@@ -217,3 +241,236 @@ main {
     padding: 0.5rem 0;
   }
 }
+
+/* ============================================================
+   ADMIN OVERHAUL — PHASE 1 DESIGN SYSTEM EXTENSIONS
+   ============================================================ */
+
+/* 1. Admin Sidebar & Shell Layout */
+.admin-shell {
+  background: #070a14;
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+}
+
+.admin-sidebar {
+  width: var(--sidebar-expanded-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid rgba(212, 175, 55, 0.18);
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 20;
+}
+
+.admin-sidebar--collapsed {
+  width: var(--sidebar-collapsed-width);
+  padding: 1.5rem 0.5rem;
+  align-items: center;
+}
+
+.admin-sidebar--collapsed .sidebar-hide-on-collapse {
+  display: none !important;
+}
+
+.admin-sidebar-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-sidebar-toggle:hover {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.admin-nav-group-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+  padding-left: 0.5rem;
+}
+
+.admin-nav-btn {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.admin-sidebar--collapsed .admin-nav-btn {
+  justify-content: center;
+  padding: 0.65rem 0;
+}
+
+.admin-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.admin-nav-btn.active {
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0.04) 100%);
+  color: var(--primary);
+  font-weight: 700;
+  border-left: 3px solid var(--primary);
+  border-radius: 4px 10px 10px 4px;
+}
+
+/* 2. Admin Header */
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.6) 0%, rgba(7, 10, 20, 1) 100%);
+  padding: 2rem 2.5rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-search-box {
+  position: relative;
+  width: 320px;
+}
+
+.admin-search-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 10px;
+  padding: 0.5rem 1rem 0.5rem 2.4rem;
+  color: #fff;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.admin-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+  width: 380px;
+}
+
+.admin-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #0f172a;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.admin-search-item {
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.admin-search-item:hover {
+  background: rgba(212, 175, 55, 0.15);
+}
+
+/* 3. Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-badge--success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+.status-badge--warning { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+.status-badge--danger  { background: var(--danger-bg);  color: var(--danger);  border: 1px solid rgba(239, 68, 68, 0.3); }
+.status-badge--info    { background: var(--info-bg);    color: var(--info);    border: 1px solid rgba(59, 130, 246, 0.3); }
+.status-badge--purple  { background: var(--purple-bg);  color: var(--purple);  border: 1px solid rgba(139, 92, 246, 0.3); }
+.status-badge--gold    { background: rgba(212, 175, 55, 0.15); color: var(--primary); border: 1px solid rgba(212, 175, 55, 0.3); }
+.status-badge--muted   { background: rgba(148, 163, 184, 0.12); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.2); }
+
+/* 4. Tab Panel Transitions */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tab-panel {
+  animation: fadeSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. Skeleton Shimmer Placeholder */
+@keyframes skeleton-pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton-row {
+  height: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+/* 6. Activity Dot Indicator */
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--success);
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-dot 2s infinite;
+}
+

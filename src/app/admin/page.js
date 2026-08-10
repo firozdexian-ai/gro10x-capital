@@ -164,7 +164,7 @@ export default function AdminPortal() {
   const [promoterLeads, setPromoterLeads] = useState([]);
   const [promoterCommissions, setPromoterCommissions] = useState([]);
   const [promoterTargets, setPromoterTargets] = useState([]);
-  const [kamForm, setKamForm] = useState({ full_name: '', title: 'Managing Partner', region: 'Dhaka HQ', email: '', phone: '', joined_at: new Date().toISOString().slice(0, 10) });
+  const [kamForm, setKamForm] = useState({ full_name: '', team_type: 'kam', designation: 'Managing Partner', title: 'Managing Partner', region: 'Dhaka HQ', email: '', phone: '', joined_at: new Date().toISOString().slice(0, 10) });
   const [promoterForm, setPromoterForm] = useState({ full_name: '', alias_name: '', phone: '', email: '', tier: 'Trainee', joined_at: new Date().toISOString().slice(0, 10) });
   const [showKamForm, setShowKamForm] = useState(false);
   const [showPromoterForm, setShowPromoterForm] = useState(false);
@@ -195,14 +195,6 @@ export default function AdminPortal() {
     kam_notes: ''
   });
 
-  useEffect(() => {
-    if (role === 'admin') {
-      fetchAdminData();
-    } else if (!authLoading && role !== 'admin') {
-      setLoading(false);
-    }
-  }, [role, authLoading]);
-
   const fetchAdminData = async () => {
     try {
       setLoading(true);
@@ -214,7 +206,7 @@ export default function AdminPortal() {
       // Fetch Cohort Applications & Stakeholders
       const { data: appData } = await supabase
         .from('business_cohort_applications')
-        .select(`*, kams ( full_name )`)
+        .select('*')
         .order('created_at', { ascending: false });
       setCohortApplications(appData || []);
 
@@ -230,46 +222,54 @@ export default function AdminPortal() {
       if (projErr) throw projErr;
       setProjects(projData || []);
 
-      // Fetch KAMs
-      const { data: kamsData } = await supabase.from('kams').select('*').order('created_at', { ascending: false });
+      // Fetch KAMs & Team Members from public.team
+      const { data: kamsData } = await supabase
+        .from('team')
+        .select('*')
+        .in('team_type', ['kam', 'manager', 'admin'])
+        .order('created_at', { ascending: false });
       setAllKams(kamsData || []);
 
-      // Fetch Promoters
-      const { data: promData } = await supabase.from('promoters').select('*').order('created_at', { ascending: false });
+      // Fetch Promoters from public.team
+      const { data: promData } = await supabase
+        .from('team')
+        .select('*')
+        .eq('team_type', 'promoter')
+        .order('created_at', { ascending: false });
       setAllPromoters(promData || []);
 
       // Fetch Promoter Leads (CRM)
       const { data: promLeadsData } = await supabase
         .from('promoter_leads')
-        .select(`*, promoters ( alias_name, full_name )`)
+        .select('*')
         .order('created_at', { ascending: false });
       setPromoterLeads(promLeadsData || []);
 
       // Fetch Promoter Commissions
       const { data: commData } = await supabase
         .from('promoter_commissions')
-        .select(`*, promoters ( alias_name ), investments ( amount_invested_bdt, funding_projects ( project_title, businesses ( brand_name ) ) )`)
+        .select(`*, investments ( amount_invested_bdt, funding_projects ( project_title, businesses ( brand_name ) ) )`)
         .order('created_at', { ascending: false });
       setPromoterCommissions(commData || []);
 
       // Fetch Promoter Targets (Gamified Tiers)
       const { data: targetsData } = await supabase
         .from('promoter_targets')
-        .select(`*, promoters ( alias_name ), funding_projects ( project_title, businesses ( brand_name ) )`)
+        .select(`*, funding_projects ( project_title, businesses ( brand_name ) )`)
         .order('created_at', { ascending: false });
       setPromoterTargets(targetsData || []);
 
       // Fetch All Investors with KAM & Promoter details
       const { data: invsList } = await supabase
         .from('investors')
-        .select(`*, kams(full_name), promoters:origin_promoter_id(alias_name, full_name)`)
+        .select('*')
         .order('created_at', { ascending: false });
       setAllInvestors(invsList || []);
 
       // Fetch Investor Notes
       const { data: notesData } = await supabase
         .from('investor_notes')
-        .select(`*, kams(full_name)`)
+        .select('*')
         .order('created_at', { ascending: false });
       setAllInvestorNotes(notesData || []);
 
@@ -290,8 +290,7 @@ export default function AdminPortal() {
         .select(`
           *,
           investors ( id, alias_name, phone, email, requires_anonymity, telegram_chat_id, kyc_level ),
-          funding_projects ( id, project_title, min_otc_investment_bdt, businesses ( brand_name ) ),
-          kams ( id, full_name, email )
+          funding_projects ( id, project_title, min_otc_investment_bdt, businesses ( brand_name ) )
         `)
         .order('created_at', { ascending: false });
       setCashTickets(cashData || []);
@@ -376,6 +375,14 @@ export default function AdminPortal() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (role === 'admin') {
+      fetchAdminData();
+    } else if (!authLoading && role !== 'admin') {
+      setLoading(false);
+    }
+  }, [role, authLoading]);
 
   // Stage Advance Handler
   const handleConfirmAdvanceStage = async () => {
@@ -1389,7 +1396,7 @@ export default function AdminPortal() {
   const handleToggleKamActive = async (kamId, currentActive) => {
     try {
       const { error } = await supabase
-        .from('kams')
+        .from('team')
         .update({ is_active: !currentActive })
         .eq('id', kamId);
 
@@ -1420,6 +1427,8 @@ export default function AdminPortal() {
         alias_name: promoterForm.alias_name,
         phone: promoterForm.phone || null,
         email: promoterForm.email || null,
+        team_type: 'promoter',
+        designation: 'Growth Promoter',
         referral_code: referralCode,
         tier: promoterForm.tier || 'Trainee',
         joined_at: promoterForm.joined_at || new Date().toISOString().slice(0, 10),
@@ -1428,7 +1437,7 @@ export default function AdminPortal() {
         telegram_onboarded: false
       };
 
-      const { data, error } = await supabase.from('promoters').insert([payload]).select().single();
+      const { data, error } = await supabase.from('team').insert([payload]).select().single();
       if (error) throw error;
 
       addToast(`Promoter onboarded! Code: ${referralCode}. Direct them to GRO10X Telegram Bot to complete onboarding.`, 'success');
@@ -1450,7 +1459,7 @@ export default function AdminPortal() {
     }
     try {
       const { error } = await supabase
-        .from('promoters')
+        .from('team')
         .update({ can_promote_deals: !currentCanPromote })
         .eq('id', promoterId);
 
@@ -1466,7 +1475,7 @@ export default function AdminPortal() {
   const handleTogglePromoterActive = async (promoterId, currentActive) => {
     try {
       const { error } = await supabase
-        .from('promoters')
+        .from('team')
         .update({ is_active: !currentActive })
         .eq('id', promoterId);
 
@@ -1486,7 +1495,7 @@ export default function AdminPortal() {
         updates.can_promote_deals = true;
       }
       const { error } = await supabase
-        .from('promoters')
+        .from('team')
         .update(updates)
         .eq('id', promoterId);
 
@@ -1525,7 +1534,7 @@ export default function AdminPortal() {
           const updates = { tier: targetTier, total_raised_bdt: totalRaised };
           if (targetTier !== 'Trainee') updates.can_promote_deals = true;
 
-          await supabase.from('promoters').update(updates).eq('id', p.id);
+          await supabase.from('team').update(updates).eq('id', p.id);
           upgradedCount++;
         }
       }
@@ -6397,7 +6406,7 @@ function InquiryLeadsTab({ currency, addToast }) {
       // Fetch Pre-Profiles (Promoter Surveys)
       const { data: preData } = await supabase
         .from('investor_pre_profiles')
-        .select(`*, promoters(alias_name, referral_code), funding_projects(project_title, businesses(brand_name))`)
+        .select(`*, funding_projects(project_title, businesses(brand_name))`)
         .order('created_at', { ascending: false });
       setPreProfiles(preData || []);
 
@@ -6409,10 +6418,10 @@ function InquiryLeadsTab({ currency, addToast }) {
       setCampaigns(campData || []);
 
       // Fetch Helpers (KAMs, Promoters, Projects)
-      const { data: kData } = await supabase.from('kams').select('*');
+      const { data: kData } = await supabase.from('team').select('*').in('team_type', ['kam', 'manager', 'admin']);
       setAllKams(kData || []);
 
-      const { data: pData } = await supabase.from('promoters').select('*');
+      const { data: pData } = await supabase.from('team').select('*').eq('team_type', 'promoter');
       setAllPromoters(pData || []);
 
       const { data: prjData } = await supabase.from('funding_projects').select(`*, businesses(brand_name)`);
@@ -7221,7 +7230,7 @@ function PlatformSettingsTab({ addToast }) {
         setTelegramChatId(data.setting_value);
       }
     } catch (err) {
-      console.log('No Telegram Chat ID configured yet.');
+      // No owner Telegram Chat ID configured yet
     }
   };
 

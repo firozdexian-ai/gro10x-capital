@@ -3,7 +3,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, CheckCircle2, AlertCircle, Info, TrendingUp, DollarSign, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
-import { formatDistanceToNow } from 'date-fns';
+
+// Native relative time — no external package needed
+function timeAgo(dateStr) {
+  const seconds = Math.floor((new Date() - new Date(dateStr)) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 export default function NotificationBell() {
   const { user } = useAuth();
@@ -197,7 +208,7 @@ export default function NotificationBell() {
                     <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', color: n.is_read ? '#cbd5e1' : '#fff' }}>{n.title}</h4>
                     <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>{n.message}</p>
                     <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      {timeAgo(n.created_at)}
                     </span>
                   </div>
                   {!n.is_read && (

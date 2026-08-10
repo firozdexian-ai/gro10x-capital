@@ -67,7 +67,7 @@ export default function PublicPortal() {
       {/* 3. HERO SECTION */}
       <section className="container" style={{ position: 'relative', padding: '5rem 0 3.5rem 0', textAlign: 'center', overflow: 'hidden' }}>
         {/* Subtle grid background for premium feel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(212,175,55,0.05) 0%, transparent 70%)', zIndex: 0 pointerEvents: 'none' }}></div>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(212,175,55,0.05) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }}></div>
         
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div className="badge-gold" style={{ marginBottom: '1.5rem', padding: '0.5rem 1.25rem', fontSize: '0.95rem' }}>

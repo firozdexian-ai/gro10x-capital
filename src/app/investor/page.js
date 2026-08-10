@@ -391,7 +391,7 @@ export default function InvestorPortal() {
     }
   };
 
-  if (loading || authLoading) {
+  if (loadingData || authLoading) {
     return <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center' }}>Loading...</div>;
   }
 

@@ -363,6 +363,7 @@ export default function KamDashboard() {
                 </div>
 
               </div>
+            </div>
             )}
             {/* CASH ADVISORY PIPELINE TAB */}
             {activeTab === 'cash-pipeline' && (

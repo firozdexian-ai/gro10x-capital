@@ -23,6 +23,17 @@ export default function SecondaryMarketplace() {
   const [isAcquiring, setIsAcquiring] = useState(false);
   const { addToast } = useToast();
 
+  // Sell Modal State
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [myHoldings, setMyHoldings] = useState([]);
+  const [selectedHoldingId, setSelectedHoldingId] = useState('');
+  const [sellPriceInput, setSellPriceInput] = useState('');
+  const [corridorError, setCorridorError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [calculatedFmv, setCalculatedFmv] = useState(0);
+  const [minCorridorPrice, setMinCorridorPrice] = useState(0);
+  const [maxCorridorPrice, setMaxCorridorPrice] = useState(0);
+
   useEffect(() => {
     fetchOrderbook();
   }, []);
@@ -54,6 +65,60 @@ export default function SecondaryMarketplace() {
       console.error('Error fetching orderbook:', err);
     } finally {
       setLoadingListings(false);
+    }
+  };
+
+  const handleOpenSellModal = async () => {
+    if (!user) { addToast('Please log in to list a share.', 'error'); return; }
+    const { data: inv } = await supabase.from('investors').select('id').eq('user_id', user.id).single();
+    if (!inv) { addToast('No investor profile found.', 'error'); return; }
+    const { data: holdings } = await supabase
+      .from('investments').select('*, funding_projects(project_title, businesses(brand_name))')
+      .eq('investor_id', inv.id).eq('status', 'Active');
+    setMyHoldings(holdings || []);
+    if (holdings && holdings.length > 0) {
+      setSelectedHoldingId(holdings[0].id);
+      const fmv = Number(holdings[0].amount_invested_bdt);
+      setCalculatedFmv(fmv);
+      setMinCorridorPrice(fmv * 0.9);
+      setMaxCorridorPrice(fmv * 1.1);
+    }
+    setShowSellModal(true);
+  };
+
+  const handlePriceChange = (val) => {
+    setSellPriceInput(val);
+    const price = Number(val);
+    if (price < minCorridorPrice || price > maxCorridorPrice) {
+      setCorridorError(`Price must be between ${formatCurrency(minCorridorPrice, currency)} and ${formatCurrency(maxCorridorPrice, currency)}`);
+    } else {
+      setCorridorError('');
+    }
+  };
+
+  const handleCreateListing = async (e) => {
+    e.preventDefault();
+    if (corridorError) return;
+    setIsSubmitting(true);
+    try {
+      const { data: inv } = await supabase.from('investors').select('id').eq('user_id', user.id).single();
+      const holding = myHoldings.find(h => h.id === selectedHoldingId);
+      if (!holding || !inv) throw new Error('Invalid selection');
+      await supabase.from('secondary_orders').insert({
+        seller_investor_id: inv.id,
+        investment_id: holding.id,
+        original_investment_bdt: holding.amount_invested_bdt,
+        seller_price_bdt: Number(sellPriceInput),
+        fmv_at_listing_bdt: calculatedFmv,
+        status: 'Active'
+      });
+      addToast('Share listed on Secondary Market!', 'success');
+      setShowSellModal(false);
+      fetchOrderbook();
+    } catch (err) {
+      addToast('Failed to list share.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

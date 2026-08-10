@@ -1151,7 +1151,8 @@ export default function AdminPortal() {
                       stageProjects.map((p) => {
                         const feeSpread = Number(p.target_raise_bdt) * 0.05;
                         return (
-
+                          <div key={p.id} style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '10px', padding: '1rem' }}>
+                            <p style={{ fontWeight: '700', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#f8fafc' }}>{p.project_title}</p>
                             <div style={{ background: 'rgba(7,10,20,0.8)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.8rem' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
                                 <span style={{ color: '#94a3b8' }}>CapEx Target:</span>

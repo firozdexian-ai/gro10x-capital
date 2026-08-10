@@ -63,76 +63,33 @@ export default function PublicPortal() {
         </div>
       </div>
 
-      {/* 2. NAVIGATION BAR WITH CURRENCY SELECTOR */}
-      <header className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#070a14', fontWeight: '900', fontSize: '1.25rem' }}>
-            G
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '800', letterSpacing: '-0.02em', margin: 0 }}>
-              GRO10X <span style={{ color: '#D4AF37' }}>CAPITAL</span>
-            </h1>
-            <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em' }}>v0.1.1 NRB & HNI Investor Suite</p>
-          </div>
-        </div>
-
-        <nav style={{ display: 'flex', gap: '0.7rem', alignItems: 'center' }}>
-          <a href="/showcase" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '700' }}>⭐ Deal Showcase</a>
-          <a href="/financial-model" style={{ color: '#a855f7', textDecoration: 'none', fontWeight: '700' }}>📈 Financial Model</a>
-          <a href="/fraud-detection" style={{ color: '#ef4444', textDecoration: 'none', fontWeight: '600' }}>🛡️ Fraud Engine</a>
-          <a href="/funding-rounds" style={{ color: '#a855f7', textDecoration: 'none', fontWeight: '600' }}>🎯 Funding Rounds</a>
-          <a href="/telegram" style={{ color: '#0088cc', textDecoration: 'none', fontWeight: '600' }}>✈️ Telegram Bot</a>
-          <a href="/secondary-market" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>🔄 Secondary Orderbook</a>
-          <a href="/pos-sync" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>📊 POS Sync</a>
-          <a href="/ai-assistant" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>✨ AI Assistant</a>
-          <a href="/buildout-tracker" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>🏗️ Buildout</a>
-          <a href="/legal-contracts" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>📜 Contracts</a>
-          <a href="/cash-concierge" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>🔒 Cash Concierge</a>
-          <a href="/payouts" style={{ color: '#f59e0b', textDecoration: 'none', fontWeight: '600' }}>💸 Payouts</a>
-          <a href="/promoter" style={{ color: '#f59e0b', textDecoration: 'none', fontWeight: '600' }}>🤝 Promoter</a>
-          <a href="/investor" style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>💼 Investor</a>
-          <a href="/kam-dashboard" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}>👨‍💼 KAM</a>
-          <a href="/admin" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>⚡ Admin</a>
-        </nav>
-
-        {/* CURRENCY SELECTOR */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', padding: '0.35rem 0.75rem', borderRadius: '10px' }}>
-            <Globe size={16} style={{ color: '#D4AF37' }} />
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem', outline: 'none' }}
-            >
-              {Object.keys(CURRENCY_RATES).map(code => (
-                <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
-                  {CURRENCY_RATES[code].label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <a href="#concierge" className="btn-gold" style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem' }}>Investor Access</a>
-        </div>
-      </header>
 
       {/* 3. HERO SECTION */}
-      <section className="container" style={{ padding: '3.5rem 0 2.5rem 0', textAlign: 'center' }}>
-        <div className="badge-gold" style={{ marginBottom: '1.5rem' }}>
-          <ShieldCheck size={16} /> Transparent • Multi-Currency • NRB & HNI Certified
-        </div>
+      <section className="container" style={{ position: 'relative', padding: '5rem 0 3.5rem 0', textAlign: 'center', overflow: 'hidden' }}>
+        {/* Subtle grid background for premium feel */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(212,175,55,0.05) 0%, transparent 70%)', zIndex: 0 pointerEvents: 'none' }}></div>
+        
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div className="badge-gold" style={{ marginBottom: '1.5rem', padding: '0.5rem 1.25rem', fontSize: '0.95rem' }}>
+            <ShieldCheck size={16} /> Transparent • Multi-Currency • NRB & HNI Certified
+          </div>
 
-        <h1 style={{ fontSize: '3.3rem', fontWeight: '800', lineHeight: 1.15, maxWidth: '920px', margin: '0 auto 1.5rem auto' }}>
-          Invest in High-Margin SME Hubs with <span style={{ background: 'linear-gradient(135deg, #F3E5AB, #D4AF37, #AA7C11)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Audited Asset Protection</span>
-        </h1>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: '800', lineHeight: 1.15, maxWidth: '1000px', margin: '0 auto 1.5rem auto' }}>
+            Invest in High-Margin SME Hubs with <span style={{ background: 'linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #AA7C11 100%)', backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'shine 3s linear infinite' }}>Audited Asset Protection</span>
+          </h1>
+          
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes shine {
+              to { background-position: 200% center; }
+            }
+          `}} />
 
         <p style={{ fontSize: '1.15rem', color: '#94a3b8', maxWidth: '750px', margin: '0 auto 2.5rem auto', lineHeight: 1.6 }}>
           Targeting 20% annual ROI backed by hard machinery assets, 25% net margin mandates, and a 6-month secondary share marketplace for NRB and High-Net-Worth investors.
         </p>
 
         {/* HERO STATS BAR WITH MULTI-CURRENCY CONVERSION */}
-        <div className="grid-4" style={{ marginTop: '2.5rem', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(212, 175, 55, 0.2)', borderRadius: '20px', padding: '2rem' }}>
+        <div className="grid-4 glass-card-premium" style={{ marginTop: '3rem' }}>
           <div>
             <h3 style={{ color: '#D4AF37', fontSize: '2rem', fontWeight: '800' }}>20% ROI</h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Target Annual Yield</p>
@@ -149,6 +106,7 @@ export default function PublicPortal() {
             <h3 style={{ color: '#D4AF37', fontSize: '2rem', fontWeight: '800' }}>80% Secured</h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Physical Assets & Equipment</p>
           </div>
+        </div>
         </div>
       </section>
 
@@ -401,15 +359,15 @@ export default function PublicPortal() {
       </section>
 
       {/* FOOTER */}
-      <footer className="container" style={{ padding: '3rem 0', borderTop: '1px solid rgba(255,255,255,0.1)', color: '#64748b', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <footer className="container" style={{ padding: '3rem 0', borderTop: '1px solid rgba(255,255,255,0.1)', color: '#64748b', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <p style={{ color: '#f8fafc', fontWeight: '700', marginBottom: '0.25rem' }}>GRO10X CAPITAL PLATFORM v0.1.1</p>
+          <p style={{ color: '#f8fafc', fontWeight: '700', marginBottom: '0.25rem' }}>GRO10X CAPITAL PLATFORM v0.4.0</p>
           <p>© 2026 GRO10X Technologies Ltd. All rights reserved.</p>
         </div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Privacy Policy</a>
-          <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Term Sheet Guidelines</a>
-          <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Risk Disclosure</a>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <a href="#" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#D4AF37'} onMouseOut={(e) => e.target.style.color = '#94a3b8'}>Privacy Policy</a>
+          <a href="#" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#D4AF37'} onMouseOut={(e) => e.target.style.color = '#94a3b8'}>Term Sheet Guidelines</a>
+          <a href="#" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#D4AF37'} onMouseOut={(e) => e.target.style.color = '#94a3b8'}>Risk Disclosure</a>
         </div>
       </footer>
 

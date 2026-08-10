@@ -1,22 +1,21 @@
 'use client';
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, TrendingUp, ShieldCheck, HelpCircle, MessageSquare, 
   Calendar, CheckCircle, Lock, ArrowUpRight, DollarSign, Send,
   FileText, Award, ChevronDown, ChevronUp, AlertTriangle, Info, Sparkles, Globe,
-  UserCheck, Shield, Unlock, RefreshCw
+  UserCheck, Shield, Unlock, RefreshCw, Loader2, Download
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../components/AuthProvider';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
 
-const portfolioHistory = [
-  { month: 'Jan', payout: 2.85 },
-  { month: 'Feb', payout: 3.10 },
-  { month: 'Mar', payout: 3.85 },
-  { month: 'Apr', payout: 3.40 },
-  { month: 'May', payout: 3.25 },
-  { month: 'Jun', payout: 3.85 },
-];
+// Global constants for month order mapping
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const dueDiligenceFAQs = [
   {
@@ -34,14 +33,45 @@ const dueDiligenceFAQs = [
 ];
 
 export default function InvestorPortal() {
+  const { user } = useAuth();
   const [currency, setCurrency] = useState('BDT');
   const [activeTab, setActiveTab] = useState('portfolio');
   const [openFaq, setOpenFaq] = useState(null);
   
+  // Real Data State
+  const [loadingData, setLoadingData] = useState(true);
+  const [holdings, setHoldings] = useState([]);
+  const [totalInvested, setTotalInvested] = useState(0);
+  const [pendingBookings, setPendingBookings] = useState([]);
+  const [yieldHistory, setYieldHistory] = useState([]);
+  const [totalEarned, setTotalEarned] = useState(0);
+  const [legalDocuments, setLegalDocuments] = useState([]);
+
+  // Payment Upload State
+  const [uploadBookingId, setUploadBookingId] = useState(null);
+  const [transactionId, setTransactionId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
+  const [screenshotFile, setScreenshotFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const { addToast } = useToast();
+
   // Progressive KYC Verification State
-  const [kycLevel, setKycLevel] = useState(2); // Level 1, 2, or 3
-  const [nidUploaded, setNidUploaded] = useState(true);
-  const [bankStmtUploaded, setBankStmtUploaded] = useState(false);
+  const [kycLevel, setKycLevel] = useState(1); 
+  const [investorDbId, setInvestorDbId] = useState(null);
+  
+  // KYC Form State
+  const [activeKycForm, setActiveKycForm] = useState(null); // 'L2' or 'L3'
+  const [nidFront, setNidFront] = useState(null);
+  const [nidBack, setNidBack] = useState(null);
+  const [sourceOfFunds, setSourceOfFunds] = useState('');
+  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
+
+  // Secondary Market Sell State
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [selectedHolding, setSelectedHolding] = useState(null);
+  const [sellPrice, setSellPrice] = useState('');
+  const [isListing, setIsListing] = useState(false);
 
   // AI Concierge State
   const [messages, setMessages] = useState([
@@ -49,10 +79,160 @@ export default function InvestorPortal() {
   ]);
   const [inputQuery, setInputQuery] = useState('');
 
-  // Booking State
-  const [bookingHub, setBookingHub] = useState('ORO Roasters - Mirpur');
-  const [bookingDate, setBookingDate] = useState('');
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+  useEffect(() => {
+    if (user) {
+      fetchInvestorData(user.id);
+    } else {
+      setLoadingData(false);
+    }
+  }, [user]);
+
+  const fetchInvestorData = async (authUserId) => {
+    try {
+      // 1. Fetch internal investor_id from auth user
+      const { data: invData, error: invError } = await supabase
+        .from('investors')
+        .select('id, kyc_verified')
+        .eq('user_id', authUserId)
+        .single();
+
+      if (invError) {
+        if (invError.code === 'PGRST116') {
+          setLoadingData(false);
+          return;
+        }
+        throw invError;
+      }
+
+      setInvestorDbId(invData.id);
+      
+      // Determine kyc level
+      if (invData.kyc_verified) {
+        setKycLevel(3); // For MVP, verified means L3. Could be more granular.
+      } else {
+        // Check if they have a pending submission
+        const { data: sub } = await supabase
+          .from('kyc_submissions')
+          .select('status, target_level')
+          .eq('investor_id', invData.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (sub && sub.status === 'Approved') {
+          setKycLevel(sub.target_level);
+        } else {
+          setKycLevel(1);
+        }
+      }
+
+      // 2. Fetch their portfolio holdings
+      const { data: investments, error: investErr } = await supabase
+        .from('investments')
+        .select(`
+          amount_invested_bdt,
+          status,
+          funding_projects(
+            project_title,
+            yield_model,
+            businesses(brand_name)
+          )
+        `)
+        .eq('investor_id', invData.id);
+
+      if (investErr) throw investErr;
+      
+      setHoldings(investments || []);
+      
+      // Calculate total
+      const total = (investments || []).reduce((acc, curr) => acc + Number(curr.amount_invested_bdt), 0);
+      setTotalInvested(total);
+
+      // 3. Fetch pending bookings (Action Required)
+      const { data: pending, error: pendingErr } = await supabase
+        .from('investment_bookings')
+        .select(`
+          id,
+          amount_bdt,
+          yield_option,
+          booking_type,
+          project_id,
+          funding_projects(
+            project_title,
+            businesses(brand_name)
+          )
+        `)
+        .eq('investor_id', invData.id)
+        .eq('status', 'Pending_Proof');
+
+      if (pendingErr) throw pendingErr;
+      setPendingBookings(pending || []);
+      
+      // 4. Fetch actual yields from investor_yields
+      const { data: yields, error: yieldsErr } = await supabase
+        .from('investor_yields')
+        .select(`
+          amount_bdt,
+          yield_disbursements (month, year)
+        `)
+        .eq('investor_id', invData.id);
+        
+      if (yieldsErr) throw yieldsErr;
+      
+      if (yields && yields.length > 0) {
+        let earned = 0;
+        const monthlyAgg = {};
+        
+        yields.forEach(y => {
+          const amt = Number(y.amount_bdt);
+          earned += amt;
+          const month = y.yield_disbursements?.month;
+          if (month) {
+            const shortMonth = month.substring(0, 3);
+            monthlyAgg[shortMonth] = (monthlyAgg[shortMonth] || 0) + amt;
+          }
+        });
+        
+        setTotalEarned(earned);
+        
+        // Map back to array sorted by months
+        const historyData = [];
+        MONTHS.forEach(m => {
+          const shortM = m.substring(0, 3);
+          if (monthlyAgg[shortM]) {
+            historyData.push({ month: shortM, payout: monthlyAgg[shortM] });
+          }
+        });
+        
+        // If history is empty but we have zero earned, supply empty array.
+        setYieldHistory(historyData);
+      } else {
+        setTotalEarned(0);
+        setYieldHistory([]);
+      }
+
+      // 5. Fetch Legal Documents
+      const { data: docsData, error: docsErr } = await supabase
+        .from('legal_documents')
+        .select(`
+          id, doc_url, doc_type, created_at,
+          investment_id,
+          investments (
+            funding_projects (project_title)
+          )
+        `)
+        .eq('investor_id', invData.id)
+        .order('created_at', { ascending: false });
+        
+      if (docsErr) throw docsErr;
+      setLegalDocuments(docsData || []);
+
+    } catch (error) {
+      console.error("Error fetching portfolio:", error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const handleAiSend = (query) => {
     const qText = query || inputQuery;
@@ -63,80 +243,179 @@ export default function InvestorPortal() {
     setInputQuery('');
 
     setTimeout(() => {
-      let reply = "GRO10X targets a 20% annual ROI across 3 structures: Option 1 Capped Yield (10% sales), Option 2 Multiplier (12% sales), and Option 3 Partnership (5% floor + 35% profit). How else can I assist your due diligence?";
-      const lower = qText.toLowerCase();
-
-      if (lower.includes('mirpur') || lower.includes('may') || lower.includes('profit')) {
-        reply = "In Mirpur, May's net profit of BDT 3.1L reflected a seasonal Eid staff bonus payment of BDT 1.80 Lakhs. Standard monthly net profit averages BDT 5.34 Lakhs on BDT 31.6 Lakhs sales (16.89% net margin).";
-      } else if (lower.includes('banani') || lower.includes('launch')) {
-        reply = "Banani launched in June 2026 with BDT 30.3 Lakhs in gross sales and BDT 6.01 Lakhs net profit (19.85% margin). Target sales scale to BDT 35L by Month 3.";
-      }
-
+      let reply = "GRO10X targets a 20% annual ROI across 3 structures: Option 1 Capped Yield (10% sales), Option 2 Multiplier (12% sales), and Option 3 Partnership (5% floor + 35% profit).";
       setMessages((prev) => [...prev, { sender: 'ai', text: reply }]);
     }, 600);
   };
 
-  const handleBookVisit = (e) => {
+  const handlePaymentUpload = async (e) => {
     e.preventDefault();
-    setBookingSuccess(true);
-  };
+    if (!transactionId || !screenshotFile || !uploadBookingId) {
+      addToast('Please provide a Transaction ID and upload a screenshot.', 'error');
+      return;
+    }
 
-  const upgradeKyc = () => {
-    if (kycLevel < 3) {
-      setKycLevel(kycLevel + 1);
+    setIsUploading(true);
+    try {
+      // Since local Supabase Storage might not be configured, we will mock the file upload
+      // and just use a placeholder URL, but the table insertion will be real.
+      // In a real environment, you'd use supabase.storage.from('payment-proofs').upload(...)
+      
+      const fileExt = screenshotFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const fakeUrl = `https://mock-storage.gro10x.com/payment-proofs/${fileName}`;
+
+      const { error: insertErr } = await supabase
+        .from('payment_submissions')
+        .insert([{
+          booking_id: uploadBookingId,
+          transaction_id: transactionId,
+          payment_method: paymentMethod,
+          screenshot_url: fakeUrl
+        }]);
+
+      if (insertErr) throw insertErr;
+
+      // Update Booking status to Proof_Submitted
+      const { error: updateErr } = await supabase
+        .from('investment_bookings')
+        .update({ status: 'Proof_Submitted' })
+        .eq('id', uploadBookingId);
+
+      if (updateErr) throw updateErr;
+
+      addToast('Payment proof submitted successfully! Awaiting Admin verification.', 'success');
+      setUploadBookingId(null);
+      setTransactionId('');
+      setScreenshotFile(null);
+      fetchInvestorData(user.id);
+    } catch (err) {
+      console.error(err);
+      addToast(err.message || 'Failed to submit payment proof.', 'error');
+    } finally {
+      setIsUploading(false);
     }
   };
+
+  const handleKycSubmit = async (e, level) => {
+    e.preventDefault();
+    if (!investorDbId) return;
+    
+    if (level === 2 && (!nidFront || !nidBack)) {
+      addToast('Please upload both Front and Back of your NID.', 'error');
+      return;
+    }
+    
+    if (level === 3 && !sourceOfFunds.trim()) {
+      addToast('Please declare your source of funds.', 'error');
+      return;
+    }
+
+    setIsSubmittingKyc(true);
+    try {
+      // Mock File Uploads
+      let frontUrl = null;
+      let backUrl = null;
+      
+      if (level === 2) {
+        frontUrl = `https://mock-storage.gro10x.com/kyc/${user.id}-front.jpg`;
+        backUrl = `https://mock-storage.gro10x.com/kyc/${user.id}-back.jpg`;
+      }
+      
+      const { error } = await supabase
+        .from('kyc_submissions')
+        .insert([{
+          investor_id: investorDbId,
+          target_level: level,
+          nid_front_url: frontUrl,
+          nid_back_url: backUrl,
+          source_of_funds: level === 3 ? sourceOfFunds : null,
+          status: 'Pending'
+        }]);
+        
+      if (error) throw error;
+      
+      addToast(`Level ${level} Verification Submitted. Awaiting Admin Clearance.`, 'success');
+      setActiveKycForm(null);
+      setNidFront(null);
+      setNidBack(null);
+      setSourceOfFunds('');
+      
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to submit KYC data.', 'error');
+} finally {
+      setIsSubmittingKyc(false);
+    }
+  };
+
+  const handleListForSell = async (e) => {
+    e.preventDefault();
+    if (!selectedHolding || !sellPrice) return;
+    
+    // Anti-speculation Guardrail (±10%)
+    const originalAmt = Number(selectedHolding.amount_invested_bdt);
+    const minPrice = originalAmt * 0.90;
+    const maxPrice = originalAmt * 1.10;
+    const inputPrice = Number(sellPrice);
+    
+    if (inputPrice < minPrice || inputPrice > maxPrice) {
+      addToast(`Price must be between ${formatCurrency(minPrice, currency)} and ${formatCurrency(maxPrice, currency)} (±10% of original investment).`, 'error');
+      return;
+    }
+    
+    setIsListing(true);
+    try {
+      // Create listing
+      const { error } = await supabase.from('secondary_orders').insert([{
+        seller_investor_id: investorDbId,
+        investment_id: selectedHolding.id,
+        original_investment_bdt: originalAmt,
+        seller_price_bdt: inputPrice,
+        fmv_at_listing_bdt: originalAmt, // For MVP, FMV is original amount
+        status: 'Active'
+      }]);
+      
+      if (error) throw error;
+      
+      addToast('Share successfully listed on the Secondary Market!', 'success');
+      setShowSellModal(false);
+      setSelectedHolding(null);
+      setSellPrice('');
+      
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to list share. Please try again.', 'error');
+    } finally {
+      setIsListing(false);
+    }
+  };
+
+  if (loading || authLoading) {
+    return <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center' }}>Loading...</div>;
+  }
 
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>
       
-      {/* NAVIGATION HEADER */}
-      <header style={{ background: 'rgba(15,23,42,0.8)', borderBottom: '1px solid rgba(212,175,55,0.2)', padding: '1.25rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(10px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #10b981, #047857)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: '900', fontSize: '1.2rem' }}>
-            I
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.3rem', fontWeight: '800', margin: 0 }}>GRO10X <span style={{ color: '#10b981' }}>INVESTOR SUITE</span></h1>
-            <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>v0.2.7 Progressive Verification & Multi-Tier Portfolio</p>
-          </div>
-        </div>
-
-        <nav style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button onClick={() => setActiveTab('portfolio')} style={tabBtnStyle(activeTab === 'portfolio')}>
-            My Portfolio
-          </button>
-          <button onClick={() => setActiveTab('kyc')} style={tabBtnStyle(activeTab === 'kyc')}>
-            <Shield size={16} style={{ color: '#10b981' }} /> Verification (L{kycLevel})
-          </button>
-          <button onClick={() => setActiveTab('ai-concierge')} style={tabBtnStyle(activeTab === 'ai-concierge')}>
-            <Sparkles size={16} style={{ color: '#D4AF37' }} /> AI Assistant
-          </button>
-          <button onClick={() => setActiveTab('faq')} style={tabBtnStyle(activeTab === 'faq')}>
-            <HelpCircle size={16} /> FAQ
-          </button>
-
-          {/* CURRENCY SELECTOR */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.35rem 0.75rem', borderRadius: '10px' }}>
-            <Globe size={16} style={{ color: '#10b981' }} />
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#10b981', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem', outline: 'none' }}
-            >
-              {Object.keys(CURRENCY_RATES).map(code => (
-                <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
-                  {CURRENCY_RATES[code].label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <a href="/showcase" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            Showcase <ArrowUpRight size={14} />
-          </a>
-        </nav>
-      </header>
+      {/* LOCAL INVESTOR TABS (Under the global Navigation) */}
+      <div style={{ background: 'rgba(15,23,42,0.8)', borderBottom: '1px solid rgba(16,185,129,0.2)', padding: '1rem 2.5rem', display: 'flex', justifyContent: 'center', gap: '1rem', position: 'sticky', top: '70px', zIndex: 9, backdropFilter: 'blur(10px)' }}>
+        <button onClick={() => setActiveTab('portfolio')} style={tabBtnStyle(activeTab === 'portfolio')}>
+          My Portfolio
+        </button>
+        <button onClick={() => setActiveTab('kyc')} style={tabBtnStyle(activeTab === 'kyc')}>
+          <Shield size={16} style={{ color: '#10b981' }} /> Verification (L{kycLevel})
+        </button>
+        <button onClick={() => setActiveTab('vault')} style={tabBtnStyle(activeTab === 'vault')}>
+          <FileText size={16} style={{ color: '#D4AF37' }} /> Document Vault
+        </button>
+        <button onClick={() => setActiveTab('ai-concierge')} style={tabBtnStyle(activeTab === 'ai-concierge')}>
+          <Sparkles size={16} style={{ color: '#D4AF37' }} /> AI Assistant
+        </button>
+        <button onClick={() => setActiveTab('faq')} style={tabBtnStyle(activeTab === 'faq')}>
+          <HelpCircle size={16} /> FAQ
+        </button>
+      </div>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2.5rem 2rem' }}>
         
@@ -167,89 +446,191 @@ export default function InvestorPortal() {
         {/* 1. PORTFOLIO DASHBOARD */}
         {activeTab === 'portfolio' && (
           <div>
-            <div className="grid-4" style={{ marginBottom: '2.5rem' }}>
-              <div className="glass-card">
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Total Capital Invested</p>
-                <h2 style={{ fontSize: '2rem', color: '#D4AF37', fontWeight: '800' }}>
-                  {formatCurrency(2500000, currency)}
-                </h2>
-                <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '0.25rem' }}>2 Active Hub Shares</p>
-              </div>
-
-              <div className="glass-card">
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Monthly Cash Payout</p>
-                <h2 style={{ fontSize: '2rem', color: '#10b981', fontWeight: '800' }}>
-                  {formatCurrency(385000, currency)}
-                </h2>
-                <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '0.25rem' }}>Distributed 5th of every month</p>
-              </div>
-
-              <div className="glass-card">
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Cumulative Profits Received</p>
-                <h2 style={{ fontSize: '2rem', fontWeight: '800' }}>
-                  {formatCurrency(1730000, currency)}
-                </h2>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.25rem' }}>Over 6 Months</p>
-              </div>
-
-              <div className="glass-card">
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Portfolio Net Yield</p>
-                <h2 style={{ fontSize: '2rem', color: '#D4AF37', fontWeight: '800' }}>18.48%</h2>
-                <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '0.25rem' }}>Target: 20.00%</p>
-              </div>
-            </div>
-
-            {/* PAYOUT HISTORY CHART */}
-            <div className="grid-2" style={{ marginBottom: '2.5rem' }}>
-              <div className="glass-card">
-                <h3 style={{ fontSize: '1.3rem', marginBottom: '1.25rem' }}>Monthly Payout Distributions</h3>
-                <div style={{ height: '240px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={portfolioHistory}>
-                      <defs>
-                        <linearGradient id="payoutGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="month" stroke="#94a3b8" />
-                      <YAxis stroke="#94a3b8" />
-                      <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #10b981' }} />
-                      <Area type="monotone" dataKey="payout" stroke="#10b981" fillOpacity={1} fill="url(#payoutGrad)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* MY HOLDINGS LIST */}
-              <div className="glass-card">
-                <h3 style={{ fontSize: '1.3rem', marginBottom: '1.25rem' }}>Active Outlet Shares</h3>
-                
+            {/* ACTION REQUIRED: PENDING BOOKINGS */}
+            {pendingBookings.length > 0 && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <h3 style={{ fontSize: '1.3rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <AlertTriangle size={20} /> Action Required: Pending Payments
+                </h3>
                 <div style={{ display: 'grid', gap: '1rem' }}>
-                  <div style={{ background: 'rgba(7,10,20,0.6)', padding: '1rem', borderRadius: '12px', borderLeft: '4px solid #D4AF37', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ color: '#D4AF37' }}>ORO Roasters - Mirpur</strong>
-                      <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Option 3: Partnership (5% + 35% Profit Share)</p>
+                  {pendingBookings.map(booking => (
+                    <div key={booking.id} className="glass-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                          <h4 style={{ fontSize: '1.1rem', margin: '0 0 0.25rem 0' }}>{booking.funding_projects?.businesses?.brand_name} - {booking.funding_projects?.project_title}</h4>
+                          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>
+                            Intent: {formatCurrency(booking.amount_bdt, currency)} | Option {booking.yield_option} Yield | Type: {booking.booking_type}
+                          </p>
+                        </div>
+                        {uploadBookingId === booking.id ? (
+                          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', width: '100%', maxWidth: '400px' }}>
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#D4AF37' }}>Upload Payment Proof</p>
+                            <form onSubmit={handlePaymentUpload} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              <select 
+                                value={paymentMethod}
+                                onChange={(e) => setPaymentMethod(e.target.value)}
+                                style={{ padding: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                              >
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="bKash">bKash</option>
+                                <option value="Cash Deposit">Cash Deposit</option>
+                              </select>
+                              <input 
+                                type="text" 
+                                placeholder="Transaction ID" 
+                                value={transactionId}
+                                onChange={(e) => setTransactionId(e.target.value)}
+                                style={{ padding: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                                required
+                              />
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => setScreenshotFile(e.target.files[0])}
+                                style={{ padding: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                                required
+                              />
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button type="submit" disabled={isUploading} style={{ flex: 1, background: '#10b981', color: '#000', border: 'none', padding: '0.5rem', borderRadius: '4px', fontWeight: 'bold', cursor: isUploading ? 'not-allowed' : 'pointer' }}>
+                                  {isUploading ? 'Uploading...' : 'Submit'}
+                                </button>
+                                <button type="button" onClick={() => setUploadBookingId(null)} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>
+                                  Cancel
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setUploadBookingId(booking.id)}
+                            style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            Submit Payment Proof
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontWeight: '700', color: '#10b981' }}>{formatCurrency(316000, currency)} / mo</span>
-                      <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{formatCurrency(1500000, currency)} Invested</p>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'rgba(7,10,20,0.6)', padding: '1rem', borderRadius: '12px', borderLeft: '4px solid #3b82f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ color: '#3b82f6' }}>ORO Roasters - Banani</strong>
-                      <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Option 2: Multiplier (12% Gross Sales)</p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontWeight: '700', color: '#10b981' }}>{formatCurrency(69000, currency)} / mo</span>
-                      <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{formatCurrency(1000000, currency)} Invested</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
+
+            {loadingData ? (
+               <div className="grid-4" style={{ marginBottom: '2.5rem' }}>
+                 {[1,2,3,4].map(i => (
+                   <div key={i} className="glass-card">
+                     <Skeleton width="60%" height="16px" className="mb-2" />
+                     <Skeleton width="80%" height="32px" className="mb-2" />
+                     <Skeleton width="40%" height="14px" />
+                   </div>
+                 ))}
+               </div>
+            ) : (
+              <>
+                <div className="grid-4" style={{ marginBottom: '2.5rem' }}>
+                  <div className="glass-card">
+                    <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Total Capital Invested</p>
+                    <h2 style={{ fontSize: '2rem', color: '#D4AF37', fontWeight: '800' }}>
+                      {formatCurrency(totalInvested, currency)}
+                    </h2>
+                    <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '0.25rem' }}>{holdings.length} Active Holdings</p>
+                  </div>
+
+                  <div className="glass-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                      <TrendingUp style={{ color: '#8b5cf6' }} />
+                      <h3 style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>Total Earned</h3>
+                    </div>
+                    <h2 style={{ fontSize: '2rem', margin: 0 }}>{formatCurrency(totalEarned, currency)}</h2>
+                    <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.25rem' }}>Lifetime Dividends</p>
+                  </div>
+
+                  <div className="glass-card">
+                    <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Monthly Cash Payout</p>
+                    <h2 style={{ fontSize: '2rem', color: '#10b981', fontWeight: '800' }}>
+                      {totalInvested > 0 ? formatCurrency(totalInvested * 0.016, currency) : formatCurrency(0, currency)}
+                    </h2>
+                    <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '0.25rem' }}>Estimated (Pending Audit)</p>
+                  </div>
+
+                  <div className="glass-card">
+                    <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Portfolio Target Yield</p>
+                    <h2 style={{ fontSize: '2rem', color: '#D4AF37', fontWeight: '800' }}>20.00%</h2>
+                    <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '0.25rem' }}>Internal Target</p>
+                  </div>
+                </div>
+
+                <div className="grid-2" style={{ marginBottom: '2.5rem' }}>
+                  {/* PAYOUT HISTORY CHART */}
+                  <div className="glass-card">
+                    <h3 style={{ fontSize: '1.3rem', marginBottom: '1.25rem' }}>Monthly Payout Distributions</h3>
+                    <div style={{ height: '300px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#64748b' }}>
+                        {yieldHistory.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={yieldHistory}>
+                              <defs>
+                                <linearGradient id="colorPayout" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <XAxis dataKey="month" stroke="#475569" fontSize={12} tickLine={false} axisLine={false} />
+                              <YAxis stroke="#475569" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `৳${val/1000}k`} />
+                              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '8px' }} />
+                              <Area type="monotone" dataKey="payout" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorPayout)" />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <p>No dividend data available yet.</p>
+                        )}
+                      </div>
+                  </div>
+
+                  {/* MY HOLDINGS LIST (LIVE) */}
+                  <div className="glass-card">
+                    <h3 style={{ fontSize: '1.3rem', marginBottom: '1.25rem' }}>Active Outlet Shares</h3>
+                    
+                    {holdings.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        <p>No active investments yet.</p>
+                        <a href="/showcase" style={{ color: '#D4AF37', textDecoration: 'underline' }}>View Deal Showcase</a>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: '1rem' }}>
+                        {holdings.map((h, i) => (
+                          <div key={i} style={{ background: 'rgba(7,10,20,0.6)', padding: '1rem', borderRadius: '12px', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                              <strong style={{ color: '#10b981' }}>{h.funding_projects?.businesses?.brand_name} - {h.funding_projects?.project_title}</strong>
+                              <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{h.funding_projects?.yield_model || 'Standard Yield'}</p>
+                            </div>
+                            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                              <div>
+                                <span style={{ fontWeight: '700', color: '#f8fafc' }}>{formatCurrency(h.amount_invested_bdt, currency)}</span>
+                                <p style={{ color: '#10b981', fontSize: '0.8rem' }}>{h.status}</p>
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  if (kycLevel < 2) {
+                                    addToast('Level 2 Verification is required to access the Secondary Market.', 'error');
+                                    return;
+                                  }
+                                  setSelectedHolding(h);
+                                  setSellPrice(h.amount_invested_bdt);
+                                  setShowSellModal(true);
+                                }}
+                                style={{ background: 'transparent', color: '#D4AF37', border: '1px solid #D4AF37', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
+                              >
+                                List Share
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -280,7 +661,7 @@ export default function InvestorPortal() {
 
               {/* LEVEL 2 */}
               <div className="glass-card" style={{ borderColor: kycLevel >= 2 ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: activeKycForm === 'L2' ? '1.5rem' : '0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ background: kycLevel >= 2 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.1)', color: kycLevel >= 2 ? '#10b981' : '#94a3b8', padding: '0.6rem 0.9rem', borderRadius: '8px', fontWeight: '800' }}>L2</div>
                     <div>
@@ -293,16 +674,32 @@ export default function InvestorPortal() {
                       <CheckCircle size={16} /> Verified
                     </span>
                   ) : (
-                    <button onClick={upgradeKyc} style={{ background: '#10b981', color: '#070a14', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' }}>
-                      Submit NID
+                    <button onClick={() => setActiveKycForm(activeKycForm === 'L2' ? null : 'L2')} style={{ background: '#10b981', color: '#070a14', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' }}>
+                      {activeKycForm === 'L2' ? 'Cancel' : 'Submit NID'}
                     </button>
                   )}
                 </div>
+                
+                {activeKycForm === 'L2' && kycLevel < 2 && (
+                  <form onSubmit={(e) => handleKycSubmit(e, 2)} style={{ background: 'rgba(0,0,0,0.2)', padding: '1.25rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>NID Front Image</label>
+                      <input type="file" accept="image/*" onChange={(e) => setNidFront(e.target.files[0])} className="form-input" required />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>NID Back Image</label>
+                      <input type="file" accept="image/*" onChange={(e) => setNidBack(e.target.files[0])} className="form-input" required />
+                    </div>
+                    <button type="submit" disabled={isSubmittingKyc} style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', opacity: isSubmittingKyc ? 0.6 : 1 }}>
+                      {isSubmittingKyc ? 'Uploading...' : 'Submit for Verification'}
+                    </button>
+                  </form>
+                )}
               </div>
 
               {/* LEVEL 3 */}
               <div className="glass-card" style={{ borderColor: kycLevel >= 3 ? 'rgba(16,185,129,0.4)' : 'rgba(212,175,55,0.3)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: activeKycForm === 'L3' ? '1.5rem' : '0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ background: kycLevel >= 3 ? 'rgba(16,185,129,0.2)' : 'rgba(212,175,55,0.2)', color: kycLevel >= 3 ? '#10b981' : '#D4AF37', padding: '0.6rem 0.9rem', borderRadius: '8px', fontWeight: '800' }}>L3</div>
                     <div>
@@ -315,13 +712,90 @@ export default function InvestorPortal() {
                       <CheckCircle size={16} /> Accredited HNI
                     </span>
                   ) : (
-                    <button onClick={upgradeKyc} style={{ background: '#D4AF37', color: '#070a14', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' }}>
-                      Upgrade to L3 VIP
+                    <button 
+                      onClick={() => {
+                        if (kycLevel < 2) {
+                          addToast('You must complete Level 2 verification first.', 'error');
+                          return;
+                        }
+                        setActiveKycForm(activeKycForm === 'L3' ? null : 'L3');
+                      }} 
+                      style={{ background: '#D4AF37', color: '#070a14', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', opacity: kycLevel < 2 ? 0.5 : 1 }}
+                    >
+                      {activeKycForm === 'L3' ? 'Cancel' : 'Upgrade to L3 VIP'}
                     </button>
                   )}
                 </div>
+                
+                {activeKycForm === 'L3' && kycLevel === 2 && (
+                  <form onSubmit={(e) => handleKycSubmit(e, 3)} style={{ background: 'rgba(0,0,0,0.2)', padding: '1.25rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.3rem' }}>Source of Funds Declaration</label>
+                      <textarea 
+                        value={sourceOfFunds} 
+                        onChange={(e) => setSourceOfFunds(e.target.value)} 
+                        className="form-input" 
+                        placeholder="Please briefly explain your primary source of investment capital (e.g., Business Income from XYZ Corp, Salary, Inheritance)..." 
+                        rows={3}
+                        required 
+                      />
+                    </div>
+                    <button type="submit" disabled={isSubmittingKyc} style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', opacity: isSubmittingKyc ? 0.6 : 1 }}>
+                      {isSubmittingKyc ? 'Submitting...' : 'Request L3 Accreditation'}
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 2.5. DOCUMENT VAULT TAB */}
+        {activeTab === 'vault' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.2rem' }}>Document Vault</h2>
+                <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Securely download your executed SPV Share Certificates and Tax Statements.</p>
+              </div>
+            </div>
+
+            {loadingData ? (
+              <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+                <Skeleton width="100%" height="80px" borderRadius="12px" />
+                <Skeleton width="100%" height="80px" borderRadius="12px" />
+              </div>
+            ) : legalDocuments.length === 0 ? (
+              <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
+                <FileText size={48} style={{ color: '#334155', margin: '0 auto 1rem', opacity: 0.5 }} />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>No Documents Yet</h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Your legal certificates will appear here once your investments are fully cleared and minted.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {legalDocuments.map(doc => (
+                  <div key={doc.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ background: 'rgba(212,175,55,0.1)', padding: '1rem', borderRadius: '12px' }}>
+                        <FileText size={24} style={{ color: '#D4AF37' }} />
+                      </div>
+                      <div>
+                        <h4 style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>
+                          {doc.doc_type === 'Share_Certificate' ? 'SPV Share Certificate' : 
+                           doc.doc_type === 'Subscription_Agreement' ? 'Subscription Agreement' : 'Tax Document'}
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                          {doc.investments?.funding_projects?.project_title || 'General Account Document'} • Issued on {new Date(doc.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <a href={doc.doc_url} target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '0.6rem 1.2rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+                      <Download size={16} /> Download PDF
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -395,6 +869,54 @@ export default function InvestorPortal() {
         )}
 
       </main>
+
+      {/* SECONDARY MARKET SELL MODAL */}
+      {showSellModal && selectedHolding && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'grid', placeItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '450px', position: 'relative' }}>
+            <button 
+              onClick={() => {
+                setShowSellModal(false);
+                setSelectedHolding(null);
+              }}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem' }}
+            >
+              &times;
+            </button>
+            <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#D4AF37' }}>List on Secondary Market</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              You are listing your shares in <strong>{selectedHolding.funding_projects?.businesses?.brand_name}</strong>.
+            </p>
+            
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+              <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>Original Investment</p>
+              <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(selectedHolding.amount_invested_bdt, currency)}</p>
+            </div>
+
+            <form onSubmit={handleListForSell} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#cbd5e1' }}>
+                  Listing Price (BDT)
+                </label>
+                <input 
+                  type="number" 
+                  value={sellPrice} 
+                  onChange={(e) => setSellPrice(e.target.value)} 
+                  className="form-input" 
+                  required 
+                />
+                <p style={{ color: '#10b981', fontSize: '0.75rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                  Anti-Speculation Rule: You can list this asset between {formatCurrency(Number(selectedHolding.amount_invested_bdt) * 0.90, currency)} (-10%) and {formatCurrency(Number(selectedHolding.amount_invested_bdt) * 1.10, currency)} (+10%).
+                </p>
+              </div>
+              
+              <button type="submit" disabled={isListing} style={{ background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14', border: 'none', padding: '0.85rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: isListing ? 0.7 : 1 }}>
+                {isListing ? 'Publishing Order...' : 'Confirm Listing'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -19,11 +19,21 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-main);
   line-height: 1.6;
   overflow-x: hidden;
+}
+
+/* Page Transition Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+main {
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
 /* Container */
@@ -157,7 +167,53 @@ body {
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
 }
 
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  opacity: 0.5;
+}
+
+.glass-card-premium {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+.glass-card-premium:hover {
+  box-shadow: 0 15px 40px rgba(212, 175, 55, 0.3);
+  border-color: #D4AF37;
+}
+
 /* Grids */
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
 .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .container {
+    padding: 0 1rem;
+  }
+
+  h1 {
+    font-size: 2.2rem !important;
+  }
+  
+  h2 {
+    font-size: 1.8rem !important;
+  }
+
+  .ticker-wrap {
+    padding: 0.5rem 0;
+  }
+}

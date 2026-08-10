@@ -184,14 +184,14 @@ function ProjectProfileContent() {
                   <div style={{ position: 'relative', width: '100%', height: '380px', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
                     {mediaList[activeMediaIndex].media_type === 'video_link' ? (
                       <iframe 
-                        src={mediaList[activeMediaIndex].url.replace('watch?v=', 'embed/')} 
+                        src={(mediaList[activeMediaIndex].media_url || mediaList[activeMediaIndex].url || '').replace('watch?v=', 'embed/')} 
                         style={{ width: '100%', height: '100%', border: 'none' }}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowFullScreen 
                       />
                     ) : (
                       <img 
-                        src={mediaList[activeMediaIndex].url} 
+                        src={mediaList[activeMediaIndex].media_url || mediaList[activeMediaIndex].url} 
                         alt={mediaList[activeMediaIndex].caption || project.project_title} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
@@ -215,7 +215,7 @@ function ProjectProfileContent() {
                               <Play size={20} />
                             </div>
                           ) : (
-                            <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={m.media_url || m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           )}
                         </button>
                       ))}
@@ -227,7 +227,9 @@ function ProjectProfileContent() {
                 <div style={{ height: '320px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(15,23,42,0.8))', border: '1px border rgba(212,175,55,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
                   <Building2 size={56} style={{ color: '#D4AF37', marginBottom: '1rem', opacity: 0.6 }} />
                   <h3 style={{ margin: 0, fontSize: '1.4rem' }}>{project.businesses?.brand_name}</h3>
-                  <p style={{ color: '#94a3b8', fontSize: '0.9rem', maxWidth: '400px', marginTop: '0.5rem' }}>Verified Franchise & SME Expansion Campaign</p>
+                  <p style={{ color: '#94a3b8', fontSize: '0.9rem', maxWidth: '400px', marginTop: '0.5rem' }}>
+                    {project.location_address ? `Location: ${project.location_address}` : 'Verified Franchise & SME Expansion Campaign'}
+                  </p>
                 </div>
               )}
             </div>
@@ -242,25 +244,26 @@ function ProjectProfileContent() {
                 <div style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(212,175,55,0.3)', padding: '1.25rem', borderRadius: '12px' }}>
                   <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: 'bold', textTransform: 'uppercase' }}>Option 1</span>
                   <h4 style={{ margin: '0.2rem 0 0.5rem 0', fontSize: '1.1rem' }}>Capped Fixed Yield</h4>
-                  <p style={{ color: '#10b981', fontSize: '1.4rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>10% Gross Sales</p>
+                  <p style={{ color: '#10b981', fontSize: '1.4rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>{project.yield_option_1_rate || 10}% Gross Sales</p>
                   <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0, lineHeight: '1.4' }}>Prioritised payout from monthly gross revenue pool until return cap is met.</p>
                 </div>
 
                 <div style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(16,185,129,0.3)', padding: '1.25rem', borderRadius: '12px' }}>
                   <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold', textTransform: 'uppercase' }}>Option 2</span>
                   <h4 style={{ margin: '0.2rem 0 0.5rem 0', fontSize: '1.1rem' }}>Growth Multiplier</h4>
-                  <p style={{ color: '#10b981', fontSize: '1.4rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>12% Gross Sales</p>
+                  <p style={{ color: '#10b981', fontSize: '1.4rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>{project.yield_option_2_rate || 12}% Gross Sales</p>
                   <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0, lineHeight: '1.4' }}>Higher gross revenue share for investors seeking accelerated cash recovery.</p>
                 </div>
 
                 <div style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(139,92,246,0.3)', padding: '1.25rem', borderRadius: '12px' }}>
                   <span style={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold', textTransform: 'uppercase' }}>Option 3</span>
                   <h4 style={{ margin: '0.2rem 0 0.5rem 0', fontSize: '1.1rem' }}>Net Profit Share</h4>
-                  <p style={{ color: '#8b5cf6', fontSize: '1.4rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>35% Net Profit</p>
+                  <p style={{ color: '#8b5cf6', fontSize: '1.4rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>{project.yield_option_3_rate || 35}% Net Profit</p>
                   <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0, lineHeight: '1.4' }}>Direct equity-style participation in declared monthly net outlet profit.</p>
                 </div>
               </div>
             </div>
+
 
             {/* 3. BUSINESS & FOUNDER CREDIBILITY */}
             <div className="glass-card" style={{ padding: '2rem' }}>

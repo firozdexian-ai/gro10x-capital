@@ -47,7 +47,9 @@ function BusinessShowcaseContent() {
             )
           )
         `)
+        .eq('show_on_showcase', true)
         .order('created_at', { ascending: false });
+
 
       if (error) throw error;
       setProjects(data || []);

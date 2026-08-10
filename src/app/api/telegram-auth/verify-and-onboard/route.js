@@ -59,34 +59,43 @@ export async function POST(request) {
       }
     }
 
-    // 3. Admin Supabase Client (if SUPABASE_SERVICE_ROLE_KEY is present)
+    // 3. Admin Supabase Client (Requires SUPABASE_SERVICE_ROLE_KEY)
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-    if (serviceKey && supabaseUrl) {
-      const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
-        auth: { autoRefreshToken: false, persistSession: false }
+    if (!serviceKey) {
+      return NextResponse.json({
+        error: 'SUPABASE_SERVICE_ROLE_KEY is missing from environment variables on Vercel. Please add SUPABASE_SERVICE_ROLE_KEY to Vercel Environment Variables.'
+      }, { status: 500 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Find user in auth.users
+    const { data: usersData, error: listErr } = await supabaseAdmin.auth.admin.listUsers();
+    if (listErr) throw listErr;
+
+    const existingUser = usersData?.users?.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase());
+
+    if (existingUser) {
+      // Update existing user password to temp_pin & set first_login: true
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+        password: temp_pin,
+        email_confirm: true,
+        user_metadata: { first_login: true, full_name: userName }
       });
-
-      // Find user in auth.users
-      const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = usersData?.users?.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase());
-
-      if (existingUser) {
-        // Update existing user password to temp_pin & first_login: true
-        await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-          password: temp_pin,
-          user_metadata: { first_login: true, full_name: userName }
-        });
-      } else {
-        // Create user with temp_pin
-        await supabaseAdmin.auth.admin.createUser({
-          email: targetEmail,
-          password: temp_pin,
-          email_confirm: true,
-          user_metadata: { first_login: true, full_name: userName }
-        });
-      }
+      if (updateErr) throw updateErr;
+    } else {
+      // Create fresh user with temp_pin
+      const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: targetEmail,
+        password: temp_pin,
+        email_confirm: true,
+        user_metadata: { first_login: true, full_name: userName }
+      });
+      if (createErr) throw createErr;
     }
 
     // 4. Mark PIN as verified in DB

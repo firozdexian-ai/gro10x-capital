@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../../../../lib/supabase';
 
+// Pad 4-digit PIN to 6 chars for Supabase Auth password policy compatibility
+function formatAuthPassword(pin) {
+  return pin ? `${pin}00` : '';
+}
+
 export async function POST(request) {
   try {
     const { identifier, temp_pin } = await request.json();
@@ -59,6 +64,8 @@ export async function POST(request) {
       }
     }
 
+    const authPassword = formatAuthPassword(temp_pin);
+
     // 3. Admin Supabase Client (Requires SUPABASE_SERVICE_ROLE_KEY)
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -80,18 +87,18 @@ export async function POST(request) {
     const existingUser = usersData?.users?.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase());
 
     if (existingUser) {
-      // Update existing user password to temp_pin & set first_login: true
+      // Update existing user password to padded temp_pin & set first_login: true
       const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-        password: temp_pin,
+        password: authPassword,
         email_confirm: true,
         user_metadata: { first_login: true, full_name: userName }
       });
       if (updateErr) throw updateErr;
     } else {
-      // Create fresh user with temp_pin
+      // Create fresh user with padded temp_pin
       const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
         email: targetEmail,
-        password: temp_pin,
+        password: authPassword,
         email_confirm: true,
         user_metadata: { first_login: true, full_name: userName }
       });

@@ -148,18 +148,19 @@ function AuthContent() {
       if (!res.ok) throw new Error(data.error || 'Verification failed');
 
       const targetEmail = data.email;
+      const authPassword = pinString ? `${pinString}00` : '';
 
       // 2. Sign in to Supabase Auth
       let { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
         email: targetEmail,
-        password: pinString
+        password: authPassword
       });
 
       if (signInErr) {
         // Fallback: try signUp if user does not exist in auth.users
         const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
           email: targetEmail,
-          password: pinString,
+          password: authPassword,
           options: {
             data: { first_login: true, full_name: data.name }
           }
@@ -214,10 +215,12 @@ function AuthContent() {
         throw new Error(`Account not found for '${identifier}'. Please verify your email or phone number.`);
       }
 
+      const authPassword = pinString ? `${pinString}00` : '';
+
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: targetEmail,
-          password: pinString,
+          password: authPassword,
         });
         if (error) throw error;
 
@@ -230,7 +233,7 @@ function AuthContent() {
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: targetEmail,
-          password: pinString,
+          password: authPassword,
         });
         if (error) throw error;
 
@@ -271,8 +274,9 @@ function AuthContent() {
     }
 
     try {
+      const authPassword = np ? `${np}00` : '';
       const { error: updateErr } = await supabase.auth.updateUser({
-        password: np,
+        password: authPassword,
         data: { first_login: false }
       });
       if (updateErr) throw updateErr;

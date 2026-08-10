@@ -9,9 +9,11 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+import LeadBot from '../components/LeadBot';
+
 export const metadata = {
-  title: 'GRO10X Capital Ecosystem',
-  description: 'The Next-Generation Private Equity Ecosystem',
+  title: 'GRO10X Capital Ecosystem — Invest Smarter. Earn Verified Yields.',
+  description: 'The Next-Generation Private Equity & SME Yield Investment Platform',
 };
 
 export default function RootLayout({ children }) {
@@ -24,6 +26,7 @@ export default function RootLayout({ children }) {
             <main style={{ paddingTop: '70px', minHeight: 'calc(100vh - 70px)' }}>
               {children}
             </main>
+            <LeadBot />
           </AuthProvider>
         </ToastProvider>
       </body>

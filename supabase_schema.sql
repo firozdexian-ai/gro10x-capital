@@ -432,3 +432,54 @@ FOR INSERT WITH CHECK (
         SELECT id FROM public.promoters WHERE user_id = auth.uid()
     )
 );
+
+-- ============================================================
+-- SPRINT 0.5.1.x ADDITIONS: PUBLIC INVESTOR EXPERIENCE
+-- ============================================================
+
+-- 1. Project Description and Cover Image on funding_projects
+ALTER TABLE public.funding_projects ADD COLUMN IF NOT EXISTS project_description TEXT;
+ALTER TABLE public.funding_projects ADD COLUMN IF NOT EXISTS cover_image_url TEXT;
+
+-- 2. Project Media Table (Photos & Video Links/Uploads)
+CREATE TABLE IF NOT EXISTS public.project_media (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    project_id UUID REFERENCES public.funding_projects(id) ON DELETE CASCADE NOT NULL,
+    media_type TEXT CHECK (media_type IN ('image', 'video_upload', 'video_link')),
+    url TEXT NOT NULL,
+    caption TEXT,
+    display_order INTEGER DEFAULT 0
+);
+
+-- 3. Inquiry Leads Table (Bot Captured Leads)
+CREATE TABLE IF NOT EXISTS public.inquiry_leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    investment_range TEXT,
+    meeting_preference TEXT,
+    source_page TEXT,
+    referral_code TEXT,
+    status TEXT DEFAULT 'New' CHECK (status IN ('New', 'Contacted', 'Meeting Booked', 'Converted', 'Not Interested'))
+);
+
+-- 4. Platform Settings Table (Telegram Chat ID & System Config)
+CREATE TABLE IF NOT EXISTS public.platform_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    setting_key TEXT UNIQUE NOT NULL,
+    setting_value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE public.project_media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inquiry_leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Allow public read access to project_media" ON public.project_media FOR SELECT USING (true);
+CREATE POLICY "Allow public insert to inquiry_leads" ON public.inquiry_leads FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read to platform_settings" ON public.platform_settings FOR SELECT USING (true);
+

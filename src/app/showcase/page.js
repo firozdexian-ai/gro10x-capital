@@ -1,38 +1,37 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { 
-  Building2, Users, ClipboardCheck, ArrowUpRight, CheckCircle2, ShieldCheck, 
-  TrendingUp, BarChart2, DollarSign, Camera, FileText, ChevronRight, Globe,
-  Briefcase, Star, Clock, AlertTriangle, ArrowRight, LineChart, Loader2
+  Building2, ShieldCheck, TrendingUp, Filter, Search, CheckCircle2, 
+  ArrowUpRight, DollarSign, MessageSquare, Loader2, Sparkles, AlertCircle
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../components/AuthProvider';
-import Navigation from '../../components/Navigation';
-import Skeleton from '../../components/Skeleton';
-import { useToast } from '../../components/Toast';
-import { X } from 'lucide-react';
+import ProjectCard from '../../components/ProjectCard';
 
-export default function BusinessShowcase() {
-  const { user } = useAuth();
-  const { addToast } = useToast();
+import { Suspense } from 'react';
+
+function BusinessShowcaseContent() {
+  const searchParams = useSearchParams();
+  const refCode = searchParams?.get('ref');
+
   const [currency, setCurrency] = useState('BDT');
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Booking Modal State
-  const [bookingProject, setBookingProject] = useState(null);
-  const [bookingAmount, setBookingAmount] = useState('');
-  const [yieldOption, setYieldOption] = useState(1);
-  const [isBooking, setIsBooking] = useState(false);
+  const [filterSector, setFilterSector] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchActiveDeals();
-  }, []);
+    if (refCode && typeof window !== 'undefined') {
+      sessionStorage.setItem('gro10x_ref_code', refCode);
+    }
+  }, [refCode]);
 
   const fetchActiveDeals = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('funding_projects')
         .select(`
@@ -48,7 +47,7 @@ export default function BusinessShowcase() {
             )
           )
         `)
-        .eq('status', 'Origination'); // Only show active deals
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setProjects(data || []);
@@ -59,257 +58,123 @@ export default function BusinessShowcase() {
     }
   };
 
-  const handleOpenBooking = async (project) => {
-    if (!user) {
-      addToast('You must be logged in as an Investor to book a deal.', 'error');
-      return;
-    }
-    setBookingProject(project);
-    setBookingAmount('');
-    setYieldOption(1);
-  };
+  const filteredProjects = projects.filter(p => {
+    const matchesSector = filterSector === 'All' || p.businesses?.industry_sector === filterSector;
+    const matchesQuery = !searchQuery || p.project_title?.toLowerCase().includes(searchQuery.toLowerCase()) || p.businesses?.brand_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSector && matchesQuery;
+  });
 
-  const handleSubmitBooking = async () => {
-    if (!bookingAmount || Number(bookingAmount) <= 0) {
-      addToast('Please enter a valid amount.', 'error');
-      return;
-    }
-
-    setIsBooking(true);
-    try {
-      // Get Investor ID
-      const { data: invData, error: invError } = await supabase
-        .from('investors')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (invError || !invData) {
-        throw new Error('Investor profile not found. Make sure you are logged in as an investor.');
-      }
-
-      const numAmount = Number(bookingAmount);
-
-      // Overbooking limit check (120%)
-      const maxAllowed = Number(bookingProject.target_raise_bdt) * 1.2;
-      const currentRaised = Number(bookingProject.amount_raised_bdt);
-      
-      if (currentRaised + numAmount > maxAllowed) {
-        throw new Error(`This deal is fully oversubscribed. You can invest up to ${formatCurrency(maxAllowed - currentRaised, 'BDT')} more.`);
-      }
-
-      const { error } = await supabase
-        .from('investment_bookings')
-        .insert([{
-          investor_id: invData.id,
-          project_id: bookingProject.id,
-          amount_bdt: numAmount,
-          yield_option: yieldOption
-        }]);
-
-      if (error) throw error;
-
-      addToast('Booking Intent submitted! Proceed to your Portfolio to upload payment proof.', 'success');
-      setBookingProject(null);
-      fetchActiveDeals();
-    } catch (err) {
-      console.error(err);
-      addToast(err.message || 'Failed to submit booking.', 'error');
-    } finally {
-      setIsBooking(false);
+  const handleOpenLeadBot = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-lead-bot', { detail: { refCode } }));
     }
   };
 
   return (
-    <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '5rem' }}>
       
-      {/* HEADER SECTION */}
-      <section style={{ padding: '3rem 3rem 1rem 3rem', background: 'radial-gradient(circle at top right, rgba(212,175,55,0.08), transparent 50%)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div>
-            <h1 style={{ fontSize: '3rem', fontWeight: '800', margin: '0 0 0.5rem 0', letterSpacing: '-0.03em' }}>
-              Deal <span style={{ color: '#D4AF37' }}>Showcase</span>
-            </h1>
-            <p style={{ fontSize: '1.1rem', color: '#94a3b8', margin: 0 }}>
-              Live investment opportunities vetted by GRO10X Key Account Managers.
-            </p>
-          </div>
+      {/* HEADER BANNER */}
+      <div style={{ background: 'radial-gradient(circle at top center, rgba(212,175,55,0.1) 0%, rgba(15,23,42,0.8) 70%)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '3.5rem 2rem 2.5rem 2rem', textAlign: 'center' }}>
+        <div className="container" style={{ maxWidth: '800px' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
-            <Globe size={16} style={{ color: '#D4AF37' }} />
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem', outline: 'none' }}
-            >
-              {Object.keys(CURRENCY_RATES).map(code => (
-                <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
-                  {CURRENCY_RATES[code].label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </section>
-
-      {/* DETAILED SHOWCASE LIST */}
-      <section style={{ padding: '3rem' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
-          {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3rem' }}>
-              {[1, 2].map((i) => (
-                <div key={i} className="glass-card" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '3rem', padding: '2.5rem' }}>
-                  <div>
-                    <Skeleton width="120px" height="24px" className="mb-4" />
-                    <Skeleton width="60%" height="40px" className="mb-4" />
-                    <Skeleton width="80%" height="24px" className="mb-8" />
-                    <Skeleton width="100%" height="80px" />
-                  </div>
-                  <div>
-                    <Skeleton width="100%" height="100%" borderRadius="12px" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="glass-card" style={{ textAlign: 'center', padding: '5rem', borderColor: 'rgba(212,175,55,0.2)' }}>
-              <Briefcase size={48} style={{ color: '#64748b', margin: '0 auto 1rem auto' }} />
-              <h3 style={{ fontSize: '1.5rem', color: '#f8fafc', marginBottom: '0.5rem' }}>No Active Deals</h3>
-              <p style={{ color: '#94a3b8' }}>Check back later as KAMs finalize the audit process for the next cohort of businesses.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3rem' }}>
-              {projects.map(project => {
-                const business = project.businesses;
-                const founder = business?.founders;
-                const percentRaised = Math.min((project.amount_raised_bdt / project.target_raise_bdt) * 100, 100);
-
-                return (
-                  <div key={project.id} className="glass-card" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '3rem', padding: '2.5rem', position: 'relative', overflow: 'hidden' }}>
-                    
-                    {/* Left Column: Business Details */}
-                    <div>
-                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <span className="badge-gold" style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', borderColor: 'rgba(16,185,129,0.3)' }}>
-                          <CheckCircle2 size={12} /> KAM Audited
-                        </span>
-                        <span className="badge-gold">{business?.industry_sector || 'Business'}</span>
-                      </div>
-                      
-                      <h2 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>{business?.brand_name || 'Unnamed Business'}</h2>
-                      <p style={{ fontSize: '1.1rem', color: '#94a3b8', margin: '0 0 2rem 0', lineHeight: '1.5' }}>
-                        {project.project_title}
-                      </p>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px' }}>
-                        <div>
-                          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Target Raise</p>
-                          <p style={{ fontSize: '1.25rem', fontWeight: '800', color: '#D4AF37' }}>{formatCurrency(project.target_raise_bdt, currency)}</p>
-                        </div>
-                        <div>
-                          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Funding Type</p>
-                          <p style={{ fontSize: '1.25rem', fontWeight: '800', color: '#10b981' }}>{project.funding_type}</p>
-                        </div>
-                        <div>
-                          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Health Score</p>
-                          <p style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <ShieldCheck size={18} color="#10b981" /> {business?.ai_health_score}/100
-                          </p>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'grid', placeItems: 'center' }}>
-                          <Users size={20} color="#94a3b8" />
-                        </div>
-                        <div>
-                          <p style={{ color: '#f8fafc', fontWeight: '600', fontSize: '0.95rem', margin: '0 0 0.1rem 0' }}>{founder?.full_name || 'Unknown Founder'}</p>
-                          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>Founder Track Record: {founder?.track_record_score}/100</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column: Funding Progress & Action */}
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <div style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(255,255,255,0.1)', padding: '1.5rem', borderRadius: '12px' }}>
-                        <h4 style={{ fontSize: '1.1rem', margin: '0 0 1rem 0', fontWeight: '700' }}>Investment Round Status</h4>
-                        
-                        <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '0.75rem', overflow: 'hidden' }}>
-                          <div style={{ width: `${percentRaised}%`, height: '100%', background: '#D4AF37' }}></div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                          <span>{formatCurrency(project.amount_raised_bdt, currency)} raised</span>
-                          <span style={{ color: '#D4AF37', fontWeight: '700' }}>{percentRaised.toFixed(1)}%</span>
-                        </div>
-                        
-                        <button 
-                          onClick={() => handleOpenBooking(project)}
-                          style={{ width: '100%', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14', padding: '1rem', borderRadius: '8px', fontSize: '1rem', fontWeight: '800', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
-                        >
-                          Review Deal & Invest <ArrowRight size={18} />
-                        </button>
-                      </div>
-                    </div>
-
-                  </div>
-                );
-              })}
+          {refCode && (
+            <div className="badge-gold" style={{ display: 'inline-flex', marginBottom: '1rem', padding: '0.4rem 1rem' }}>
+              <Sparkles size={14} /> Referred Opportunity (Code: {refCode})
             </div>
           )}
 
-        </div>
-      </section>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '0 0 0.75rem 0', color: '#fff' }}>
+            Live Verified Investment Deals
+          </h1>
+          <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: '1.6', margin: '0 0 2rem 0' }}>
+            Browse physical asset-backed franchise & SME campaigns. Every deal is monitored by Key Account Managers and secured under individual SPVs.
+          </p>
 
-      {/* BOOKING MODAL */}
-      {bookingProject && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(7, 10, 20, 0.8)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', padding: '1rem' }}>
-          <div className="glass-card-premium" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative' }}>
-            <button 
-              onClick={() => setBookingProject(null)} 
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-            >
-              <X size={24} />
-            </button>
-            
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.5rem', color: '#f8fafc' }}>Book Investment</h2>
-            <p style={{ color: '#D4AF37', fontWeight: '700', marginBottom: '1.5rem' }}>{bookingProject.businesses?.brand_name} - {bookingProject.project_title}</p>
-            
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Select Yield Structure</label>
-              <select 
-                value={yieldOption}
-                onChange={(e) => setYieldOption(Number(e.target.value))}
-                style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', borderRadius: '8px', outline: 'none' }}
-              >
-                <option value={1}>Option 1: Capped Yield (10% Sales)</option>
-                <option value={2}>Option 2: Multiplier (12% Sales)</option>
-                <option value={3}>Option 3: Partnership (5% Floor + 35% Profit)</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Investment Amount (BDT)</label>
+          {/* SEARCH & FILTER BAR */}
+          <div style={{ display: 'flex', gap: '1rem', background: 'rgba(15,23,42,0.9)', padding: '0.75rem', borderRadius: '14px', border: '1px solid rgba(212,175,55,0.3)', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
+              <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
               <input 
-                type="number" 
-                value={bookingAmount}
-                onChange={(e) => setBookingAmount(e.target.value)}
-                placeholder="e.g. 500000"
-                style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc', borderRadius: '8px', outline: 'none', fontSize: '1.1rem' }}
+                type="text" 
+                placeholder="Search deal or brand name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-input"
+                style={{ paddingLeft: '2.8rem', background: 'rgba(7,10,20,0.6)', border: 'none' }}
               />
             </div>
 
-            <button 
-              onClick={handleSubmitBooking}
-              disabled={isBooking}
-              style={{ width: '100%', background: '#10b981', color: '#070a14', padding: '1rem', borderRadius: '8px', fontSize: '1rem', fontWeight: '800', border: 'none', cursor: isBooking ? 'not-allowed' : 'pointer', opacity: isBooking ? 0.7 : 1 }}
-            >
-              {isBooking ? 'Processing...' : 'Confirm Intent & Proceed to Payment'}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {['All', 'F&B Franchise', 'Digital Agency & Tech', 'Distribution'].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterSector(cat)}
+                  style={{
+                    background: filterSector === cat ? 'rgba(212,175,55,0.2)' : 'transparent',
+                    color: filterSector === cat ? '#D4AF37' : '#94a3b8',
+                    border: filterSector === cat ? '1px solid #D4AF37' : '1px solid transparent',
+                    padding: '0.5rem 0.85rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* DEAL CARDS GRID */}
+      <main className="container" style={{ paddingTop: '3rem' }}>
+        
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '5rem', color: '#D4AF37' }}>
+            <Loader2 size={40} className="animate-spin" style={{ margin: '0 auto 1rem auto' }} />
+            <p style={{ color: '#94a3b8' }}>Fetching Active Investment Opportunities...</p>
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem', maxWidth: '600px', margin: '0 auto' }}>
+            <AlertCircle size={44} style={{ color: '#D4AF37', margin: '0 auto 1rem auto' }} />
+            <h3 style={{ fontSize: '1.4rem', margin: '0 0 0.5rem 0' }}>No Matching Deals Found</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              {searchQuery || filterSector !== 'All' ? 'Try adjusting your search query or category filter.' : 'New investment campaigns are currently undergoing KAM due diligence.'}
+            </p>
+            <button onClick={handleOpenLeadBot} className="btn-gold" style={{ display: 'inline-flex' }}>
+              <MessageSquare size={16} /> Speak to Advisor / Join Waitlist
             </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Showing <strong>{filteredProjects.length}</strong> active campaigns</span>
+              <button onClick={handleOpenLeadBot} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.4rem 0.9rem' }}>
+                <MessageSquare size={14} /> Need Help Choosing? Talk to Us
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.75rem' }}>
+              {filteredProjects.map(project => (
+                <ProjectCard key={project.id} project={project} currency={currency} />
+              ))}
+            </div>
+          </div>
+        )}
+
+      </main>
     </div>
+  );
+}
+
+export default function BusinessShowcase() {
+  return (
+    <Suspense fallback={<div style={{ padding: '5rem', textAlign: 'center', color: '#D4AF37' }}>Loading deals...</div>}>
+      <BusinessShowcaseContent />
+    </Suspense>
   );
 }

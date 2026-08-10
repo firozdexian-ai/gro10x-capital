@@ -828,6 +828,12 @@ export default function AdminPortal() {
           <button onClick={() => setActiveTab('legal')} style={navBtnStyle(activeTab === 'legal')}>
             <FileText size={18} style={{ color: activeTab === 'legal' ? '#10b981' : 'inherit' }} /> Legal Compliance
           </button>
+          <button onClick={() => setActiveTab('inquiry-leads')} style={navBtnStyle(activeTab === 'inquiry-leads')}>
+            <MessageSquare size={18} style={{ color: activeTab === 'inquiry-leads' ? '#3b82f6' : 'inherit' }} /> Inquiry Leads
+          </button>
+          <button onClick={() => setActiveTab('settings')} style={navBtnStyle(activeTab === 'settings')}>
+            <Sparkles size={18} style={{ color: activeTab === 'settings' ? '#D4AF37' : 'inherit' }} /> Platform Settings
+          </button>
           <button onClick={() => setActiveTab('treasury')} style={navBtnStyle(activeTab === 'treasury')}>
             <Wallet size={18} style={{ color: activeTab === 'treasury' ? '#10b981' : 'inherit' }} /> Treasury & Payouts
           </button>
@@ -1371,6 +1377,16 @@ export default function AdminPortal() {
           </div>
         )}
 
+        {/* INQUIRY LEADS TAB */}
+        {activeTab === 'inquiry-leads' && (
+          <InquiryLeadsTab currency={currency} addToast={addToast} />
+        )}
+
+        {/* PLATFORM SETTINGS TAB */}
+        {activeTab === 'settings' && (
+          <PlatformSettingsTab addToast={addToast} />
+        )}
+
       </main>
 
       {/* NEW PROJECT MODAL */}
@@ -1442,12 +1458,175 @@ function navBtnStyle(active) {
     background: active ? 'rgba(212,175,55,0.15)' : 'transparent',
     color: active ? '#D4AF37' : '#94a3b8',
     fontWeight: active ? '700' : '500',
+    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
-    cursor: 'pointer',
-    textAlign: 'left',
     fontSize: '0.9rem',
-    transition: 'all 0.2s ease'
+    textAlign: 'left'
   };
+}
+
+function InquiryLeadsTab({ currency, addToast }) {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('inquiry_leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeads(data || []);
+    } catch (err) {
+      console.error('Error fetching inquiry leads:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('inquiry_leads')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      addToast('Lead status updated', 'success');
+      fetchLeads();
+    } catch (err) {
+      addToast('Failed to update lead status', 'error');
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', margin: 0 }}>Public Prospective Leads</h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0.2rem 0 0 0' }}>Captured via LeadBot on Website & Project Profiles</p>
+        </div>
+        <span className="badge-gold">Total: {leads.length}</span>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Loading inquiry leads...</div>
+      ) : leads.length === 0 ? (
+        <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>No prospective leads captured yet.</div>
+      ) : (
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {leads.map(lead => (
+            <div key={lead.id} className="glass-card" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0, color: '#fff' }}>{lead.name}</h3>
+                  <span style={{ fontSize: '0.75rem', background: 'rgba(59,130,246,0.2)', color: '#3b82f6', padding: '0.1rem 0.5rem', borderRadius: '6px' }}>{lead.meeting_preference || 'Online Call'}</span>
+                </div>
+                <p style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '0.9rem', margin: '0 0 0.4rem 0' }}>Phone: {lead.phone} | Budget: {lead.investment_range || 'N/A'}</p>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
+                  <span>Source: {lead.source_page || 'Website'}</span>
+                  <span>Captured: {new Date(lead.created_at).toLocaleString()}</span>
+                  {lead.referral_code && <span style={{ color: '#10b981' }}>Ref Code: {lead.referral_code}</span>}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <select
+                  value={lead.status}
+                  onChange={(e) => handleUpdateStatus(lead.id, e.target.value)}
+                  style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.8rem' }}
+                >
+                  <option value="New">New</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Meeting Booked">Meeting Booked</option>
+                  <option value="Converted">Converted</option>
+                  <option value="Not Interested">Not Interested</option>
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlatformSettingsTab({ addToast }) {
+  const [telegramChatId, setTelegramChatId] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('platform_settings')
+        .select('setting_value')
+        .eq('setting_key', 'owner_telegram_chat_id')
+        .single();
+
+      if (data) {
+        setTelegramChatId(data.setting_value);
+      }
+    } catch (err) {
+      console.log('No Telegram Chat ID configured yet.');
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('platform_settings')
+        .upsert({
+          setting_key: 'owner_telegram_chat_id',
+          setting_value: telegramChatId.trim(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'setting_key' });
+
+      if (error) throw error;
+      addToast('Telegram Chat ID saved successfully!', 'success');
+    } catch (err) {
+      addToast('Failed to save settings', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '600px' }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.5rem' }}>Platform & Notification Settings</h2>
+      <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '2rem' }}>Configure automated alerts and system integrations.</p>
+
+      <form onSubmit={handleSaveSettings} className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div>
+          <label style={{ display: 'block', color: '#D4AF37', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.4rem' }}>Owner / Team Telegram Chat ID</label>
+          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.75rem 0', lineHeight: '1.4' }}>
+            New leads captured by LeadBot on project pages will be dispatched to this Telegram Chat ID instantly.
+          </p>
+          <input
+            type="text"
+            placeholder="e.g. 123456789 or -100123456789"
+            value={telegramChatId}
+            onChange={(e) => setTelegramChatId(e.target.value)}
+            className="form-input"
+          />
+        </div>
+
+        <button type="submit" disabled={saving} className="btn-gold" style={{ justifyContent: 'center', padding: '0.8rem' }}>
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </form>
+    </div>
+  );
 }

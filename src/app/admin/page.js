@@ -15,6 +15,8 @@ import { useToast } from '../../components/Toast';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import CommandCenterTab from './tabs/CommandCenterTab';
+import DealPipelineTab from './tabs/DealPipelineTab';
+import BusinessRegistryTab from './tabs/BusinessRegistryTab';
 
 const kanbanStages = [
   { id: 'Origination', title: '1. Origination & Pitch Review' },
@@ -1995,320 +1997,37 @@ export default function AdminPortal() {
         {/* TAB 2: DEAL PIPELINE (kanban) */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'kanban' && (
-          <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
-            {/* VIEW MODE TOGGLE */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', background: '#0f172a', padding: '0.3rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <button 
-                  onClick={() => setPipelineView('kanban')} 
-                  style={{ background: pipelineView === 'kanban' ? '#D4AF37' : 'transparent', color: pipelineView === 'kanban' ? '#000' : '#94a3b8', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
-                >
-                  Kanban View
-                </button>
-                <button 
-                  onClick={() => setPipelineView('table')} 
-                  style={{ background: pipelineView === 'table' ? '#D4AF37' : 'transparent', color: pipelineView === 'table' ? '#000' : '#94a3b8', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
-                >
-                  Table View
-                </button>
-              </div>
-
-              <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Total Active Pipeline Projects: <strong>{projects.length}</strong></span>
-            </div>
-
-            {/* KANBAN BOARD */}
-            {pipelineView === 'kanban' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', alignItems: 'start' }}>
-                {kanbanStages.map((stage) => {
-                  const stageProjects = projects.filter(p => p.status === stage.id);
-                  return (
-                    <div key={stage.id} style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '14px', padding: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.6rem' }}>
-                        <h4 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#D4AF37', margin: 0 }}>{stage.title}</h4>
-                        <span style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '700' }}>
-                          {stageProjects.length}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {stageProjects.length === 0 ? (
-                          <div style={{ padding: '1.5rem 0.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>No projects in stage</div>
-                        ) : (
-                          stageProjects.map((p) => {
-                            const feeSpread = Number(p.target_raise_bdt) * 0.05;
-                            const raised = Number(p.amount_raised_bdt || 0);
-                            const target = Number(p.target_raise_bdt || 1);
-                            const pct = Math.min(100, Math.round((raised / target) * 100));
-
-                            // Per-project investors count
-                            const projInvsCount = activeInvestments.filter(i => i.project_id === p.id).length;
-
-                            // Next stage logic
-                            let nextStage = null;
-                            if (p.status === 'Origination') nextStage = 'Diligence';
-                            else if (p.status === 'Diligence') nextStage = 'Funding';
-                            else if (p.status === 'Funding') nextStage = 'Active';
-                            else if (p.status === 'Active') nextStage = 'Closed';
-
-                            return (
-                              <div key={p.id} className="glass-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 'bold' }}>{p.businesses?.brand_name || 'GRO10X Hub'}</span>
-                                    {p.show_on_showcase && <span style={{ fontSize: '0.6rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>Live</span>}
-                                  </div>
-                                  <p style={{ fontWeight: '700', margin: '0.1rem 0 0.2rem 0', fontSize: '0.9rem', color: '#f8fafc' }}>{p.project_title}</p>
-                                  {p.location_address && (
-                                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                                      <MapPin size={12} style={{ color: '#D4AF37' }} /> {p.location_address}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div style={{ background: 'rgba(7,10,20,0.8)', padding: '0.6rem', borderRadius: '8px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: '#94a3b8' }}>CapEx:</span>
-                                    <span style={{ fontWeight: '700' }}>{formatCurrency(p.target_raise_bdt, currency)}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: '#94a3b8' }}>Raised:</span>
-                                    <span style={{ color: '#10b981', fontWeight: '700' }}>{pct}% ({formatCurrency(raised, currency)})</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: '#94a3b8' }}>Yield Rates:</span>
-                                    <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{p.yield_option_1_rate || 10}% / {p.yield_option_2_rate || 12}% / {p.yield_option_3_rate || 35}%</span>
-                                  </div>
-                                </div>
-
-                                <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                                  <span>SPV: <strong style={{ color: p.spv_name ? '#fff' : '#ef4444' }}>{p.spv_name || 'Not Configured ⚠'}</strong></span>
-                                  <span>KAM: <strong style={{ color: '#fff' }}>{allKams.find(k => k.id === p.kam_id)?.full_name || 'Unassigned ⚠'}</strong></span>
-                                  {p.expected_close_date && <span>Close Target: <strong style={{ color: '#f59e0b' }}>{p.expected_close_date}</strong></span>}
-                                </div>
-
-                                {/* CARD ACTION BUTTONS */}
-                                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
-                                  <button 
-                                    onClick={() => handleOpenProjectModal(p)} 
-                                    style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                                  >
-                                    ✏ Edit
-                                  </button>
-
-                                  <button 
-                                    onClick={() => setSelectedProjectForInvestors(p)} 
-                                    style={{ flex: 1, background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', padding: '0.4rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                                  >
-                                    👥 ({projInvsCount})
-                                  </button>
-
-                                  {nextStage && (
-                                    <button 
-                                      onClick={() => setAdvanceModal({ open: true, project: p, targetStage: nextStage })}
-                                      style={{ flex: 1, background: '#D4AF37', color: '#000', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                                    >
-                                      → {nextStage}
-                                    </button>
-                                  )}
-                                </div>
-
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* TABLE VIEW */
-              <div className="glass-card">
-                <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8' }}>
-                      <th style={{ padding: '0.75rem' }}>Project Title</th>
-                      <th style={{ padding: '0.75rem' }}>Brand & Location</th>
-                      <th style={{ padding: '0.75rem' }}>Stage</th>
-                      <th style={{ padding: '0.75rem' }}>Target CapEx</th>
-                      <th style={{ padding: '0.75rem' }}>Amount Raised</th>
-                      <th style={{ padding: '0.75rem' }}>SPV Legal Entity</th>
-                      <th style={{ padding: '0.75rem' }}>Assigned KAM</th>
-                      <th style={{ padding: '0.75rem' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {projects.map(p => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{p.project_title}</td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <span style={{ color: '#D4AF37', fontWeight: 'bold', display: 'block' }}>{p.businesses?.brand_name || 'N/A'}</span>
-                          <span style={{ color: '#64748b', fontSize: '0.75rem' }}>{p.location_address || 'Address unlisted'}</span>
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <span style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem' }}>
-                            {p.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{formatCurrency(p.target_raise_bdt, currency)}</td>
-                        <td style={{ padding: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>{formatCurrency(p.amount_raised_bdt || 0, currency)}</td>
-                        <td style={{ padding: '0.75rem', color: p.spv_name ? '#fff' : '#ef4444' }}>{p.spv_name || 'Not Configured'}</td>
-                        <td style={{ padding: '0.75rem' }}>{allKams.find(k => k.id === p.kam_id)?.full_name || 'Unassigned'}</td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <button onClick={() => handleOpenProjectModal(p)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.34rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                            Edit Project
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-          </div>
+          <DealPipelineTab
+            projects={projects}
+            kanbanStages={kanbanStages}
+            activeInvestments={activeInvestments}
+            allKams={allKams}
+            currency={currency}
+            pipelineView={pipelineView}
+            setPipelineView={setPipelineView}
+            handleOpenProjectModal={handleOpenProjectModal}
+            setSelectedProjectForInvestors={setSelectedProjectForInvestors}
+            setAdvanceModal={setAdvanceModal}
+          />
         )}
 
         {/* ---------------------------------------------------- */}
         {/* TAB 3: BUSINESS REGISTRY (business-registry) */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'business-registry' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
-            {/* TOP BAR: SEARCH & FILTER TABS */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
-                {['All', 'New_Submission', 'KAM_Assigned', 'Diligence_Complete', 'Onboarded_To_Pipeline', 'Rejected'].map(st => (
-                  <button
-                    key={st}
-                    onClick={() => setAppFilterStatus(st)}
-                    style={{
-                      background: appFilterStatus === st ? '#D4AF37' : 'rgba(15,23,42,0.8)',
-                      color: appFilterStatus === st ? '#000' : '#94a3b8',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      padding: '0.45rem 0.9rem',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {st.replace(/_/g, ' ')}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
-                <Search size={16} style={{ color: '#64748b' }} />
-                <input 
-                  type="text"
-                  placeholder="Search brand, founder, ref code..."
-                  value={appSearchQuery}
-                  onChange={(e) => setAppSearchQuery(e.target.value)}
-                  style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', fontSize: '0.85rem' }}
-                />
-              </div>
-            </div>
-
-            {/* APPLICATIONS LIST TABLE */}
-            <div className="glass-card">
-              {cohortApplications.length === 0 ? (
-                <div style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8' }}>
-                  <Building2 size={48} style={{ color: '#D4AF37', margin: '0 auto 1rem auto', opacity: 0.6 }} />
-                  <h3>No Cohort Applications Found</h3>
-                  <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Founders applying via `/apply` will appear here in real-time.</p>
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8' }}>
-                      <th style={{ padding: '0.85rem' }}>Ref Code</th>
-                      <th style={{ padding: '0.85rem' }}>Brand & Sector</th>
-                      <th style={{ padding: '0.85rem' }}>Lead Founder</th>
-                      <th style={{ padding: '0.85rem' }}>Capital Ask</th>
-                      <th style={{ padding: '0.85rem' }}>Status</th>
-                      <th style={{ padding: '0.85rem' }}>Assigned KAM</th>
-                      <th style={{ padding: '0.85rem' }}>Health Score</th>
-                      <th style={{ padding: '0.85rem' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cohortApplications
-                      .filter(a => appFilterStatus === 'All' || a.status === appFilterStatus)
-                      .filter(a => !appSearchQuery || a.brand_name.toLowerCase().includes(appSearchQuery.toLowerCase()) || a.ref_code.toLowerCase().includes(appSearchQuery.toLowerCase()) || a.lead_founder_name.toLowerCase().includes(appSearchQuery.toLowerCase()))
-                      .map(app => (
-                        <tr key={app.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                          <td style={{ padding: '0.85rem', fontFamily: 'monospace', color: '#D4AF37', fontWeight: 'bold' }}>{app.ref_code}</td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <span style={{ fontWeight: 'bold', display: 'block', color: '#fff' }}>{app.brand_name}</span>
-                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>{app.industry_sector} ({app.outlet_count} outlets)</span>
-                          </td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <span style={{ fontWeight: '600', display: 'block' }}>{app.lead_founder_name}</span>
-                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>{app.lead_founder_phone}</span>
-                          </td>
-                          <td style={{ padding: '0.85rem', fontWeight: 'bold', color: '#10b981' }}>
-                            {formatCurrency(app.requested_funding_bdt, currency)}
-                            <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 'normal' }}>{app.preferred_funding_type}</span>
-                          </td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <span style={{
-                              background: app.status === 'Onboarded_To_Pipeline' ? 'rgba(16,185,129,0.15)' : app.status === 'Rejected' ? 'rgba(239,68,68,0.15)' : 'rgba(212,175,55,0.15)',
-                              color: app.status === 'Onboarded_To_Pipeline' ? '#10b981' : app.status === 'Rejected' ? '#ef4444' : '#D4AF37',
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold'
-                            }}>
-                              {app.status.replace(/_/g, ' ')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <select 
-                              value={app.assigned_kam_id || ''} 
-                              onChange={(e) => handleAssignKamToApp(app.id, e.target.value)}
-                              style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.3rem', borderRadius: '4px', fontSize: '0.8rem' }}
-                            >
-                              <option value="">-- Assign KAM --</option>
-                              {allKams.map(k => (
-                                <option key={k.id} value={k.id}>{k.full_name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <span style={{ fontWeight: '800', color: app.ai_health_score >= 75 ? '#10b981' : app.ai_health_score >= 50 ? '#D4AF37' : '#ef4444' }}>
-                              {app.ai_health_score || 0}/100
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <button 
-                              onClick={() => {
-                                setSelectedApplication(app);
-                                setAppDrawerSubTab('brand');
-                                setKamAuditForm({
-                                  kam_site_visit_date: app.kam_site_visit_date || '',
-                                  kam_location_score: app.kam_location_score || 4,
-                                  kam_equipment_score: app.kam_equipment_score || 4,
-                                  kam_financial_verification: app.kam_financial_verification || 'Pass',
-                                  kam_legal_doc_status: app.kam_legal_doc_status || 'Verified',
-                                  kam_notes: app.kam_notes || ''
-                                });
-                              }} 
-                              style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
-                            >
-                              Inspect Drawer
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-          </div>
+          <BusinessRegistryTab
+            cohortApplications={cohortApplications}
+            allKams={allKams}
+            currency={currency}
+            appFilterStatus={appFilterStatus}
+            setAppFilterStatus={setAppFilterStatus}
+            appSearchQuery={appSearchQuery}
+            setAppSearchQuery={setAppSearchQuery}
+            handleAssignKamToApp={handleAssignKamToApp}
+            setSelectedApplication={setSelectedApplication}
+            setAppDrawerSubTab={setAppDrawerSubTab}
+            setKamAuditForm={setKamAuditForm}
+          />
         )}
 
         {/* ---------------------------------------------------- */}

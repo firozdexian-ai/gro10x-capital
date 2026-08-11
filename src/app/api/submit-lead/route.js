@@ -1,49 +1,101 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Init Supabase admin/anon client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://teujfcjoyxzmsyoyxfcy.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../../../lib/supabase';
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, phone, investmentRange, meetingPref, sourcePage } = body;
+    const { 
+      name, 
+      phone, 
+      email, 
+      investment_range, 
+      investmentRange, 
+      notes, 
+      meetingPref, 
+      source_channel, 
+      sourcePage, 
+      referral_code 
+    } = body;
 
-    // 1. Fetch configured Telegram Chat ID from platform_settings
-    const { data: settingData } = await supabase
-      .from('platform_settings')
-      .select('setting_value')
-      .eq('setting_key', 'owner_telegram_chat_id')
-      .single();
+    const leadName = name || 'Anonymous Investor';
+    const leadPhone = phone || 'N/A';
+    const budget = investment_range || investmentRange || 'N/A';
+    const channel = source_channel || sourcePage || 'Website';
 
-    const telegramChatId = settingData?.setting_value;
+    // 1. Insert into inquiry_leads table
+    const { data: insertedLead, error: insertErr } = await supabase
+      .from('inquiry_leads')
+      .insert([{
+        name: leadName,
+        phone: leadPhone,
+        email: email || null,
+        investment_range: budget,
+        source_channel: channel,
+        status: 'New',
+        notes: notes || `Meeting Pref: ${meetingPref || 'N/A'}`,
+        referral_code: referral_code || null
+      }])
+      .select();
 
-    // If Telegram Chat ID is configured, dispatch notification
-    if (telegramChatId) {
-      const botToken = process.env.TELEGRAM_BOT_TOKEN || '7891234567:AAFakeTokenForGRO10XBotAlerts'; // Fallback token format
-      
-      const messageText = `🔔 *New GRO10X Investment Lead*\n\n` +
-        `👤 *Name:* ${name}\n` +
-        `📱 *Phone:* ${phone}\n` +
-        `💰 *Budget Range:* ${investmentRange || 'N/A'}\n` +
-        `📍 *Preference:* ${meetingPref || 'Online Call'}\n` +
-        `🌐 *Source:* ${sourcePage || 'Website'}\n` +
-        `🕐 *Time:* ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}`;
+    if (insertErr) console.error('Error inserting inquiry lead:', insertErr);
 
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: telegramChatId,
-          text: messageText,
-          parse_mode: 'Markdown'
-        })
-      }).catch(err => console.error('Telegram Bot API call error:', err));
+    // 2. If referral code is provided, bridge lead into promoter_leads table
+    if (referral_code) {
+      const { data: promoter } = await supabase
+        .from('promoters')
+        .select('id')
+        .eq('referral_code', referral_code)
+        .maybeSingle();
+
+      if (promoter) {
+        await supabase.from('promoter_leads').insert([{
+          promoter_id: promoter.id,
+          name: leadName,
+          phone: leadPhone,
+          email: email || null,
+          category: 'Referral Prospect',
+          interest: budget,
+          status: 'New Lead'
+        }]);
+      }
     }
 
-    return NextResponse.json({ success: true, message: 'Lead recorded and notification sent' });
+    // 3. Dispatch real-time Telegram alert to Admins via @gro10xmanbot
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const alertTitle = `🎯 New Investor Inquiry (${leadName})`;
+    const alertMsg = `<b>Phone:</b> <code>${leadPhone}</code>\n<b>Budget:</b> ${budget}\n<b>Channel:</b> ${channel}\n${referral_code ? `<b>Ref Code:</b> ${referral_code}` : ''}`;
+
+    // Send push alert to all connected admin chat IDs
+    const botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN;
+    if (botToken) {
+      const { data: admins } = await supabase
+        .from('team')
+        .select('telegram_chat_id')
+        .in('team_type', ['admin', 'manager'])
+        .not('telegram_chat_id', 'is', null);
+
+      if (admins && admins.length > 0) {
+        const payloadText = `🚨 <b>GRO10X Platform Alert</b>\n\n📌 <b>${alertTitle}</b>\n${alertMsg}`;
+        for (const admin of admins) {
+          if (admin.telegram_chat_id) {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: admin.telegram_chat_id,
+                text: payloadText,
+                parse_mode: 'HTML',
+                reply_markup: {
+                  inline_keyboard: [[{ text: '🌐 View Lead CRM', url: `${appUrl}/admin` }]]
+                }
+              })
+            }).catch(e => console.error('Admin push error:', e));
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, lead: insertedLead?.[0] || null });
   } catch (err) {
     console.error('Submit Lead API error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

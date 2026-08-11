@@ -300,7 +300,10 @@ function AuthContent() {
 
       setSuccessMsg('✓ Permanent 4-Digit Security PIN set! Redirecting to GRO10X OS...');
       setTimeout(() => {
-        router.push('/admin');
+        const userRole = verifiedUserInfo?.role;
+        if (userRole === 'promoter') router.push('/promoter');
+        else if (userRole === 'kam') router.push('/kam-dashboard');
+        else router.push('/admin');
       }, 1200);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to update PIN.');

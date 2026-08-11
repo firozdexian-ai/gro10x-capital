@@ -271,6 +271,12 @@ export default function BotManagementTab({ currency, addToast }) {
         >
           PIN & Web Security Logs ({authPins.length})
         </button>
+        <button 
+          onClick={() => setBotSubTab('commands')}
+          style={{ background: 'transparent', border: 'none', borderBottom: botSubTab === 'commands' ? '2px solid #D4AF37' : '2px solid transparent', color: botSubTab === 'commands' ? '#D4AF37' : '#94a3b8', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
+        >
+          Commands & Mini App Matrix
+        </button>
       </div>
 
       {/* SUB-TAB 1: THE 3 BOTS ECOSYSTEM */}
@@ -541,6 +547,42 @@ export default function BotManagementTab({ currency, addToast }) {
         </div>
       )}
 
+      {/* SUB-TAB 4: COMMANDS & MINI APP MATRIX */}
+      {botSubTab === 'commands' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>Management Bot Command & Mini App Matrix</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Overview of active slash commands, role-based inline keyboards, and the bKash-style Mini App endpoint.</p>
+          </div>
+
+          <div className="glass-card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
+              <div>
+                <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1rem' }}>📱 GRO10X bKash-Style Mini App Dashboard</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Target Route: <code>/team-miniapp</code></div>
+              </div>
+              <a href="/team-miniapp" target="_blank" rel="noreferrer" className="btn-gold" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', textDecoration: 'none' }}>
+                Launch Preview ↗
+              </a>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', textAlign: 'center' }}>
+              <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '0.9rem' }}>🔴 Admin Suite</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.3rem' }}>/kpis, /alerts, /leads, /payouts, /broadcast</div>
+              </div>
+              <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '0.9rem' }}>🟡 KAM Suite</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.3rem' }}>/portfolio, /tickets</div>
+              </div>
+              <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.9rem' }}>🟢 Promoter Suite</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.3rem' }}>/mycode, /tier, /earnings, /survey, /payout</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

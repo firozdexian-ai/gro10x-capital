@@ -87,15 +87,31 @@ export async function POST(request) {
     }
 
     // -----------------------------------------------------------
-    // 2. HANDLE TEXT MESSAGES & CONTACT SHARING
+    // 2. HANDLE TEXT MESSAGES, CONTACT SHARING & WEBAPP DATA
     // -----------------------------------------------------------
     const message = body.message || {};
     const chat = message.chat || {};
     const text = (message.text || '').trim();
     const contact = message.contact || null;
+    const webAppData = message.web_app_data || null;
     const chatId = chat.id;
 
     if (!chatId) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // A) Handle WebApp sendData payloads
+    if (webAppData && webAppData.data) {
+      const dataStr = webAppData.data;
+      if (dataStr.startsWith('pin_issued:')) {
+        const pinCode = dataStr.split(':')[1];
+        await sendTelegramMessage(botToken, chatId, `🔑 <b>New Web Access PIN Issued!</b>\n\nPIN Code: <code>${pinCode}</code>\n<i>Valid for 15 minutes.</i>`);
+      } else if (dataStr.startsWith('survey_complete:')) {
+        await sendTelegramMessage(botToken, chatId, `🎉 <b>Investor Survey Logged!</b>\n\nYour prospect has been saved to the CRM pipeline. Your managing partner has been notified.`);
+      } else if (dataStr.startsWith('payout_approved:')) {
+        const pid = dataStr.split(':')[1];
+        await sendTelegramMessage(botToken, chatId, `✅ <b>Commission Payout Cleared!</b>\nPayout #${pid.slice(0,6)} has been marked as cleared.`);
+      }
       return NextResponse.json({ ok: true });
     }
 

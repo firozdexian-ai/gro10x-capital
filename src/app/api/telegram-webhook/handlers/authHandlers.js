@@ -71,9 +71,14 @@ export async function answerCallbackQuery(botToken, callbackQueryId, text = '') 
 
 // Generate Role-Specific Inline Keyboard
 export function getRoleMenuKeyboard(role, appUrl) {
+  const miniAppUrl = `${appUrl}/team-miniapp`;
+
   if (role === 'admin' || role === 'manager') {
     return {
       inline_keyboard: [
+        [
+          { text: '💼 Open GRO10X Mini App ↗', web_app: { url: miniAppUrl } }
+        ],
         [
           { text: '📊 Live KPIs', callback_data: 'cmd_kpis' },
           { text: '🔔 Action Alerts', callback_data: 'cmd_alerts' }
@@ -84,7 +89,7 @@ export function getRoleMenuKeyboard(role, appUrl) {
         ],
         [
           { text: '🔑 New Web PIN', callback_data: 'cmd_pin' },
-          { text: '🌐 Open Admin Panel', url: `${appUrl}/admin` }
+          { text: '🌐 Admin Panel', url: `${appUrl}/admin` }
         ]
       ]
     };
@@ -93,6 +98,9 @@ export function getRoleMenuKeyboard(role, appUrl) {
   if (role === 'kam') {
     return {
       inline_keyboard: [
+        [
+          { text: '💼 Open GRO10X Mini App ↗', web_app: { url: miniAppUrl } }
+        ],
         [
           { text: '📁 My Portfolio', callback_data: 'cmd_portfolio' },
           { text: '🎫 Cash Tickets', callback_data: 'cmd_tickets' }
@@ -109,7 +117,10 @@ export function getRoleMenuKeyboard(role, appUrl) {
   return {
     inline_keyboard: [
       [
-        { text: '🎯 My Referral Code', callback_data: 'cmd_mycode' },
+        { text: '💼 Open GRO10X Mini App ↗', web_app: { url: miniAppUrl } }
+      ],
+      [
+        { text: '🎯 Referral Code', callback_data: 'cmd_mycode' },
         { text: '🏆 Tier Progress', callback_data: 'cmd_tier' }
       ],
       [
@@ -117,8 +128,7 @@ export function getRoleMenuKeyboard(role, appUrl) {
         { text: '💳 Request Payout', callback_data: 'cmd_payout' }
       ],
       [
-        { text: '📋 Log Investor Survey', callback_data: 'cmd_survey' },
-        { text: '🌐 Promoter CRM', url: `${appUrl}/promoter` }
+        { text: '📋 Log Investor Survey', callback_data: 'cmd_survey' }
       ]
     ]
   };

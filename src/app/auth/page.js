@@ -303,6 +303,7 @@ function AuthContent() {
         const userRole = verifiedUserInfo?.role;
         if (userRole === 'promoter') router.push('/promoter');
         else if (userRole === 'kam') router.push('/kam-dashboard');
+        else if (userRole === 'investor') router.push('/investor-onboard');
         else router.push('/admin');
       }, 1200);
     } catch (err) {

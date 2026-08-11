@@ -25,6 +25,15 @@ import {
   handlePayoutCommand, 
   handleSurveyCommand 
 } from './handlers/promoterHandlers';
+import {
+  handleInvestorStart,
+  handleInvestorContact,
+  handleInvestorPortfolio,
+  handleInvestorYields,
+  handleInvestorKyc,
+  handleInvestorDocuments,
+  handleInvestorHelp
+} from './handlers/investorHandlers';
 
 export async function POST(request) {
   try {
@@ -49,9 +58,60 @@ export async function POST(request) {
     const body = await request.json();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    // -----------------------------------------------------------
+    // ─── INVESTOR BOT ──────────────────────────────────────────────────────────
+    if (botKey === 'investor') {
+      const message = body.message || {};
+      const chat = message.chat || {};
+      const text = (message.text || '').trim();
+      const contact = message.contact || null;
+      const chatId = chat.id;
+
+      if (!chatId) return NextResponse.json({ ok: true });
+
+      if (text.startsWith('/start')) {
+        const payload = text.replace('/start', '').trim();
+        await handleInvestorStart(botToken, chatId, payload, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (contact && contact.phone_number) {
+        await handleInvestorContact(botToken, chatId, contact, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/portfolio' || text === '/holdings') {
+        await handleInvestorPortfolio(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/yields' || text === '/dividends') {
+        await handleInvestorYields(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/kyc' || text === '/verify') {
+        await handleInvestorKyc(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/documents' || text === '/docs') {
+        await handleInvestorDocuments(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/help') {
+        await handleInvestorHelp(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Default investor fallback
+      await handleInvestorHelp(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // ─── TEAM / MANAGEMENT BOT (existing logic) ────────────────────────────────
+
     // 1. HANDLE CALLBACK QUERIES (INLINE KEYBOARD BUTTON PRESSES)
-    // -----------------------------------------------------------
     if (body.callback_query) {
       const cb = body.callback_query;
       const callbackData = cb.data || '';
@@ -86,9 +146,7 @@ export async function POST(request) {
       return NextResponse.json({ ok: true });
     }
 
-    // -----------------------------------------------------------
     // 2. HANDLE TEXT MESSAGES, CONTACT SHARING & WEBAPP DATA
-    // -----------------------------------------------------------
     const message = body.message || {};
     const chat = message.chat || {};
     const text = (message.text || '').trim();

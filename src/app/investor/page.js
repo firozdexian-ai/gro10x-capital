@@ -257,13 +257,22 @@ export default function InvestorPortal() {
 
     setIsUploading(true);
     try {
-      // Since local Supabase Storage might not be configured, we will mock the file upload
-      // and just use a placeholder URL, but the table insertion will be real.
-      // In a real environment, you'd use supabase.storage.from('payment-proofs').upload(...)
-      
+      // Real Supabase Storage upload
       const fileExt = screenshotFile.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const fakeUrl = `https://mock-storage.gro10x.com/payment-proofs/${fileName}`;
+      const fileName = `payment-proofs/${user.id}-${Date.now()}.${fileExt}`;
+      let screenshotUrl = null;
+
+      const { data: uploadData, error: uploadErr } = await supabase.storage
+        .from('public-docs')
+        .upload(fileName, screenshotFile);
+
+      if (uploadErr) {
+        console.warn('Storage upload fallback:', uploadErr.message);
+        // Graceful fallback — still record with placeholder URL
+        screenshotUrl = `payment-proof-pending:${Date.now()}`;
+      } else {
+        screenshotUrl = supabase.storage.from('public-docs').getPublicUrl(fileName).data.publicUrl;
+      }
 
       const { error: insertErr } = await supabase
         .from('payment_submissions')
@@ -271,7 +280,7 @@ export default function InvestorPortal() {
           booking_id: uploadBookingId,
           transaction_id: transactionId,
           payment_method: paymentMethod,
-          screenshot_url: fakeUrl
+          screenshot_url: screenshotUrl
         }]);
 
       if (insertErr) throw insertErr;
@@ -313,15 +322,26 @@ export default function InvestorPortal() {
 
     setIsSubmittingKyc(true);
     try {
-      // Mock File Uploads
+      // Real Supabase Storage upload for NID
       let frontUrl = null;
       let backUrl = null;
-      
-      if (level === 2) {
-        frontUrl = `https://mock-storage.gro10x.com/kyc/${user.id}-front.jpg`;
-        backUrl = `https://mock-storage.gro10x.com/kyc/${user.id}-back.jpg`;
+
+      if (level === 2 && nidFront && nidBack) {
+        const frontPath = `kyc/${investorDbId}/nid-front-${Date.now()}.${nidFront.name.split('.').pop()}`;
+        const backPath = `kyc/${investorDbId}/nid-back-${Date.now()}.${nidBack.name.split('.').pop()}`;
+
+        const [{ data: fData, error: fErr }, { data: bData, error: bErr }] = await Promise.all([
+          supabase.storage.from('public-docs').upload(frontPath, nidFront),
+          supabase.storage.from('public-docs').upload(backPath, nidBack)
+        ]);
+
+        if (fErr) console.warn('NID front upload error:', fErr.message);
+        if (bErr) console.warn('NID back upload error:', bErr.message);
+
+        frontUrl = fData ? supabase.storage.from('public-docs').getPublicUrl(frontPath).data.publicUrl : `kyc-front-pending:${Date.now()}`;
+        backUrl = bData ? supabase.storage.from('public-docs').getPublicUrl(backPath).data.publicUrl : `kyc-back-pending:${Date.now()}`;
       }
-      
+
       const { error } = await supabase
         .from('kyc_submissions')
         .insert([{
@@ -332,19 +352,19 @@ export default function InvestorPortal() {
           source_of_funds: level === 3 ? sourceOfFunds : null,
           status: 'Pending'
         }]);
-        
+
       if (error) throw error;
-      
+
       addToast(`Level ${level} Verification Submitted. Awaiting Admin Clearance.`, 'success');
       setActiveKycForm(null);
       setNidFront(null);
       setNidBack(null);
       setSourceOfFunds('');
-      
+
     } catch (err) {
       console.error(err);
       addToast('Failed to submit KYC data.', 'error');
-} finally {
+    } finally {
       setIsSubmittingKyc(false);
     }
   };

@@ -9,8 +9,8 @@ export async function POST(request) {
     }
 
     let botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN;
-    if (botKey === 'investor') botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN;
-    if (botKey === 'client') botToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
+    if (bot_key === 'investor') botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN;
+    if (bot_key === 'client') botToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
 
     if (!botToken) {
       return NextResponse.json({ ok: false, error: 'Bot token not configured' }, { status: 500 });

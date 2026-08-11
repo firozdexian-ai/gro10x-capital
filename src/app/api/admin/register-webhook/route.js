@@ -5,15 +5,15 @@ export async function POST(request) {
     const { bot_key = 'team' } = await request.json();
 
     let botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN;
-    if (botKey === 'investor') botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN;
-    if (botKey === 'client') botToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
+    if (bot_key === 'investor') botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN;
+    if (bot_key === 'client') botToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
 
     if (!botToken) {
       return NextResponse.json({ error: `Bot token for '${bot_key}' is not set in environment variables.` }, { status: 400 });
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const webhookUrl = `${appUrl}/api/telegram-webhook?bot=${botKey}`;
+    const webhookUrl = `${appUrl}/api/telegram-webhook?bot=${bot_key}`;
 
     const tgUrl = `https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}`;
     

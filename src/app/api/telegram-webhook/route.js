@@ -1,69 +1,94 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
+import { 
+  handleStartCommand, 
+  handleContactVerification, 
+  handlePinCommand,
+  sendTelegramMessage,
+  answerCallbackQuery
+} from './handlers/authHandlers';
+import { 
+  handleKpisCommand, 
+  handleAlertsCommand, 
+  handleLeadsCommand, 
+  handlePayoutsCommand, 
+  handleBroadcastCommand 
+} from './handlers/adminHandlers';
+import { 
+  handlePortfolioCommand, 
+  handleTicketsCommand 
+} from './handlers/kamHandlers';
+import { 
+  handleMyCodeCommand, 
+  handleTierCommand, 
+  handleEarningsCommand, 
+  handlePayoutCommand, 
+  handleSurveyCommand 
+} from './handlers/promoterHandlers';
 
-// Helper to normalise Bangladesh phone numbers for clean DB matching
-function normalisePhone(phone) {
-  if (!phone) return '';
-  let cleaned = phone.replace(/[\s\-\+\(\)]/g, '');
-  if (cleaned.startsWith('880')) {
-    cleaned = '0' + cleaned.slice(3);
-  }
-  return cleaned;
-}
-
-// Format team types nicely
-function formatTeamType(teamType, designation) {
-  if (designation) return designation;
-  switch (teamType) {
-    case 'admin': return 'Platform Administrator';
-    case 'manager': return 'Operations Manager';
-    case 'kam': return 'Key Account Manager (KAM)';
-    case 'promoter': return 'Growth Promoter';
-    case 'support_backops': return 'Support & BackOps';
-    default: return 'Team Member';
-  }
-}
-
-// Map team_type to user_roles
-function mapTeamTypeToRole(teamType) {
-  if (teamType === 'promoter') return 'promoter';
-  return 'admin';
-}
-
-// Send message via Telegram Bot API
-async function sendTelegramMessage(botToken, chatId, text, replyMarkup = null) {
-  if (!botToken) return;
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  const payload = {
-    chat_id: chatId,
-    text: text,
-    parse_mode: 'HTML',
-    ...(replyMarkup && { reply_markup: replyMarkup })
-  };
-
-  try {
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-  } catch (err) {
-    console.error('Failed to send Telegram message:', err);
-  }
-}
-
-// Telegram Webhook Handler (POST)
 export async function POST(request) {
   try {
     const urlObj = new URL(request.url);
     const botKey = urlObj.searchParams.get('bot') || 'team';
 
-    // Select token
+    // Verify secret token if configured
+    const secretHeader = request.headers.get('x-telegram-bot-api-secret-token');
+    const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (expectedSecret && secretHeader !== expectedSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     let botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN;
     if (botKey === 'investor') botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN;
     if (botKey === 'client') botToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
 
+    if (!botToken) {
+      return NextResponse.json({ ok: true });
+    }
+
     const body = await request.json();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+    // -----------------------------------------------------------
+    // 1. HANDLE CALLBACK QUERIES (INLINE KEYBOARD BUTTON PRESSES)
+    // -----------------------------------------------------------
+    if (body.callback_query) {
+      const cb = body.callback_query;
+      const callbackData = cb.data || '';
+      const chatId = cb.message?.chat?.id;
+
+      if (chatId) {
+        await answerCallbackQuery(botToken, cb.id);
+
+        if (callbackData === 'cmd_kpis') await handleKpisCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_alerts') await handleAlertsCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_leads') await handleLeadsCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_payouts') await handlePayoutsCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_portfolio') await handlePortfolioCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_tickets') await handleTicketsCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_mycode') await handleMyCodeCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_tier') await handleTierCommand(botToken, chatId);
+        else if (callbackData === 'cmd_earnings') await handleEarningsCommand(botToken, chatId);
+        else if (callbackData === 'cmd_payout') await handlePayoutCommand(botToken, chatId);
+        else if (callbackData === 'cmd_survey') await handleSurveyCommand(botToken, chatId);
+        else if (callbackData === 'cmd_pin') await handlePinCommand(botToken, chatId, appUrl);
+        else if (callbackData.startsWith('approve_payout:')) {
+          const payoutId = callbackData.split(':')[1];
+          await supabase.from('payout_requests').update({ status: 'Cleared' }).eq('id', payoutId);
+          await sendTelegramMessage(botToken, chatId, `✅ Commission Payout #${payoutId.slice(0, 6)} marked as Cleared!`);
+        } else if (callbackData.startsWith('reject_payout:')) {
+          const payoutId = callbackData.split(':')[1];
+          await supabase.from('payout_requests').update({ status: 'Rejected' }).eq('id', payoutId);
+          await sendTelegramMessage(botToken, chatId, `❌ Commission Payout #${payoutId.slice(0, 6)} Rejected.`);
+        }
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    // -----------------------------------------------------------
+    // 2. HANDLE TEXT MESSAGES & CONTACT SHARING
+    // -----------------------------------------------------------
     const message = body.message || {};
     const chat = message.chat || {};
     const text = (message.text || '').trim();
@@ -74,114 +99,99 @@ export async function POST(request) {
       return NextResponse.json({ ok: true });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-    // 1. HANDLE /start OR REQUEST FOR CONTACT
+    // A) /start Command
     if (text.startsWith('/start')) {
-      const welcomeText = `👋 <b>Welcome to GRO10X OS!</b>\n\nTo verify your identity and receive your 4-digit temporary web access PIN, please tap the button below to share your registered phone number.`;
-      
-      const replyMarkup = {
-        keyboard: [[{ text: '📱 Share Phone Number', request_contact: true }]],
-        resize_keyboard: true,
-        one_time_keyboard: true
-      };
-
-      await sendTelegramMessage(botToken, chatId, welcomeText, replyMarkup);
+      await handleStartCommand(botToken, chatId);
       return NextResponse.json({ ok: true });
     }
 
-    // 2. HANDLE CONTACT SHARING
+    // B) Contact Sharing Verification
     if (contact && contact.phone_number) {
-      const rawPhone = contact.phone_number;
-      const cleanPhone = normalisePhone(rawPhone);
-
-      let matchedUser = null;
-      let userRole = 'admin';
-
-      // A) Check public.team (Unified Internal Stakeholders)
-      const { data: teamMembers } = await supabase.from('team').select('*');
-      if (teamMembers && teamMembers.length > 0) {
-        const found = teamMembers.find(t => normalisePhone(t.phone) === cleanPhone);
-        if (found) {
-          matchedUser = {
-            name: found.full_name,
-            title: formatTeamType(found.team_type, found.designation),
-            email: found.email,
-            phone: found.phone,
-            id: found.id,
-            table: 'team',
-            teamType: found.team_type
-          };
-          userRole = mapTeamTypeToRole(found.team_type);
-        }
-      }
-
-      // B) Check investors table if not found (For Investor Bot)
-      if (!matchedUser) {
-        const { data: invs } = await supabase.from('investors').select('*');
-        if (invs && invs.length > 0) {
-          const found = invs.find(i => normalisePhone(i.phone) === cleanPhone);
-          if (found) {
-            matchedUser = {
-              name: found.alias_name || found.full_name,
-              title: 'Accredited Investor',
-              email: found.email,
-              phone: found.phone,
-              id: found.id,
-              table: 'investors',
-              teamType: 'investor'
-            };
-            userRole = 'investor';
-          }
-        }
-      }
-
-      // IF USER FOUND
-      if (matchedUser) {
-        // Generate 4-digit PIN
-        const tempPin = Math.floor(1000 + Math.random() * 9000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
-
-        // Store PIN
-        await supabase.from('telegram_auth_pins').insert([{
-          phone_number: matchedUser.phone || cleanPhone,
-          telegram_chat_id: String(chatId),
-          user_role: userRole,
-          temp_pin: tempPin,
-          pin_expires_at: expiresAt,
-          is_verified: false,
-          linked_entity_id: matchedUser.id
-        }]);
-
-        // Update Telegram Chat ID on team or investors table
-        if (matchedUser.table === 'team') {
-          await supabase.from('team').update({ telegram_chat_id: String(chatId) }).eq('id', matchedUser.id);
-        } else if (matchedUser.table === 'investors') {
-          await supabase.from('investors').update({ telegram_chat_id: String(chatId) }).eq('id', matchedUser.id);
-        }
-
-        const identifier = matchedUser.email || matchedUser.phone;
-        const onboardUrl = `${appUrl}/auth?onboard=1&id=${encodeURIComponent(identifier)}`;
-
-        const successText = `Welcome <b>${matchedUser.name}</b> 👋\n<b>${matchedUser.title}</b> | GRO10X OS\n\nI am your Management AI Colleague 🤖\n\nTo complete your system registration and set up your web access, visit:\n🔗 <a href="${onboardUrl}">${onboardUrl}</a>\n\n🔑 <b>Temporary 4-Digit PIN:</b> <code>${tempPin}</code>\n\n<i>(This PIN expires in 15 minutes)</i>`;
-
-        // Hide custom keyboard
-        const removeKeyboard = { remove_keyboard: true };
-
-        await sendTelegramMessage(botToken, chatId, successText, removeKeyboard);
-        return NextResponse.json({ ok: true });
-      } else {
-        // NOT FOUND
-        const notFoundText = `⚠️ <b>Verification Failed</b>\n\nThe phone number <code>${rawPhone}</code> is not registered in GRO10X OS.\n\nPlease contact your platform administrator to pre-register your account details first.`;
-        const removeKeyboard = { remove_keyboard: true };
-
-        await sendTelegramMessage(botToken, chatId, notFoundText, removeKeyboard);
-        return NextResponse.json({ ok: true });
-      }
+      await handleContactVerification(botToken, chatId, contact, appUrl);
+      return NextResponse.json({ ok: true });
     }
 
-    // Default response for other messages
-    const defaultText = `🤖 <b>GRO10X OS Bot Command Center</b>\n\nType /start to initiate identity verification or request a 4-digit web access PIN.`;
+    // C) /pin Command
+    if (text === '/pin') {
+      await handlePinCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // D) /kpis Command
+    if (text === '/kpis') {
+      await handleKpisCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // E) /alerts Command
+    if (text === '/alerts') {
+      await handleAlertsCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // F) /leads Command
+    if (text === '/leads') {
+      await handleLeadsCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // G) /payouts Command
+    if (text === '/payouts') {
+      await handlePayoutsCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // H) /broadcast Command
+    if (text.startsWith('/broadcast')) {
+      const msg = text.replace('/broadcast', '').trim();
+      await handleBroadcastCommand(botToken, chatId, msg);
+      return NextResponse.json({ ok: true });
+    }
+
+    // I) /portfolio Command
+    if (text === '/portfolio') {
+      await handlePortfolioCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // J) /tickets Command
+    if (text === '/tickets') {
+      await handleTicketsCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // K) /mycode Command
+    if (text === '/mycode') {
+      await handleMyCodeCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // L) /tier Command
+    if (text === '/tier') {
+      await handleTierCommand(botToken, chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // M) /earnings Command
+    if (text === '/earnings') {
+      await handleEarningsCommand(botToken, chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // N) /survey Command
+    if (text === '/survey') {
+      await handleSurveyCommand(botToken, chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // O) /payout Command
+    if (text === '/payout') {
+      await handlePayoutCommand(botToken, chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Fallback default response
+    const defaultText = `🤖 <b>GRO10X Management AI Colleague</b>\n\nType /start to verify identity or /pin for a quick web access code.\nAvailable commands: /kpis, /alerts, /leads, /payouts, /portfolio, /tickets, /mycode, /tier, /earnings, /survey`;
     await sendTelegramMessage(botToken, chatId, defaultText);
 
     return NextResponse.json({ ok: true });

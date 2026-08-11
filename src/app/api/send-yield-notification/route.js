@@ -44,7 +44,7 @@ export async function POST(request) {
       return NextResponse.json({ error: yErr.message }, { status: 500 });
     }
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
     const projectTitle = disb.funding_projects?.project_title || 'Project CapEx';
     const brandName = disb.funding_projects?.businesses?.brand_name || 'GRO10X SPV';
     const period = disb.disbursement_month || `${disb.month || ''} ${disb.year || ''}`;

@@ -37,7 +37,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Cash ticket record not found.' }, { status: 404 });
     }
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
     const chatID = ticket.investors?.telegram_chat_id;
     const investorName = ticket.investors?.requires_anonymity 
       ? ticket.investors?.alias_name 

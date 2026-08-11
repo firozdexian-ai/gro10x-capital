@@ -672,7 +672,22 @@ main {
     grid-template-columns: 1fr;
   }
 }
+/* Phase 8 Design Utilities */
+.bot-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
 
+.dir-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
 
-
-
+@media (max-width: 1024px) {
+  .bot-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

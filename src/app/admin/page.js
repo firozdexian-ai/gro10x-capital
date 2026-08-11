@@ -14,6 +14,7 @@ import { useAuth } from '../../components/AuthProvider';
 import { useToast } from '../../components/Toast';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
+import CommandCenterTab from './tabs/CommandCenterTab';
 
 const kanbanStages = [
   { id: 'Origination', title: '1. Origination & Pitch Review' },
@@ -1969,206 +1970,25 @@ export default function AdminPortal() {
         {/* TAB 1: COMMAND CENTER (dashboard) */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'dashboard' && (
-          <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            
-            {/* ZONE 1: KPI STRIP */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem' }}>
-              <div className="glass-card" style={{ padding: '1.25rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total AUM Raised</p>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#10b981', margin: 0 }}>{formatCurrency(totalAumRaised, currency)}</h3>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Active CapEx</span>
-              </div>
-
-              <div className="glass-card" style={{ padding: '1.25rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Active Investors</p>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>{activeInvestorsCount}</h3>
-                <span style={{ fontSize: '0.7rem', color: '#10b981' }}>KYC Verified</span>
-              </div>
-
-              <div className="glass-card" style={{ padding: '1.25rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Active Projects</p>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{activeProjectsCount}</h3>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>In Pipeline/Trading</span>
-              </div>
-
-              <div className="glass-card" style={{ padding: '1.25rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total Yield Disbursed</p>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#8b5cf6', margin: 0 }}>{formatCurrency(totalYieldDisbursed, currency)}</h3>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>All-Time Ledger</span>
-              </div>
-
-              <div className="glass-card" style={{ padding: '1.25rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Platform Revenue (5%)</p>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>{formatCurrency(totalFeeSpreadCaptured, currency)}</h3>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Deal Fee Spread</span>
-              </div>
-
-              <div className="glass-card" style={{ padding: '1.25rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>New Leads</p>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#ec4899', margin: 0 }}>{inquiryLeads.length}</h3>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Via LeadBot</span>
-              </div>
-            </div>
-
-            {/* ZONE 2 & 3: MAIN GRID (HEALTH GRID + PENDING ACTIONS) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr', gap: '2rem' }}>
-              
-              {/* ZONE 3: ACTIVE PROJECT HEALTH GRID */}
-              <div className="glass-card" style={{ padding: '1.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>Active Campaign Health</h3>
-                  <button onClick={() => setActiveTab('kanban')} style={{ background: 'transparent', border: 'none', color: '#D4AF37', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    View All in Pipeline <ChevronRight size={16} />
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                  {projects.slice(0, 4).map(p => {
-                    const raised = Number(p.amount_raised_bdt || 0);
-                    const target = Number(p.target_raise_bdt || 1);
-                    const pct = Math.min(100, Math.round((raised / target) * 100));
-
-                    return (
-                      <div key={p.id} style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div>
-                            <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: 'bold' }}>{p.businesses?.brand_name || 'GRO10X Hub'}</span>
-                            <h4 style={{ fontSize: '1rem', fontWeight: 'bold', margin: '0.2rem 0 0 0' }}>{p.project_title}</h4>
-                          </div>
-                          <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: p.status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(212,175,55,0.15)', color: p.status === 'Active' ? '#10b981' : '#D4AF37', fontWeight: 'bold' }}>
-                            {p.status}
-                          </span>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
-                            <span style={{ color: '#94a3b8' }}>Funding Progress</span>
-                            <span style={{ color: '#10b981', fontWeight: 'bold' }}>{pct}% ({formatCurrency(raised, currency)})</span>
-                          </div>
-                          <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #D4AF37, #10b981)' }}></div>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
-                          <span>SPV: <strong style={{ color: p.spv_name ? '#fff' : '#ef4444' }}>{p.spv_name || 'Not Configured'}</strong></span>
-                          <span>KAM: <strong style={{ color: '#fff' }}>{allKams.find(k => k.id === p.kam_id)?.full_name || 'Unassigned'}</strong></span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ZONE 2: PENDING ACTION QUEUE */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>⚡ Pending Action Alerts</h3>
-
-                <div 
-                  onClick={() => { setActiveTab('investors'); setInvestorSubTab('kyc'); }}
-                  style={{ background: pendingKycCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)', border: pendingKycCount > 0 ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <ShieldCheck style={{ color: pendingKycCount > 0 ? '#ef4444' : '#10b981' }} size={24} />
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.95rem' }}>KYC Clearance Queue</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{pendingKycCount} identity verification pending</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} style={{ color: '#64748b' }} />
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => { setActiveTab('investors'); setInvestorSubTab('payments'); }}
-                  style={{ background: pendingPaymentsCount > 0 ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)', border: pendingPaymentsCount > 0 ? '1px solid rgba(212,175,55,0.3)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <DollarSign style={{ color: pendingPaymentsCount > 0 ? '#D4AF37' : '#10b981' }} size={24} />
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.95rem' }}>Payment Clearances</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{pendingPaymentsCount} bank proof awaiting review</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} style={{ color: '#64748b' }} />
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('leads-marketing')}
-                  style={{ background: pendingLeadsCount > 0 ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)', border: pendingLeadsCount > 0 ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <MessageSquare style={{ color: pendingLeadsCount > 0 ? '#3b82f6' : '#10b981' }} size={24} />
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.95rem' }}>Inquiry Lead Queue</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{pendingLeadsCount} new website leads</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} style={{ color: '#64748b' }} />
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('cash-pipeline')}
-                  style={{ background: pendingCashTicketsCount > 0 ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.03)', border: pendingCashTicketsCount > 0 ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <ArrowUpRight style={{ color: pendingCashTicketsCount > 0 ? '#f59e0b' : '#10b981' }} size={24} />
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.95rem' }}>Cash Concierge Tickets</p>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{pendingCashTicketsCount} confidential inquiries</p>
-                      </div>
-                    </div>
-                    <ChevronRight size={18} style={{ color: '#64748b' }} />
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* ZONE 4: RECENT PLATFORM ACTIVITY FEED */}
-            <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Platform Activity Feed</h3>
-              
-              {recentNotifications.length === 0 ? (
-                <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No recent platform activity logged.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {recentNotifications.slice(0, 6).map(n => (
-                    <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#0f172a', padding: '0.85rem 1.25rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: n.type === 'success' ? '#10b981' : '#3b82f6' }}></span>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>{n.title}</p>
-                        <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>{n.message}</p>
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{new Date(n.created_at).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* QUICK ACTIONS */}
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={() => handleOpenProjectModal()} className="btn-gold" style={{ flex: 1, padding: '0.9rem', justifyContent: 'center' }}>
-                <PlusCircle size={18} /> Onboard New Project
-              </button>
-              <button onClick={() => setActiveTab('dividend')} style={{ flex: 1, background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)', padding: '0.9rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <TrendingUp size={18} /> Declare Monthly Yield
-              </button>
-              <button onClick={() => { setActiveTab('investors'); setInvestorSubTab('kyc'); }} style={{ flex: 1, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.9rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <ShieldCheck size={18} /> Review KYC Queue ({pendingKycCount})
-              </button>
-            </div>
-
-          </div>
+          <CommandCenterTab
+            totalAumRaised={totalAumRaised}
+            activeInvestorsCount={activeInvestorsCount}
+            activeProjectsCount={activeProjectsCount}
+            totalYieldDisbursed={totalYieldDisbursed}
+            totalFeeSpreadCaptured={totalFeeSpreadCaptured}
+            inquiryLeads={inquiryLeads}
+            pendingKycCount={pendingKycCount}
+            pendingPaymentsCount={pendingPaymentsCount}
+            pendingLeadsCount={pendingLeadsCount}
+            pendingCashTicketsCount={pendingCashTicketsCount}
+            projects={projects}
+            allKams={allKams}
+            recentNotifications={recentNotifications}
+            currency={currency}
+            setActiveTab={setActiveTab}
+            setInvestorSubTab={setInvestorSubTab}
+            onOpenProjectModal={() => handleOpenProjectModal()}
+          />
         )}
 
         {/* ---------------------------------------------------- */}

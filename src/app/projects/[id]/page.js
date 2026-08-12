@@ -72,6 +72,7 @@ function ProjectProfileContent() {
       }
     } catch (err) {
       console.error('Error fetching project profile:', err);
+      setProject(null);
     } finally {
       setLoading(false);
     }
@@ -392,7 +393,7 @@ function ProjectProfileContent() {
         </button>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         @media (min-width: 769px) {
           .mobile-only-sticky-bar { display: none !important; }
         }

@@ -1,143 +1,321 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Globe, LogOut, User, Menu, X } from 'lucide-react';
+import { Globe, LogOut, User, Menu, X, Search } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { CURRENCY_RATES } from '../lib/currency';
 import NotificationBell from './NotificationBell';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '../lib/supabase';
 
+// ── Role accent colours ───────────────────────────────────────────────────────
+const ROLE_COLOR = {
+  investor: '#10b981',
+  kam:      '#3b82f6',
+  promoter: '#f59e0b',
+  founder:  '#a855f7',
+  admin:    '#D4AF37',
+};
+
+// ── Per-role portal tab definitions ──────────────────────────────────────────
+const ROLE_TABS = {
+  investor: [
+    { href: '/investor',          label: 'Portfolio',    icon: '💼' },
+    { href: '/secondary-market',  label: 'Market',       icon: '🔄' },
+    { href: '/legal-contracts',   label: 'Contracts',    icon: '📜' },
+    { href: '/cash-concierge',    label: 'Concierge',    icon: '💎' },
+    { href: '/showcase',          label: 'Showcase',     icon: '⭐' },
+  ],
+  kam: [
+    { href: '/kam-dashboard',     label: 'Dashboard',   icon: '📋' },
+    { href: '/pos-sync',          label: 'POS Sync',    icon: '📊' },
+    { href: '/fraud-detection',   label: 'Fraud',       icon: '🛡️' },
+    { href: '/buildout-tracker',  label: 'Buildout',    icon: '🏗️' },
+    { href: '/showcase',          label: 'Showcase',    icon: '⭐' },
+  ],
+  promoter: [
+    { href: '/promoter',  label: 'My Hub',   icon: '🤝' },
+    { href: '/payouts',   label: 'Payouts',  icon: '💸' },
+    { href: '/showcase',  label: 'Showcase', icon: '⭐' },
+  ],
+  founder: [
+    { href: '/business',  label: 'Business Portal', icon: '🏢' },
+    { href: '/showcase',  label: 'Showcase',        icon: '⭐' },
+  ],
+};
+
+const PUBLIC_TABS = [
+  { href: '/showcase',        label: 'Showcase',        icon: '⭐' },
+  { href: '/financial-model', label: 'Financial Model', icon: '📈' },
+];
+
+// ── Pill nav link (non-admin roles) ──────────────────────────────────────────
+function PillLink({ href, icon, label, color, isActive, onClick }) {
+  const [hovered, setHovered] = useState(false);
+
+  const style = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    padding: '0.38rem 0.85rem',
+    borderRadius: '8px',
+    textDecoration: 'none',
+    fontSize: '0.84rem',
+    fontWeight: isActive ? '700' : '500',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.18s ease',
+    border: isActive
+      ? `1px solid ${color}66`
+      : hovered
+        ? '1px solid rgba(255,255,255,0.1)'
+        : '1px solid transparent',
+    background: isActive
+      ? `${color}1a`
+      : hovered
+        ? 'rgba(255,255,255,0.05)'
+        : 'transparent',
+    color: isActive ? color : hovered ? '#e2e8f0' : '#94a3b8',
+    boxShadow: isActive ? `0 0 14px ${color}20` : 'none',
+  };
+
+  return (
+    <Link
+      href={href}
+      style={style}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span style={{ fontSize: '0.9rem' }}>{icon}</span>
+      {label}
+    </Link>
+  );
+}
+
+// ── Admin global search bar ───────────────────────────────────────────────────
+function AdminSearchBar() {
+  const [query, setQuery]       = useState('');
+  const [results, setResults]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [open, setOpen]         = useState(false);
+  const router                  = useRouter();
+  const ref                     = useRef(null);
+  const debounceRef             = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const search = useCallback(async (q) => {
+    if (!q || q.length < 2) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    try {
+      const pattern = `%${q}%`;
+      const [{ data: invs }, { data: deals }, { data: leads }] = await Promise.all([
+        supabase.from('investors').select('id, alias_name, full_name, phone').or(`alias_name.ilike.${pattern},full_name.ilike.${pattern},phone.ilike.${pattern}`).limit(3),
+        supabase.from('funding_projects').select('id, project_title').ilike('project_title', pattern).limit(2),
+        supabase.from('inquiry_leads').select('id, name, phone').or(`name.ilike.${pattern},phone.ilike.${pattern}`).limit(2),
+      ]);
+
+      const combined = [
+        ...(invs  || []).map(r => ({ type: 'investor', label: r.alias_name || r.full_name, sub: r.phone || '', id: r.id, icon: '👤' })),
+        ...(deals || []).map(r => ({ type: 'deal',     label: r.project_title,              sub: 'Active Deal',   id: r.id, icon: '📊' })),
+        ...(leads || []).map(r => ({ type: 'lead',     label: r.name,                       sub: r.phone || '',   id: r.id, icon: '📥' })),
+      ];
+      setResults(combined);
+      setOpen(combined.length > 0);
+    } catch (err) {
+      console.error('Search error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(val), 280);
+  };
+
+  const handleSelect = (result) => {
+    setOpen(false);
+    setQuery('');
+    if (result.type === 'investor') router.push(`/admin?tab=investors`);
+    else if (result.type === 'deal')  router.push(`/admin?tab=pipeline`);
+    else if (result.type === 'lead')  router.push(`/admin?tab=leads`);
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flex: 1, maxWidth: '460px', margin: '0 2rem' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.5rem',
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${open ? 'rgba(212,175,55,0.35)' : 'rgba(255,255,255,0.08)'}`,
+        borderRadius: '10px',
+        padding: '0.4rem 0.9rem',
+        transition: 'border-color 0.2s',
+        boxShadow: open ? '0 0 0 3px rgba(212,175,55,0.08)' : 'none',
+      }}>
+        <Search size={15} style={{ color: loading ? '#D4AF37' : '#475569', flexShrink: 0 }} />
+        <input
+          type="text"
+          value={query}
+          onChange={handleChange}
+          onFocus={() => query.length >= 2 && setOpen(true)}
+          placeholder="Search investors, deals, leads..."
+          style={{
+            background: 'transparent', border: 'none', outline: 'none',
+            color: '#f1f5f9', fontSize: '0.85rem', width: '100%',
+            '::placeholder': { color: '#475569' }
+          }}
+        />
+        {query && (
+          <button
+            onClick={() => { setQuery(''); setResults([]); setOpen(false); }}
+            style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: 0, display: 'flex' }}
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* RESULTS DROPDOWN */}
+      {open && results.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 999,
+          background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '12px', overflow: 'hidden',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+        }}>
+          {results.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => handleSelect(r)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '0.7rem 1rem', background: 'transparent', border: 'none',
+                borderBottom: i < results.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ fontSize: '1rem' }}>{r.icon}</span>
+              <div>
+                <div style={{ color: '#f1f5f9', fontSize: '0.85rem', fontWeight: '600' }}>{r.label}</div>
+                <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{r.sub} · {r.type}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Navigation ───────────────────────────────────────────────────────────
 export default function Navigation() {
   const { user, role, signOut } = useAuth();
-  const [currency, setCurrency] = useState('BDT');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [currency, setCurrency]       = useState('BDT');
+  const [isMobileMenuOpen, setMobile] = useState(false);
+  const [isMobile, setIsMobile]       = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
-    const handleResize = () => {
+    const onResize = () => {
       setIsMobile(window.innerWidth <= 768);
-      if (window.innerWidth > 768) setIsMobileMenuOpen(false);
+      if (window.innerWidth > 768) setMobile(false);
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ── ROLE-SPECIFIC NAV LINKS ─────────────────────────────────────────────────
-  // Admin: sidebar handles full navigation — show only 2 clean shortcuts
-  // Each other role: show only their own portal links (not all roles combined)
+  const color = ROLE_COLOR[role] || '#D4AF37';
+  const tabs  = role && ROLE_TABS[role] ? ROLE_TABS[role] : (!user ? PUBLIC_TABS : null);
 
-  const adminLinks = (
-    <>
-      <Link href="/showcase" style={linkStyle('#D4AF37')} onClick={() => setIsMobileMenuOpen(false)}>
-        Showcase
-      </Link>
-      <Link href="/admin" style={activeLink(pathname === '/admin')} onClick={() => setIsMobileMenuOpen(false)}>
-        ⚡ Command Center
-      </Link>
-    </>
+  const pillNav = tabs && (
+    <nav style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+      {tabs.map(t => (
+        <PillLink
+          key={t.href}
+          href={t.href}
+          icon={t.icon}
+          label={t.label}
+          color={color}
+          isActive={pathname === t.href || (t.href !== '/' && pathname?.startsWith(t.href))}
+          onClick={() => setMobile(false)}
+        />
+      ))}
+    </nav>
   );
-
-  const investorLinks = (
-    <>
-      <Link href="/showcase"    style={linkStyle('#D4AF37')}  onClick={() => setIsMobileMenuOpen(false)}>Showcase</Link>
-      <Link href="/investor"    style={linkStyle('#10b981')}  onClick={() => setIsMobileMenuOpen(false)}>💼 Portfolio</Link>
-      <Link href="/secondary-market" style={linkStyle('#3b82f6')} onClick={() => setIsMobileMenuOpen(false)}>🔄 Secondary Market</Link>
-      <Link href="/legal-contracts"  style={linkStyle('#D4AF37')} onClick={() => setIsMobileMenuOpen(false)}>📜 Contracts</Link>
-      <Link href="/cash-concierge"   style={linkStyle('#a855f7')} onClick={() => setIsMobileMenuOpen(false)}>💎 Concierge</Link>
-    </>
-  );
-
-  const kamLinks = (
-    <>
-      <Link href="/showcase"        style={linkStyle('#D4AF37')}  onClick={() => setIsMobileMenuOpen(false)}>Showcase</Link>
-      <Link href="/kam-dashboard"   style={linkStyle('#3b82f6')}  onClick={() => setIsMobileMenuOpen(false)}>📋 Dashboard</Link>
-      <Link href="/pos-sync"        style={linkStyle('#10b981')}  onClick={() => setIsMobileMenuOpen(false)}>📊 POS Sync</Link>
-      <Link href="/fraud-detection" style={linkStyle('#ef4444')}  onClick={() => setIsMobileMenuOpen(false)}>🛡️ Fraud</Link>
-      <Link href="/buildout-tracker" style={linkStyle('#10b981')} onClick={() => setIsMobileMenuOpen(false)}>🏗️ Buildout</Link>
-    </>
-  );
-
-  const promoterLinks = (
-    <>
-      <Link href="/showcase"  style={linkStyle('#D4AF37')}  onClick={() => setIsMobileMenuOpen(false)}>Showcase</Link>
-      <Link href="/promoter"  style={linkStyle('#f59e0b')}  onClick={() => setIsMobileMenuOpen(false)}>🤝 My Hub</Link>
-      <Link href="/payouts"   style={linkStyle('#f59e0b')}  onClick={() => setIsMobileMenuOpen(false)}>💸 Payouts</Link>
-    </>
-  );
-
-  const founderLinks = (
-    <>
-      <Link href="/showcase"  style={linkStyle('#D4AF37')}  onClick={() => setIsMobileMenuOpen(false)}>Showcase</Link>
-      <Link href="/business"  style={linkStyle('#10b981')}  onClick={() => setIsMobileMenuOpen(false)}>🏢 Business Portal</Link>
-    </>
-  );
-
-  const publicLinks = (
-    <>
-      <Link href="/showcase"         style={linkStyle('#D4AF37')}  onClick={() => setIsMobileMenuOpen(false)}>Showcase</Link>
-      <Link href="/financial-model"  style={linkStyle('#a855f7')}  onClick={() => setIsMobileMenuOpen(false)}>📈 Financial Model</Link>
-    </>
-  );
-
-  const navLinks = role === 'admin'    ? adminLinks
-                 : role === 'investor' ? investorLinks
-                 : role === 'kam'      ? kamLinks
-                 : role === 'promoter' ? promoterLinks
-                 : role === 'founder'  ? founderLinks
-                 : publicLinks;
 
   return (
-    <header style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      padding: '0.75rem 2rem', 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      zIndex: 100, 
-      background: 'rgba(7, 10, 20, 0.92)', 
-      backdropFilter: 'blur(14px)', 
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-      height: '64px'
+    <header style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '0 2rem',
+      position: 'fixed',
+      top: 0, left: 0, right: 0,
+      zIndex: 100,
+      height: '62px',
+      background: 'rgba(7, 10, 20, 0.94)',
+      backdropFilter: 'blur(14px)',
+      WebkitBackdropFilter: 'blur(14px)',
+      borderBottom: '1px solid rgba(212,175,55,0.12)',
     }}>
-      {/* LOGO */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#070a14', fontWeight: '900', fontSize: '1.2rem', flexShrink: 0 }}>
-            G
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em', margin: 0, color: '#f8fafc', whiteSpace: 'nowrap' }}>
-              GRO10X <span style={{ color: '#D4AF37' }}>CAPITAL</span>
-            </h1>
-            <p style={{ fontSize: '0.65rem', color: '#64748b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              v0.4.0{role ? ` • ${role.toUpperCase()}` : ''}
-            </p>
-          </div>
-        </Link>
-      </div>
 
-      {/* NAV LINKS — desktop only, role-scoped */}
+      {/* LOGO */}
+      <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+        <div style={{
+          width: '36px', height: '36px',
+          background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)',
+          borderRadius: '9px', display: 'grid', placeItems: 'center',
+          color: '#070a14', fontWeight: '900', fontSize: '1.1rem',
+        }}>G</div>
+        <div>
+          <div style={{ fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.1 }}>
+            GRO10X <span style={{ color: '#D4AF37' }}>CAPITAL</span>
+          </div>
+          <div style={{ fontSize: '0.62rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            v0.4.0{role ? ` • ${role.toUpperCase()}` : ''}
+          </div>
+        </div>
+      </Link>
+
+      {/* CENTER — Admin gets search bar, everyone else gets pill tabs */}
       {!isMobile && (
-        <nav style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
-          {navLinks}
-        </nav>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {role === 'admin' ? (
+            <AdminSearchBar />
+          ) : (
+            pillNav
+          )}
+        </div>
       )}
 
       {/* RIGHT CONTROLS */}
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
         {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', padding: '0.3rem 0.65rem', borderRadius: '8px' }}>
-            <Globe size={14} style={{ color: '#D4AF37' }} />
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.82rem', outline: 'none' }}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
+            background: 'rgba(212,175,55,0.08)',
+            border: '1px solid rgba(212,175,55,0.2)',
+            padding: '0.28rem 0.6rem', borderRadius: '7px',
+          }}>
+            <Globe size={13} style={{ color: '#D4AF37' }} />
+            <select
+              value={currency}
+              onChange={e => setCurrency(e.target.value)}
+              style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem', outline: 'none' }}
             >
               {Object.keys(CURRENCY_RATES).map(code => (
                 <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
@@ -151,25 +329,49 @@ export default function Navigation() {
         {user && <NotificationBell />}
 
         {user ? (
-          <button 
-            onClick={signOut} 
-            style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', padding: '0.4rem 0.85rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+          <button
+            onClick={signOut}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(239,68,68,0.25)',
+              color: '#ef4444',
+              padding: '0.35rem 0.8rem',
+              borderRadius: '7px',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              fontSize: '0.8rem', whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)'; }}
           >
-            <LogOut size={13} /> {!isMobile && 'Sign Out'}
+            <LogOut size={13} />
+            {!isMobile && 'Sign Out'}
           </button>
         ) : (
-          <Link 
-            href="/auth" 
-            style={{ background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14', padding: '0.45rem 1.1rem', borderRadius: '8px', fontWeight: '800', textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+          <Link
+            href="/auth"
+            style={{
+              background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)',
+              color: '#070a14',
+              padding: '0.38rem 1rem',
+              borderRadius: '7px',
+              fontWeight: '800',
+              textDecoration: 'none',
+              fontSize: '0.82rem',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              whiteSpace: 'nowrap',
+            }}
           >
-            <User size={14} /> {!isMobile && 'Login'}
+            <User size={13} />
+            {!isMobile && 'Login'}
           </Link>
         )}
 
         {isMobile && (
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            style={{ background: 'transparent', border: 'none', color: '#f8fafc', padding: '0.5rem', cursor: 'pointer' }}
+          <button
+            onClick={() => setMobile(!isMobileMenuOpen)}
+            style={{ background: 'transparent', border: 'none', color: '#f8fafc', padding: '0.4rem', cursor: 'pointer' }}
           >
             {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -178,12 +380,20 @@ export default function Navigation() {
 
       {/* MOBILE DRAWER */}
       {isMobile && isMobileMenuOpen && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(7, 10, 20, 0.97)', backdropFilter: 'blur(16px)', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0,
+          background: 'rgba(7, 10, 20, 0.98)',
+          backdropFilter: 'blur(16px)',
+          padding: '1.25rem 1.5rem',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          {/* Mobile currency */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
             <Globe size={14} style={{ color: '#D4AF37' }} />
-            <select 
-              value={currency} 
-              onChange={(e) => setCurrency(e.target.value)}
+            <select
+              value={currency}
+              onChange={e => setCurrency(e.target.value)}
               style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', outline: 'none', width: '100%' }}
             >
               {Object.keys(CURRENCY_RATES).map(code => (
@@ -193,30 +403,36 @@ export default function Navigation() {
               ))}
             </select>
           </div>
-          {navLinks}
+
+          {/* Mobile nav tabs */}
+          {tabs && tabs.map(t => (
+            <Link
+              key={t.href}
+              href={t.href}
+              onClick={() => setMobile(false)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.6rem',
+                padding: '0.6rem 0.75rem', borderRadius: '8px',
+                textDecoration: 'none',
+                background: pathname === t.href ? `${color}18` : 'transparent',
+                border: `1px solid ${pathname === t.href ? `${color}44` : 'transparent'}`,
+                color: pathname === t.href ? color : '#94a3b8',
+                fontWeight: pathname === t.href ? '700' : '500',
+                fontSize: '0.9rem',
+              }}
+            >
+              <span>{t.icon}</span> {t.label}
+            </Link>
+          ))}
+
+          {/* Admin mobile: link to admin panel */}
+          {role === 'admin' && (
+            <Link href="/admin" onClick={() => setMobile(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '8px', textDecoration: 'none', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', fontWeight: '700', fontSize: '0.9rem' }}>
+              ⚡ Command Center
+            </Link>
+          )}
         </div>
       )}
     </header>
   );
-}
-
-function linkStyle(color) {
-  return { 
-    color: color, 
-    textDecoration: 'none', 
-    fontWeight: '600', 
-    fontSize: '0.88rem', 
-    padding: '0.4rem 0.75rem', 
-    borderRadius: '7px', 
-    whiteSpace: 'nowrap',
-    transition: 'background 0.15s'
-  };
-}
-
-function activeLink(isActive) {
-  return {
-    ...linkStyle('#D4AF37'),
-    background: isActive ? 'rgba(212,175,55,0.15)' : 'transparent',
-    border: isActive ? '1px solid rgba(212,175,55,0.3)' : '1px solid transparent',
-  };
 }

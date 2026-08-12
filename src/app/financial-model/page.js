@@ -1,13 +1,31 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Calculator, TrendingUp, PieChart, DollarSign, Percent, ShieldCheck, 
   ArrowUpRight, Globe, BarChart3, LineChart, ChevronRight, CheckCircle2, Sliders
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
+import { useAuth } from '../../components/AuthProvider';
 
 export default function FinancialModelPage() {
+  const { role, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [currency, setCurrency] = useState('BDT');
+
+  useEffect(() => {
+    if (!authLoading && role !== 'admin') {
+      router.replace('/auth');
+    }
+  }, [role, authLoading, router]);
+
+  if (authLoading || role !== 'admin') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center' }}>
+        <p style={{ color: '#D4AF37', fontWeight: 'bold' }}>Verifying Director Access...</p>
+      </div>
+    );
+  }
 
   // DCF Model Inputs
   const [initialMonthlySales, setInitialMonthlySales] = useState(3000000); // BDT 30 Lakhs

@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import {
-  Activity, Layers, Building2, Users, TrendingUp, ArrowUpRight,
+  Activity, Layers, Building2, Users, TrendingUp, ArrowUpRight, Calculator,
   Award, MessageSquare, FileText, BarChart2, Bot, Sparkles,
   LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -137,6 +137,18 @@ export default function AdminSidebar({
                 </span>
               )}
             </button>
+            <a
+              href="/financial-model"
+              target="_blank"
+              rel="noreferrer"
+              className="admin-nav-btn"
+              title="Deal Valuation & DCF Model"
+              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+            >
+              <Calculator size={18} />
+              <span className="sidebar-hide-on-collapse">Valuation Model</span>
+              <ArrowUpRight size={12} style={{ marginLeft: 'auto', opacity: 0.5 }} className="sidebar-hide-on-collapse" />
+            </a>
           </div>
         </div>
 

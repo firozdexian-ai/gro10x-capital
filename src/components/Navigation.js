@@ -46,8 +46,7 @@ const ROLE_TABS = {
 };
 
 const PUBLIC_TABS = [
-  { href: '/showcase',        label: 'Showcase',        icon: '⭐' },
-  { href: '/financial-model', label: 'Financial Model', icon: '📈' },
+  { href: '/showcase', label: 'Showcase', icon: '⭐' },
 ];
 
 // ── Pill nav link (non-admin roles) ──────────────────────────────────────────

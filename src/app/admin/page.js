@@ -460,6 +460,8 @@ export default function AdminPortal() {
         project_highlights: highlightsStr,
         cover_image_url: projectToEdit.cover_image_url || '',
         video_url: projectToEdit.youtube_url || projectToEdit.video_url || '',
+        avg_monthly_gross_sales: projectToEdit.avg_monthly_gross_sales || 0,
+        avg_monthly_net_profit: projectToEdit.avg_monthly_net_profit || 0,
         show_on_showcase: projectToEdit.show_on_showcase !== false,
         media_list: mediaData || []
       });
@@ -487,6 +489,8 @@ export default function AdminPortal() {
         project_highlights: '',
         cover_image_url: '',
         video_url: '',
+        avg_monthly_gross_sales: 0,
+        avg_monthly_net_profit: 0,
         show_on_showcase: true,
         media_list: []
       });
@@ -656,6 +660,8 @@ export default function AdminPortal() {
         project_highlights: highlightsArray,
         cover_image_url: projectForm.cover_image_url,
         youtube_url: projectForm.video_url,
+        avg_monthly_gross_sales: Number(projectForm.avg_monthly_gross_sales || 0),
+        avg_monthly_net_profit: Number(projectForm.avg_monthly_net_profit || 0),
         show_on_showcase: projectForm.show_on_showcase
       };
 
@@ -3372,6 +3378,32 @@ export default function AdminPortal() {
                       placeholder="https://www.youtube.com/watch?v=..."
                       className="form-input"
                     />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Verified Monthly Gross Sales (BDT)</label>
+                      <input 
+                        type="number" 
+                        value={projectForm.avg_monthly_gross_sales}
+                        onChange={(e) => setProjectForm({ ...projectForm, avg_monthly_gross_sales: e.target.value })}
+                        placeholder="e.g. 3160000"
+                        className="form-input"
+                      />
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Used for Investor ROI Calculator (Option 1 & 2)</span>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Verified Monthly Net Profit (BDT)</label>
+                      <input 
+                        type="number" 
+                        value={projectForm.avg_monthly_net_profit}
+                        onChange={(e) => setProjectForm({ ...projectForm, avg_monthly_net_profit: e.target.value })}
+                        placeholder="e.g. 534000"
+                        className="form-input"
+                      />
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Used for Option 3 Partnership Net Profit calculation</span>
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

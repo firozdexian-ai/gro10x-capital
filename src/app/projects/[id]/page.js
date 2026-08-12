@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
+import ROICalculator from '../../../components/ROICalculator';
 
 // Convert any YouTube URL format to embed URL
 function toEmbedUrl(url) {
@@ -208,6 +209,9 @@ function ProjectDetail() {
               💰 All distributions made <strong style={{ color: '#94a3b8' }}>monthly</strong> directly to your registered bank account.
             </p>
           </div>
+
+          {/* INTERACTIVE ROI CALCULATOR */}
+          <ROICalculator project={project} />
 
           {/* BUSINESS CREDIBILITY */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>

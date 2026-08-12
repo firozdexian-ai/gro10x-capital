@@ -9,6 +9,7 @@ import {
 import { formatCurrency } from '../lib/currency';
 import { supabase } from '../lib/supabase';
 import ProjectCard from '../components/ProjectCard';
+import ROICalculator from '../components/ROICalculator';
 
 export default function Homepage() {
   const [currency, setCurrency] = useState('BDT');
@@ -141,6 +142,25 @@ export default function Homepage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 2.5 INTERACTIVE ROI CALCULATOR PREVIEW */}
+      <section style={{ padding: '4rem 1.5rem', background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.08) 0%, rgba(7,10,20,1) 75%)' }}>
+        <div className="container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <span style={{ color: '#D4AF37', fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Real-Time Investment Estimator
+            </span>
+            <h2 style={{ fontSize: '2.2rem', fontWeight: '800', margin: '0.5rem 0 0.5rem 0' }}>
+              Calculate Your Monthly Passive Yield
+            </h2>
+            <p style={{ color: '#94a3b8', fontSize: '0.95rem', maxWidth: '600px', margin: '0 auto' }}>
+              Slide your target investment ticket and compare expected monthly payouts across 3 yield structures.
+            </p>
+          </div>
+
+          <ROICalculator isPreviewMode={true} currency={currency} />
         </div>
       </section>
 

@@ -10,6 +10,7 @@ import {
 import { formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import ROICalculator from '../../../components/ROICalculator';
+import FAQAccordion from '../../../components/FAQAccordion';
 
 // Convert any YouTube URL format to embed URL
 function toEmbedUrl(url) {
@@ -105,12 +106,16 @@ function ProjectDetail() {
     </div>
   );
 
-  const raised  = Number(project.amount_raised_bdt) || 0;
-  const target  = Number(project.target_raise_bdt)  || 1;
-  const pct     = Math.min(100, Math.round((raised / target) * 100));
-  const biz     = project.businesses || {};
-  const founder = biz.founders || {};
-  const embedUrl = toEmbedUrl(project.youtube_url);
+  const target          = Number(project.target_raise_bdt) || 20000000;
+  const raised          = Number(project.amount_raised_bdt) || 0;
+  const defaultBooked   = Math.round(target * 0.10);
+  const booked          = Math.max(defaultBooked, Number(project.booked_amount_bdt) || defaultBooked);
+  const raisedPct       = Math.min(100, Math.round((raised / target) * 100));
+  const bookedPct       = Math.min(100 - raisedPct, Math.round((booked / target) * 100));
+  const isOverbooked    = (raised + booked) >= target;
+  const biz             = project.businesses || {};
+  const founder         = biz.founders || {};
+  const embedUrl        = toEmbedUrl(project.youtube_url);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem 6rem' }}>
@@ -253,6 +258,9 @@ function ProjectDetail() {
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={14} style={{ color: '#10b981' }} /> Monthly KAM Audits</span>
             </div>
           </div>
+
+          {/* INVESTOR FAQ SECTION */}
+          <FAQAccordion />
         </div>
 
         {/* RIGHT: STICKY INVESTMENT CARD */}
@@ -263,14 +271,28 @@ function ProjectDetail() {
               {formatCurrency(target, 'BDT')}
             </h2>
 
-            {/* PROGRESS */}
+            {/* PROGRESS & BOOKED */}
             <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: '#D4AF37', fontWeight: '700' }}>{pct}% Funded</span>
-                <span style={{ color: '#64748b' }}>{formatCurrency(raised, 'BDT')} raised</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ color: '#D4AF37', fontWeight: '700' }}>{raisedPct}% Raised</span>
+                  <span style={{ color: '#f59e0b', fontWeight: '700', fontSize: '0.72rem', background: 'rgba(245,158,11,0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                    +{bookedPct}% Booked
+                  </span>
+                </div>
+                <span style={{ color: '#cbd5e1', fontWeight: '600' }}>{formatCurrency(raised + booked, 'BDT')} / {formatCurrency(target, 'BDT')}</span>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.08)', height: '9px', borderRadius: '5px', overflow: 'hidden' }}>
-                <div style={{ width: `${pct || 2}%`, height: '100%', background: 'linear-gradient(90deg, #D4AF37, #10b981)', borderRadius: '5px', transition: 'width 0.6s ease' }} />
+              <div style={{ background: 'rgba(255,255,255,0.08)', height: '9px', borderRadius: '5px', overflow: 'hidden', display: 'flex' }}>
+                <div style={{ width: `${raisedPct}%`, height: '100%', background: 'linear-gradient(90deg, #D4AF37, #b49127)', transition: 'width 0.6s ease' }} title={`Raised: ${formatCurrency(raised, 'BDT')}`} />
+                <div style={{ width: `${bookedPct}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #d97706)', transition: 'width 0.6s ease' }} title={`Booked: ${formatCurrency(booked, 'BDT')}`} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', marginTop: '0.4rem' }}>
+                <span>🏢 Incl. 10% GRO10X Stake</span>
+                {isOverbooked ? (
+                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>🔥 Overbooked</span>
+                ) : (
+                  <span>Avail: {formatCurrency(Math.max(0, target - raised - booked), 'BDT')}</span>
+                )}
               </div>
             </div>
 

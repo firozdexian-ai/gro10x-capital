@@ -462,6 +462,7 @@ export default function AdminPortal() {
         video_url: projectToEdit.youtube_url || projectToEdit.video_url || '',
         avg_monthly_gross_sales: projectToEdit.avg_monthly_gross_sales || 0,
         avg_monthly_net_profit: projectToEdit.avg_monthly_net_profit || 0,
+        booked_amount_bdt: projectToEdit.booked_amount_bdt || 0,
         show_on_showcase: projectToEdit.show_on_showcase !== false,
         media_list: mediaData || []
       });
@@ -491,6 +492,7 @@ export default function AdminPortal() {
         video_url: '',
         avg_monthly_gross_sales: 0,
         avg_monthly_net_profit: 0,
+        booked_amount_bdt: 0,
         show_on_showcase: true,
         media_list: []
       });
@@ -662,6 +664,7 @@ export default function AdminPortal() {
         youtube_url: projectForm.video_url,
         avg_monthly_gross_sales: Number(projectForm.avg_monthly_gross_sales || 0),
         avg_monthly_net_profit: Number(projectForm.avg_monthly_net_profit || 0),
+        booked_amount_bdt: Number(projectForm.booked_amount_bdt || 0),
         show_on_showcase: projectForm.show_on_showcase
       };
 
@@ -3230,6 +3233,18 @@ export default function AdminPortal() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Booked / Reserved Capital (BDT)</label>
+                      <input 
+                        type="number" 
+                        value={projectForm.booked_amount_bdt}
+                        onChange={(e) => setProjectForm({ ...projectForm, booked_amount_bdt: e.target.value })}
+                        placeholder="Includes 10% GRO10X stake + lead bookings"
+                        className="form-input" 
+                      />
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Includes GRO10X 10% co-invest stake + active lead intent bookings</span>
+                    </div>
+
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Expected Close Date</label>
                       <input 

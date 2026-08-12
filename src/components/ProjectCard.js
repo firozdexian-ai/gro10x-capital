@@ -19,9 +19,16 @@ function toEmbedUrl(url) {
 export default function ProjectCard({ project, currency = 'BDT' }) {
   if (!project) return null;
 
-  const target          = Number(project.target_raise_bdt) || 1;
+  const target          = Number(project.target_raise_bdt) || 20000000;
   const raised          = Number(project.amount_raised_bdt) || 0;
-  const progressPercent = Math.min(100, Math.round((raised / target) * 100));
+  // Default booked_amount_bdt to GRO10X 10% co-invest if 0
+  const defaultBooked   = Math.round(target * 0.10);
+  const booked          = Math.max(defaultBooked, Number(project.booked_amount_bdt) || defaultBooked);
+
+  const raisedPct       = Math.min(100, Math.round((raised / target) * 100));
+  const bookedPct       = Math.min(100 - raisedPct, Math.round((booked / target) * 100));
+  const isOverbooked    = (raised + booked) >= target;
+
   const hasCover        = !!project.cover_image_url;
   const hasVideo        = !!project.youtube_url;
   const embedUrl        = toEmbedUrl(project.youtube_url);
@@ -55,7 +62,6 @@ export default function ProjectCard({ project, currency = 'BDT' }) {
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : (
-            /* No cover but has video — show gradient with play icon */
             <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(7,10,20,0.9))', display: 'grid', placeItems: 'center' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.15)', border: '2px solid rgba(212,175,55,0.4)', display: 'grid', placeItems: 'center' }}>
                 <Play size={22} style={{ color: '#D4AF37', marginLeft: '3px' }} />
@@ -63,7 +69,6 @@ export default function ProjectCard({ project, currency = 'BDT' }) {
             </div>
           )}
 
-          {/* Video badge overlay */}
           {hasVideo && (
             <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <Play size={11} style={{ color: '#ef4444', fill: '#ef4444' }} />
@@ -71,11 +76,9 @@ export default function ProjectCard({ project, currency = 'BDT' }) {
             </div>
           )}
 
-          {/* Gradient fade to card body */}
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px', background: 'linear-gradient(to bottom, transparent, rgba(13,17,30,0.95))' }} />
         </div>
       ) : (
-        /* Placeholder gradient when no media */
         <div style={{ height: '130px', background: 'linear-gradient(135deg, rgba(212,175,55,0.07) 0%, rgba(7,10,20,0.8) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Building2 size={32} style={{ color: 'rgba(212,175,55,0.3)' }} />
         </div>
@@ -104,14 +107,31 @@ export default function ProjectCard({ project, currency = 'BDT' }) {
           {project.project_description || `Structured investment opportunity in ${project.businesses?.brand_name || 'verified outlet'}. Asset-backed SPV structure.`}
         </p>
 
-        {/* RAISE PROGRESS */}
+        {/* RAISE & BOOKING PROGRESS BAR */}
         <div style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.77rem', marginBottom: '0.35rem' }}>
-            <span style={{ color: '#D4AF37', fontWeight: '700' }}>{progressPercent}% Raised</span>
-            <span style={{ color: '#cbd5e1', fontWeight: '600' }}>{formatCurrency(raised, currency)} / {formatCurrency(target, currency)}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ color: '#D4AF37', fontWeight: '700' }}>{raisedPct}% Raised</span>
+              <span style={{ color: '#f59e0b', fontWeight: '700', fontSize: '0.7rem', background: 'rgba(245,158,11,0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                +{bookedPct}% Booked
+              </span>
+            </div>
+            <span style={{ color: '#cbd5e1', fontWeight: '600' }}>{formatCurrency(raised + booked, currency)} / {formatCurrency(target, currency)}</span>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.08)', height: '7px', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: `${progressPercent || 1}%`, height: '100%', background: 'linear-gradient(90deg, #D4AF37, #10b981)', borderRadius: '4px' }} />
+
+          {/* 3-Segment Stacked Progress Bar */}
+          <div style={{ background: 'rgba(255,255,255,0.08)', height: '8px', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+            <div style={{ width: `${raisedPct}%`, height: '100%', background: 'linear-gradient(90deg, #D4AF37, #b49127)', transition: 'width 0.3s ease' }} title={`Raised: ${formatCurrency(raised, currency)}`} />
+            <div style={{ width: `${bookedPct}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #d97706)', transition: 'width 0.3s ease' }} title={`Booked: ${formatCurrency(booked, currency)}`} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b', marginTop: '0.3rem' }}>
+            <span>🏢 Incl. 10% GRO10X Stake</span>
+            {isOverbooked ? (
+              <span style={{ color: '#ef4444', fontWeight: 'bold' }}>🔥 Overbooked</span>
+            ) : (
+              <span>Avail: {formatCurrency(Math.max(0, target - raised - booked), currency)}</span>
+            )}
           </div>
         </div>
 
@@ -119,7 +139,7 @@ export default function ProjectCard({ project, currency = 'BDT' }) {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>Min Ticket</span>
-            <strong style={{ color: '#fff', fontSize: '0.88rem' }}>{formatCurrency(project.min_otc_investment_bdt || 5000000, currency)}</strong>
+            <strong style={{ color: '#fff', fontSize: '0.88rem' }}>{formatCurrency(project.min_otc_investment_bdt || 500000, currency)}</strong>
           </div>
           <div style={{ display: 'flex', gap: '0.4rem' }}>
             <button onClick={handleOpenBot} className="btn-outline" style={{ padding: '0.35rem 0.7rem', fontSize: '0.77rem' }}>

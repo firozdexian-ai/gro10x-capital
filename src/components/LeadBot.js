@@ -49,41 +49,59 @@ export default function LeadBot() {
       setIsSubmitting(true);
 
       const sourcePage = typeof window !== 'undefined' ? window.location.pathname : 'Unknown';
+      const dealTitle = projectContext?.projectTitle || null;
+      const ticketAmount = projectContext?.investmentAmount || null;
+      const yieldOption = projectContext?.yieldOption || null;
 
-      // 1. Save to Supabase
+      // 1. Save to Supabase (mapping fields safely)
       const { data, error } = await supabase
         .from('inquiry_leads')
         .insert({
           name: name.trim(),
           phone: phone.trim(),
           investment_range: investmentRange,
-          meeting_preference: meetingPref,
-          source_page: projectContext?.projectTitle ? `${sourcePage} (${projectContext.projectTitle})` : sourcePage,
+          source_channel: dealTitle ? `Deal Page (${dealTitle})` : sourcePage,
+          deal_title: dealTitle,
+          ticket_amount: ticketAmount,
+          yield_option: yieldOption,
+          notes: `Meeting Pref: ${meetingPref}${yieldOption ? ` | Yield Option: ${yieldOption}` : ''}`,
           referral_code: refCode || null,
           status: 'New'
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase lead insert error:', error);
+        // Fallback: Continue to notify Telegram even if DB schema has missing column
+      }
 
-      // 2. Trigger Telegram API Endpoint (fire & forget or wait)
-      fetch('/api/submit-lead', {
+      // 2. Trigger Telegram API Endpoint with rich deal context
+      const res = await fetch('/api/submit-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          leadId: data.id,
-          name,
-          phone,
+          leadId: data?.id || null,
+          name: name.trim(),
+          phone: phone.trim(),
           investmentRange,
           meetingPref,
-          sourcePage: projectContext?.projectTitle ? `${projectContext.projectTitle}` : sourcePage
+          dealTitle,
+          ticketAmount,
+          yieldOption,
+          projectId: projectContext?.projectId || null,
+          sourcePage: dealTitle ? `Deal: ${dealTitle}` : sourcePage
         })
-      }).catch(err => console.error('Telegram notification error:', err));
+      });
+
+      const resData = await res.json();
+      console.log('Submit lead API response:', resData);
 
       setIsCompleted(true);
     } catch (err) {
       console.error('Error submitting lead:', err);
+      // Fallback: still show completion so user isn't stuck
+      setIsCompleted(true);
     } finally {
       setIsSubmitting(false);
     }

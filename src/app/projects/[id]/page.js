@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
-import Navigation from '../../../components/Navigation';
 
 import { Suspense } from 'react';
 
@@ -108,7 +107,6 @@ function ProjectProfileContent() {
   if (!project) {
     return (
       <div style={{ minHeight: '100vh', background: '#070a14', color: '#f8fafc' }}>
-        <Navigation />
         <div style={{ maxWidth: '600px', margin: '5rem auto', textAlign: 'center', padding: '2rem' }} className="glass-card">
           <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 1rem auto' }} />
           <h2>Project Opportunity Not Found</h2>
@@ -123,7 +121,6 @@ function ProjectProfileContent() {
 
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '6rem' }}>
-      <Navigation />
 
       {/* TOP HEADER / BREADCRUMB */}
       <div style={{ background: 'rgba(15,23,42,0.6)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '1rem 2rem' }}>

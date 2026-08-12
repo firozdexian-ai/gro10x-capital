@@ -459,7 +459,7 @@ export default function AdminPortal() {
         description: projectToEdit.description || '',
         project_highlights: highlightsStr,
         cover_image_url: projectToEdit.cover_image_url || '',
-        video_url: projectToEdit.video_url || '',
+        video_url: projectToEdit.youtube_url || projectToEdit.video_url || '',
         show_on_showcase: projectToEdit.show_on_showcase !== false,
         media_list: mediaData || []
       });
@@ -655,7 +655,7 @@ export default function AdminPortal() {
         description: projectForm.description,
         project_highlights: highlightsArray,
         cover_image_url: projectForm.cover_image_url,
-        video_url: projectForm.video_url,
+        youtube_url: projectForm.video_url,
         show_on_showcase: projectForm.show_on_showcase
       };
 

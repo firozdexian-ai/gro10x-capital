@@ -10,6 +10,18 @@ import {
 import { formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 
+// Convert any YouTube URL format to embed URL
+function toEmbedUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    let videoId = u.searchParams.get('v');
+    if (!videoId && u.hostname === 'youtu.be') videoId = u.pathname.slice(1).split('?')[0];
+    if (!videoId && u.pathname.includes('/embed/')) return url;
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+  } catch { return null; }
+}
+
 // ── Inner component that uses useSearchParams (must be inside Suspense) ───────
 function ProjectDetail() {
   const params      = useParams();
@@ -97,6 +109,7 @@ function ProjectDetail() {
   const pct     = Math.min(100, Math.round((raised / target) * 100));
   const biz     = project.businesses || {};
   const founder = biz.founders || {};
+  const embedUrl = toEmbedUrl(project.youtube_url);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem 6rem' }}>
@@ -141,15 +154,34 @@ function ProjectDetail() {
         {/* LEFT: YIELD OPTIONS + BUSINESS INFO */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
 
-          {/* MEDIA PLACEHOLDER */}
+          {/* MEDIA GALLERY / VIDEO PLAYER */}
           <div className="glass-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
-            <div style={{ height: '260px', background: 'linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(15,23,42,0.9) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', display: 'grid', placeItems: 'center', fontSize: '1.8rem' }}>
-                ☕
+            {embedUrl ? (
+              /* YouTube Embed */
+              <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '16px' }}>
+                <iframe
+                  src={embedUrl}
+                  title={project.project_title}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none', borderRadius: '16px' }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
-              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: '1.3rem', fontWeight: '800' }}>{biz.brand_name}</h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>{biz.industry_sector} · {biz.operational_months}+ months operational</p>
-            </div>
+            ) : project.cover_image_url ? (
+              /* Cover image banner */
+              <img
+                src={project.cover_image_url}
+                alt={project.project_title}
+                style={{ width: '100%', height: '320px', objectFit: 'cover', display: 'block', borderRadius: '16px' }}
+              />
+            ) : (
+              /* Placeholder */
+              <div style={{ height: '260px', background: 'linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(15,23,42,0.9) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', borderRadius: '16px' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', display: 'grid', placeItems: 'center', fontSize: '1.8rem' }}>☕</div>
+                <h3 style={{ margin: 0, color: '#f8fafc', fontSize: '1.3rem', fontWeight: '800' }}>{biz.brand_name}</h3>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>{biz.industry_sector} · {biz.operational_months}+ months operational</p>
+              </div>
+            )}
           </div>
 
           {/* YIELD OPTIONS */}

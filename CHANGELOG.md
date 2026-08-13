@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.1] — 2026-08-14
+**Platform Hardening & Performance Optimizations**
+
+### Upgrades
+- **Currency Suite**: Safe number parsing, negative amount formatting (`-৳5.0 Lakhs`), Indian numbering comma system (`৳15,00,000`), and international conversion helpers.
+- **Auth Guard**: Lifecycle synchronization in `AuthProvider`, unmount cleanup safety, and manual `refreshRole()` utility.
+- **ROI Calculator**: Interactive quick-select ticket chips (৳5L–৳1Cr), dynamic multi-currency display, and accurate yield metrics.
+- **SEO & Structured Data**: Enhanced `RootLayout` metadata with OpenGraph, Twitter card tags, and `FinancialProduct` JSON-LD schema.
+
+---
+
 ## [v0.5.0] — 2026-08-10
 **Production Baseline Lock** — Full platform committed, tagged, and deployed.
 

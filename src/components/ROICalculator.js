@@ -1,23 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, DollarSign, Calculator, HelpCircle, ShieldCheck, ArrowRight, MessageSquare, AlertCircle } from 'lucide-react';
-import { formatCurrency } from '../lib/currency';
+import { TrendingUp, DollarSign, Calculator, HelpCircle, ShieldCheck, ArrowRight, MessageSquare, AlertCircle, Sparkles } from 'lucide-react';
+import { formatCurrency, parseAmount, getCurrencySymbol } from '../lib/currency';
 
 export default function ROICalculator({ project, isPreviewMode = false, currency = 'BDT' }) {
   // Deal metrics fallback (e.g. Oro Mirpur baseline data)
-  const targetRaise = Number(project?.target_raise_bdt) || 20000000; // 2 Cr
-  const minTicket = Number(project?.min_otc_investment_bdt) || 500000; // 5 Lakh
+  const targetRaise = parseAmount(project?.target_raise_bdt) || 20000000; // 2 Cr
+  const minTicket = parseAmount(project?.min_otc_investment_bdt) || 500000; // 5 Lakh
   const maxTicket = Math.min(targetRaise * 0.5, 10000000); // 50% max ticket or 1 Cr
 
-  const avgGross = Number(project?.avg_monthly_gross_sales) || (isPreviewMode ? 3160000 : 0);
-  const avgNet = Number(project?.avg_monthly_net_profit) || (isPreviewMode ? 534000 : 0);
+  const avgGross = parseAmount(project?.avg_monthly_gross_sales) || (isPreviewMode ? 3160000 : 0);
+  const avgNet = parseAmount(project?.avg_monthly_net_profit) || (isPreviewMode ? 534000 : 0);
 
-  const opt1Rate = Number(project?.yield_option_1_rate) || 10; // 10% Gross
-  const opt2Rate = Number(project?.yield_option_2_rate) || 12; // 12% Gross
-  const opt3Rate = Number(project?.yield_option_3_rate) || 35; // 35% Net Profit
+  const opt1Rate = parseAmount(project?.yield_option_1_rate) || 10; // 10% Gross
+  const opt2Rate = parseAmount(project?.yield_option_2_rate) || 12; // 12% Gross
+  const opt3Rate = parseAmount(project?.yield_option_3_rate) || 35; // 35% Net Profit
 
-  const durationMonths = Number(project?.duration_months) || 24;
+  const durationMonths = parseAmount(project?.duration_months) || 24;
 
   // Local interactive state
   const [investment, setInvestment] = useState(Math.max(minTicket, 1000000)); // Default 10L
@@ -62,6 +62,15 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
     currentSubLabel = 'Net Profit Share + 5% Floor';
   }
 
+  // Preset ticket size buttons
+  const presetTickets = [
+    { label: '৳5 Lakh', value: 500000 },
+    { label: '৳10 Lakh', value: 1000000 },
+    { label: '৳25 Lakh', value: 2500000 },
+    { label: '৳50 Lakh', value: 5000000 },
+    { label: '৳1 Crore', value: 10000000 },
+  ].filter(preset => preset.value >= minTicket && preset.value <= maxTicket);
+
   const handleOpenLeadBot = () => {
     if (typeof window === 'undefined') return;
     window.dispatchEvent(new CustomEvent('open-lead-bot', {
@@ -84,6 +93,8 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
       </div>
     );
   }
+
+  const annualYieldPercent = investment > 0 ? ((currentAnnual / investment) * 100).toFixed(1) : '0.0';
 
   return (
     <div
@@ -116,18 +127,47 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
         </span>
       </div>
 
-      {/* INPUT SLIDER */}
+      {/* INPUT SLIDER & PRESETS */}
       <div style={{ background: 'rgba(7,10,20,0.6)', border: '1px solid rgba(255,255,255,0.06)', padding: '1.25rem', borderRadius: '12px', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <label style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>
-            Enter Ticket Size
+            Select Investment Ticket
           </label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', padding: '0.3rem 0.75rem', borderRadius: '8px' }}>
-            <span style={{ color: '#D4AF37', fontWeight: '800', fontSize: '1.1rem' }}>
+            <span style={{ color: '#D4AF37', fontWeight: '800', fontSize: '1.15rem' }}>
               {formatCurrency(investment, currency)}
             </span>
           </div>
         </div>
+
+        {/* Quick Ticket Selection Chips */}
+        {presetTickets.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            {presetTickets.map(preset => {
+              const isActive = investment === preset.value;
+              return (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setInvestment(preset.value)}
+                  style={{
+                    padding: '0.25rem 0.65rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    borderRadius: '6px',
+                    border: isActive ? '1px solid #D4AF37' : '1px solid rgba(255,255,255,0.1)',
+                    background: isActive ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.03)',
+                    color: isActive ? '#D4AF37' : '#94a3b8',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {formatCurrency(preset.value, currency)}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <input
           type="range"
@@ -214,7 +254,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
           <strong style={{ fontSize: '1.35rem', color: '#10b981', fontWeight: '800', display: 'block', margin: '0.2rem 0' }}>
             {formatCurrency(Math.round(currentAnnual), currency)}
           </strong>
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>~{((currentAnnual / investment) * 100).toFixed(1)}% p.a. yield</span>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>~{annualYieldPercent}% p.a. yield</span>
         </div>
 
         <div style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(255,255,255,0.08)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>

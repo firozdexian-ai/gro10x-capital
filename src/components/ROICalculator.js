@@ -156,7 +156,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
         <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600', marginBottom: '0.75rem' }}>
           Select Return Model:
         </label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+        <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
           {[
             { id: 1, label: 'Option 1', title: 'Capped Yield', rate: `${opt1Rate}%`, desc: 'Gross Sales Share', sub: '22% Total ROI Cap', color: '#D4AF37' },
             { id: 2, label: 'Option 2', title: 'Multiplier', rate: `${opt2Rate}%`, desc: 'Gross Sales Share', sub: '1.5X Buyout Exit', color: '#10b981' },
@@ -191,8 +191,8 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
                 <div style={{ fontSize: '1.3rem', fontWeight: '800', color: opt.color, margin: '0.2rem 0' }}>
                   {opt.rate}
                 </div>
-                <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>{opt.desc}</p>
-                <p style={{ fontSize: '0.68rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>{opt.sub}</p>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>{opt.desc}</p>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>{opt.sub}</p>
               </button>
             );
           })}
@@ -200,7 +200,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
       </div>
 
       {/* OUTPUT METRICS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
         <div style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(212,175,55,0.25)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
           <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Est. Monthly Payout</span>
           <strong style={{ fontSize: '1.35rem', color: '#D4AF37', fontWeight: '800', display: 'block', margin: '0.2rem 0' }}>
@@ -254,7 +254,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
 
       <style>{`
         @media (max-width: 640px) {
-          div[style*="gridTemplateColumns: repeat(3"] { grid-template-columns: 1fr !important; }
+          .responsive-grid-2 { grid-template-columns: 1fr !important; gap: 0.75rem !important; }
         }
       `}</style>
     </div>

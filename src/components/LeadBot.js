@@ -152,6 +152,7 @@ export default function LeadBot() {
       {/* CHAT WIDGET WINDOW */}
       {isOpen && (
         <div
+          className="leadbot-window"
           style={{
             position: 'fixed',
             bottom: '24px',
@@ -233,7 +234,7 @@ export default function LeadBot() {
                           onChange={(e) => setName(e.target.value)}
                           required
                           className="form-input"
-                          style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem' }}
+                          style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', flex: 1 }}
                         />
                         <button type="submit" className="btn-gold" style={{ padding: '0.6rem 1rem' }}>
                           <Send size={16} />
@@ -265,7 +266,7 @@ export default function LeadBot() {
                           onChange={(e) => setPhone(e.target.value)}
                           required
                           className="form-input"
-                          style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem' }}
+                          style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', flex: 1 }}
                         />
                         <button type="submit" className="btn-gold" style={{ padding: '0.6rem 1rem' }}>
                           <Send size={16} />

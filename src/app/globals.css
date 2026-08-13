@@ -272,6 +272,22 @@ main {
   }
 }
 
+/* Touch slider thumb sizing */
+input[type=range]::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #D4AF37;
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #D4AF37;
+  cursor: pointer;
+}
+
 @media (max-width: 480px) {
   .responsive-grid-4 {
     grid-template-columns: 1fr !important;
@@ -283,6 +299,18 @@ main {
 
   .form-input {
     font-size: 16px !important; /* Prevents iOS auto-zoom */
+  }
+
+  .hero-section-mobile {
+    padding: 3rem 1rem 2.5rem 1rem !important;
+  }
+
+  .leadbot-window {
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
+    bottom: 16px !important;
+    max-height: 80vh !important;
   }
 }
 

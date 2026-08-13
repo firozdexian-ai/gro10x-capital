@@ -261,7 +261,7 @@ export default function Navigation() {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: '0 2rem',
+      padding: isMobile ? '0 1rem' : '0 2rem',
       position: 'fixed',
       top: 0, left: 0, right: 0,
       zIndex: 100,
@@ -284,7 +284,7 @@ export default function Navigation() {
           <div style={{ fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.1 }}>
             GRO10X <span style={{ color: '#D4AF37' }}>CAPITAL</span>
           </div>
-          <div style={{ fontSize: '0.62rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div className="hide-mobile" style={{ fontSize: '0.62rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             v0.4.0{role ? ` • ${role.toUpperCase()}` : ''}
           </div>
         </div>

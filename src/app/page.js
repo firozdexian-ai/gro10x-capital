@@ -81,7 +81,7 @@ export default function Homepage() {
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', overflowX: 'hidden' }}>
       
       {/* 1. HERO SECTION */}
-      <section style={{ position: 'relative', padding: '5rem 1.5rem 4rem 1.5rem', textAlign: 'center', background: 'radial-gradient(circle at top center, rgba(212,175,55,0.15) 0%, rgba(7,10,20,1) 70%)' }}>
+      <section className="hero-section-mobile" style={{ position: 'relative', padding: '5rem 1.5rem 4rem 1.5rem', textAlign: 'center', background: 'radial-gradient(circle at top center, rgba(212,175,55,0.15) 0%, rgba(7,10,20,1) 70%)' }}>
         <div className="container" style={{ maxWidth: '950px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           
           <div className="badge-gold" style={{ marginBottom: '1.5rem', padding: '0.5rem 1.25rem', fontSize: '0.9rem', display: 'inline-flex' }}>

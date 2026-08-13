@@ -229,16 +229,60 @@ main {
     padding: 0 1rem;
   }
 
-  h1 {
-    font-size: 2.2rem !important;
+  .glass-card {
+    padding: 1.15rem !important;
+  }
+
+  .btn-gold, .btn-outline {
+    min-height: 44px;
+    padding: 0.75rem 1.25rem !important;
+  }
+
+  h1, .hero-h1 {
+    font-size: 2.1rem !important;
+    line-height: 1.25 !important;
   }
   
   h2 {
-    font-size: 1.8rem !important;
+    font-size: 1.6rem !important;
+  }
+
+  .mobile-stack {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .mobile-full-width {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .responsive-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  .responsive-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
   }
 
   .ticker-wrap {
     padding: 0.5rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .responsive-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  h1, .hero-h1 {
+    font-size: 1.85rem !important;
+  }
+
+  .form-input {
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
   }
 }
 

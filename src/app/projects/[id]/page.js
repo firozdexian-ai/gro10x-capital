@@ -155,7 +155,7 @@ function ProjectDetail() {
       </div>
 
       {/* TWO-COLUMN LAYOUT */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.75fr 1fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.75fr 1fr', gap: '2rem', alignItems: 'start' }}>
 
         {/* LEFT: YIELD OPTIONS + BUSINESS INFO */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
@@ -195,7 +195,7 @@ function ProjectDetail() {
             <h3 style={{ fontSize: '1.2rem', color: '#D4AF37', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <TrendingUp size={18} /> 3 Investor Yield Structures
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem' }}>
+            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem' }}>
               {[
                 { label: 'Option 1', name: 'Capped Yield', rate: '10%', detail: 'Gross Sales', sub: '22% Max ROI Cap', color: '#D4AF37', border: 'rgba(212,175,55,0.3)' },
                 { label: 'Option 2', name: 'Multiplier',   rate: '12%', detail: 'Gross Sales', sub: '1.5X Buyout Exit',  color: '#10b981', border: 'rgba(16,185,129,0.3)' },
@@ -223,7 +223,7 @@ function ProjectDetail() {
             <h3 style={{ fontSize: '1.2rem', color: '#f8fafc', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={18} style={{ color: '#10b981' }} /> Operational Credibility
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div style={{ background: 'rgba(7,10,20,0.6)', padding: '1.1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <span style={{ fontSize: '0.8rem', color: '#64748b' }}>AI Health Score</span>
                 <div style={{ fontSize: '2rem', fontWeight: '800', color: '#10b981', lineHeight: 1.2, margin: '0.2rem 0' }}>

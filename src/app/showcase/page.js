@@ -160,7 +160,7 @@ function BusinessShowcaseContent() {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
               {filteredProjects.map(project => (
                 <ProjectCard key={project.id} project={project} currency={currency} />
               ))}

@@ -88,25 +88,25 @@ export default function Homepage() {
             <ShieldCheck size={16} /> Asset-Backed Private Equity &amp; Yield Platform
           </div>
 
-          <h1 style={{ fontSize: '3.4rem', fontWeight: '900', lineHeight: '1.15', margin: '0 0 1.25rem 0', background: 'linear-gradient(180deg, #FFFFFF 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Bangladesh's First<br />Revenue-Share Investment Platform
+          <h1 className="hero-h1" style={{ fontSize: '3.4rem', fontWeight: '900', lineHeight: '1.15', margin: '0 0 1.25rem 0', background: 'linear-gradient(180deg, #FFFFFF 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Bangladesh's First Revenue-Share Investment Platform
           </h1>
 
           <p style={{ fontSize: '1.15rem', color: '#94a3b8', maxWidth: '720px', margin: '0 auto 2.5rem auto', lineHeight: '1.6' }}>
             Invest from ৳5 Lakh in verified, high-growth SME &amp; Franchise campaigns. Backed by physical outlet assets, managed via isolated legal SPVs, and audited monthly by Key Account Managers.
           </p>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/showcase" className="btn-gold" style={{ padding: '0.9rem 2rem', fontSize: '1rem', fontWeight: '800', textDecoration: 'none' }}>
+          <div className="mobile-stack" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="/showcase" className="btn-gold mobile-full-width" style={{ padding: '0.9rem 2rem', fontSize: '1rem', fontWeight: '800', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
               Explore Live Deals <ArrowUpRight size={18} />
             </a>
-            <button onClick={handleOpenBot} className="btn-outline" style={{ padding: '0.9rem 2rem', fontSize: '1rem', fontWeight: 'bold' }}>
+            <button onClick={handleOpenBot} className="btn-outline mobile-full-width" style={{ padding: '0.9rem 2rem', fontSize: '1rem', fontWeight: 'bold' }}>
               <MessageSquare size={18} /> Speak to Advisor
             </button>
           </div>
 
           {/* STATS BAR (PULLED FROM DB) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '16px', padding: '1.5rem', marginTop: '4rem', backdropFilter: 'blur(10px)' }}>
+          <div className="responsive-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '16px', padding: '1.5rem', marginTop: '4rem', backdropFilter: 'blur(10px)' }}>
             <div>
               <span style={{ color: '#94a3b8', fontSize: '0.8rem', display: 'block' }}>Total Capital Raised</span>
               <strong style={{ fontSize: '1.5rem', color: '#D4AF37', fontWeight: '800' }}>{formatCurrency(stats.totalRaised, currency)}</strong>
@@ -147,7 +147,7 @@ export default function Homepage() {
           <span style={{ color: '#D4AF37', fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Institutional Grade Process</span>
           <h2 style={{ fontSize: '2.2rem', fontWeight: '800', margin: '0.5rem 0 3rem 0' }}>How GRO10X Protects Your Investment</h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', textAlign: 'left' }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', textAlign: 'left' }}>
             <div className="glass-card" style={{ padding: '1.75rem', borderColor: 'rgba(212,175,55,0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div style={{ width: '42px', height: '42px', background: 'rgba(212,175,55,0.15)', color: '#D4AF37', borderRadius: '10px', display: 'grid', placeItems: 'center', fontWeight: 'bold', fontSize: '1.1rem' }}>
@@ -205,7 +205,7 @@ export default function Homepage() {
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', background: 'rgba(7,10,20,0.85)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '16px', padding: '1.75rem', textAlign: 'center' }}>
+          <div className="responsive-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem', background: 'rgba(7,10,20,0.85)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '16px', padding: '1.75rem', textAlign: 'center' }}>
             <div>
               <span style={{ color: '#64748b', fontSize: '0.78rem', display: 'block' }}>Avg. Monthly Gross</span>
               <strong style={{ fontSize: '1.6rem', color: '#D4AF37', fontWeight: '900', display: 'block', margin: '0.2rem 0' }}>৳31.6 Lakh</strong>
@@ -337,7 +337,7 @@ export default function Homepage() {
             Backing High-Growth SMEs
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', textAlign: 'left' }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', textAlign: 'left' }}>
             {/* CEO Card */}
             <div className="glass-card" style={{ padding: '1.75rem', borderColor: 'rgba(212,175,55,0.3)', background: 'linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(7,10,20,0.9) 100%)' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', display: 'grid', placeItems: 'center', fontWeight: '900', fontSize: '1.4rem', color: '#070a14', marginBottom: '1rem' }}>
@@ -382,7 +382,7 @@ export default function Homepage() {
         <div className="container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: '800', textAlign: 'center', marginBottom: '2.5rem' }}>Financial Ecosystem Overview</h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
             <div style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(212,175,55,0.3)', padding: '1.5rem', borderRadius: '12px' }}>
               <TrendingUp size={24} style={{ color: '#D4AF37', marginBottom: '0.75rem' }} />
               <h4 style={{ fontSize: '1.1rem', margin: '0 0 0.4rem 0' }}>SME Yield Investments</h4>
@@ -411,7 +411,7 @@ export default function Homepage() {
       <footer style={{ padding: '4rem 1.5rem 2rem', borderTop: '1px solid rgba(255,255,255,0.08)', background: '#04060d', color: '#64748b', fontSize: '0.85rem' }}>
         <div className="container" style={{ maxWidth: '1100px', margin: '0 auto' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '2.5rem', marginBottom: '3rem', textAlign: 'left' }}>
+          <div className="responsive-grid-4" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '2.5rem', marginBottom: '3rem', textAlign: 'left' }}>
             {/* Col 1: Brand info */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
@@ -476,9 +476,11 @@ export default function Homepage() {
 
       <style>{`
         @media (max-width: 768px) {
-          div[style*="gridTemplateColumns: repeat(4"] { grid-template-columns: 1fr 1fr !important; }
-          div[style*="gridTemplateColumns: repeat(3"] { grid-template-columns: 1fr !important; }
-          div[style*="gridTemplateColumns: 2fr 1fr 1fr 1fr"] { grid-template-columns: 1fr 1fr !important; }
+          .responsive-grid-4 { grid-template-columns: repeat(2, 1fr) !important; gap: 1rem !important; }
+          .responsive-grid-2 { grid-template-columns: 1fr !important; gap: 1.25rem !important; }
+        }
+        @media (max-width: 480px) {
+          .responsive-grid-4 { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>

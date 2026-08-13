@@ -382,18 +382,21 @@ export default function Navigation() {
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0,
           background: 'rgba(7, 10, 20, 0.98)',
-          backdropFilter: 'blur(16px)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           padding: '1.25rem 1.5rem',
           display: 'flex', flexDirection: 'column', gap: '0.75rem',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid rgba(212,175,55,0.2)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.8)',
+          animation: 'fadeIn 0.25s ease-out forwards',
         }}>
           {/* Mobile currency */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
-            <Globe size={14} style={{ color: '#D4AF37' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', padding: '0.6rem 1rem', borderRadius: '10px' }}>
+            <Globe size={15} style={{ color: '#D4AF37' }} />
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', outline: 'none', width: '100%' }}
+              style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '800', cursor: 'pointer', fontSize: '0.95rem', outline: 'none', width: '100%' }}
             >
               {Object.keys(CURRENCY_RATES).map(code => (
                 <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
@@ -404,30 +407,49 @@ export default function Navigation() {
           </div>
 
           {/* Mobile nav tabs */}
-          {tabs && tabs.map(t => (
-            <Link
-              key={t.href}
-              href={t.href}
-              onClick={() => setMobile(false)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.6rem',
-                padding: '0.6rem 0.75rem', borderRadius: '8px',
-                textDecoration: 'none',
-                background: pathname === t.href ? `${color}18` : 'transparent',
-                border: `1px solid ${pathname === t.href ? `${color}44` : 'transparent'}`,
-                color: pathname === t.href ? color : '#94a3b8',
-                fontWeight: pathname === t.href ? '700' : '500',
-                fontSize: '0.9rem',
-              }}
-            >
-              <span>{t.icon}</span> {t.label}
-            </Link>
-          ))}
+          {tabs && tabs.map(t => {
+            const isActive = pathname === t.href;
+            return (
+              <Link
+                key={t.href}
+                href={t.href}
+                onClick={() => setMobile(false)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.75rem 1rem', borderRadius: '10px',
+                  textDecoration: 'none',
+                  background: isActive ? `${color}20` : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${isActive ? `${color}55` : 'rgba(255,255,255,0.05)'}`,
+                  color: isActive ? color : '#cbd5e1',
+                  fontWeight: isActive ? '800' : '500',
+                  fontSize: '0.92rem',
+                  boxShadow: isActive ? `0 0 16px ${color}15` : 'none',
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <span style={{ fontSize: '1.05rem' }}>{t.icon}</span> {t.label}
+              </Link>
+            );
+          })}
 
           {/* Admin mobile: link to admin panel */}
           {role === 'admin' && (
-            <Link href="/admin" onClick={() => setMobile(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '8px', textDecoration: 'none', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: '#D4AF37', fontWeight: '700', fontSize: '0.9rem' }}>
-              ⚡ Command Center
+            <Link
+              href="/admin"
+              onClick={() => setMobile(false)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '0.75rem 1rem', borderRadius: '10px',
+                textDecoration: 'none',
+                background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))',
+                border: '1px solid rgba(212,175,55,0.4)',
+                color: '#D4AF37',
+                fontWeight: '800',
+                fontSize: '0.92rem',
+                boxShadow: '0 0 20px rgba(212,175,55,0.15)',
+              }}
+            >
+              ⚡ Master Command Center
             </Link>
           )}
         </div>

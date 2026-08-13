@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.2] — 2026-08-14
+**UI/UX Platform Polish & Responsive Design System**
+
+### Upgrades
+- **Design Tokens & Scrollbars**: Custom ultra-thin gold scrollbars (`::-webkit-scrollbar`), accessible brand focus rings (`:focus-visible`), and depth backlighting.
+- **Deal Cards (ProjectCard)**: Smooth image hover zoom (`scale(1.05)`), elevation hover depth with gold radiance, SPV secured badges, and 3-tier progress bar refinement.
+- **Navigation Fluidity**: Polished 24px backdrop blur mobile drawer, role pill radiance, and smooth drop-in animations.
+
+---
+
 ## [v0.5.1] — 2026-08-14
 **Platform Hardening & Performance Optimizations**
 

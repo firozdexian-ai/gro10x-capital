@@ -7,6 +7,7 @@ const TAB_META = {
   dashboard:          { crumb: 'Command Center',    title: 'Command Center Overview' },
   kanban:             { crumb: 'Deal Pipeline',     title: 'Deal Pipeline Management' },
   'business-registry':{ crumb: 'Business Registry', title: 'Business Registry & Cohort Applications' },
+  'valuation-model':  { crumb: 'Valuation Model',   title: 'Financial Model & Valuation Engine' },
   investors:          { crumb: 'Investor Hub',      title: 'Investor Operations Hub' },
   dividend:           { crumb: 'Yield Engine',      title: 'Dividend & Yield Distribution Engine' },
   'cash-pipeline':    { crumb: 'Cash Concierge',    title: 'Restricted Cash Concierge Advisory Pipeline' },

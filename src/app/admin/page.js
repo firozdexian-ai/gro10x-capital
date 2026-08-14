@@ -17,6 +17,7 @@ import AdminHeader from './AdminHeader';
 import CommandCenterTab from './tabs/CommandCenterTab';
 import DealPipelineTab from './tabs/DealPipelineTab';
 import BusinessRegistryTab from './tabs/BusinessRegistryTab';
+import ValuationModelTab from './tabs/ValuationModelTab';
 import InvestorHubTab from './tabs/InvestorHubTab';
 import YieldEngineTab from './tabs/YieldEngineTab';
 import CashConciergeTab from './tabs/CashConciergeTab';
@@ -2163,6 +2164,16 @@ export default function AdminPortal() {
             setSelectedApplication={setSelectedApplication}
             setAppDrawerSubTab={setAppDrawerSubTab}
             setKamAuditForm={setKamAuditForm}
+          />
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB 3.5: VALUATION MODEL (valuation-model) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === 'valuation-model' && (
+          <ValuationModelTab
+            currency={currency}
+            setCurrency={setCurrency}
           />
         )}
 

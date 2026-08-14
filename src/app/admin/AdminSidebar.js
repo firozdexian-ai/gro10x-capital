@@ -131,18 +131,14 @@ export default function AdminSidebar({
                 </span>
               )}
             </button>
-            <a
-              href="/financial-model"
-              target="_blank"
-              rel="noreferrer"
-              className="admin-nav-btn"
+            <button
+              onClick={() => setActiveTab('valuation-model')}
+              className={`admin-nav-btn ${activeTab === 'valuation-model' ? 'active' : ''}`}
               title="Deal Valuation & DCF Model"
-              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
             >
               <Calculator size={18} />
               <span className="sidebar-hide-on-collapse">Valuation Model</span>
-              <ArrowUpRight size={12} style={{ marginLeft: 'auto', opacity: 0.5 }} className="sidebar-hide-on-collapse" />
-            </a>
+            </button>
           </div>
         </div>
 

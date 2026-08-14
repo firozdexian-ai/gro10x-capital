@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.4] — 2026-08-14
+**Admin Command Center Tab 1 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Active Projects KPI Bug Fix**: Fixed filter to accurately recognize all pipeline and active statuses (`Active`, `Trading`, `Funding`, `Active Capital Raise`, `Diligence`, `Origination`), ensuring active projects count correctly displays real count.
+- **Activity Stream Live Telemetry**: Built multi-source event synthesizer + `logPlatformActivity` emitter that records and streams live KYC approvals, payment verifications, yield declarations, and SME pitch submissions.
+- **Interactive KPI Cards**: Wired all 6 metric cards with direct navigation triggers (`onClick` to Investor Hub, KYC verification, Deal Pipeline, Yield Ledger, Analytics, and Lead Center).
+- **Platform Revenue & Spread Clarification**: Disambiguated 5% spread accrued on active AUM from total pipeline deal spread target.
+- **Campaign Health Deal Stage Mapping**: Harmonized status badges (Origination, Diligence, Active Capital Raise, Live & Trading), added project tooltips, and added 1-click `Assign KAM →` shortcut for unassigned deals.
+- **Header & Sidebar Enhancements**: Added manual `Sync Data` refresh trigger in header, enabled `+ Onboard Project` directly on Command Center tab, updated icons (Wallet for Cash Concierge, Settings for Platform Settings), and synchronized versioning.
+
+---
+
 ## [v0.5.3] — 2026-08-14
 **Admin Header De-clutter, Floating LeadBot Fix & KPI Palette Harmonization**
 

@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { PlusCircle, ChevronRight, Sparkles } from 'lucide-react';
+import { PlusCircle, ChevronRight, RefreshCw } from 'lucide-react';
 
 /** Tab metadata map — single source of truth for breadcrumb + title */
 const TAB_META = {
@@ -25,6 +25,8 @@ const TAB_META = {
 export default function AdminHeader({
   activeTab,
   onAddProject,
+  onRefresh,
+  isRefreshing = false,
 }) {
   const meta = TAB_META[activeTab] || { crumb: activeTab, title: activeTab };
 
@@ -47,7 +49,20 @@ export default function AdminHeader({
 
       {/* RIGHT: Contextual Actions */}
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-        {activeTab === 'kanban' && (
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="btn-outline"
+            title="Refresh Platform Live Data"
+            style={{ padding: '0.55rem 0.9rem', fontSize: '0.82rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#cbd5e1', cursor: isRefreshing ? 'wait' : 'pointer' }}
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            <span style={{ display: 'inline' }}>{isRefreshing ? 'Syncing...' : 'Sync Data'}</span>
+          </button>
+        )}
+
+        {(activeTab === 'kanban' || activeTab === 'dashboard') && (
           <button
             onClick={onAddProject}
             className="btn-gold"

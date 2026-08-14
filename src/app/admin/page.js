@@ -402,6 +402,30 @@ export default function AdminPortal() {
   }, [role, authLoading]);
 
   // Stage Advance Handler
+  const logPlatformActivity = async (title, message, type = 'info') => {
+    const newActivity = {
+      id: 'act-' + Date.now(),
+      title,
+      message,
+      type,
+      created_at: new Date().toISOString()
+    };
+    setRecentNotifications(prev => [newActivity, ...prev].slice(0, 20));
+    try {
+      if (user?.id) {
+        await supabase.from('notifications').insert([{
+          user_id: user.id,
+          title,
+          message,
+          type,
+          is_read: false
+        }]);
+      }
+    } catch (e) {
+      console.warn('Activity stream non-blocking insert notice:', e?.message);
+    }
+  };
+
   const handleConfirmAdvanceStage = async () => {
     if (!advanceModal.project || !advanceModal.targetStage) return;
     try {
@@ -413,6 +437,7 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast(`Project advanced to ${advanceModal.targetStage}`, 'success');
+      logPlatformActivity('Project Stage Advanced', `"${advanceModal.project.project_title}" advanced to ${advanceModal.targetStage}`, 'info');
       setAdvanceModal({ open: false, project: null, targetStage: '' });
       fetchAdminData();
     } catch (err) {
@@ -608,6 +633,7 @@ export default function AdminPortal() {
       if (bzErr) throw bzErr;
 
       addToast(`Brand "${newBusinessForm.brand_name}" created successfully!`, 'success');
+      logPlatformActivity('New Brand Enlisted', `Brand "${newBusinessForm.brand_name}" created in business registry.`, 'success');
       
       // Refresh businesses & auto select
       const { data: updatedBz } = await supabase.from('businesses').select('*');
@@ -699,6 +725,11 @@ export default function AdminPortal() {
       }
 
       addToast(editingProjectId ? 'Project updated successfully' : 'Project onboarded successfully', 'success');
+      logPlatformActivity(
+        editingProjectId ? 'Project Updated' : 'New Project Onboarded',
+        `"${projectForm.project_title}" ${editingProjectId ? 'details updated' : 'onboarded to pipeline'}`,
+        'success'
+      );
       setShowProjectModal(false);
       fetchAdminData();
     } catch (err) {
@@ -725,6 +756,7 @@ export default function AdminPortal() {
       }
 
       addToast(`KYC submission ${status.toLowerCase()}.`, 'success');
+      logPlatformActivity(`KYC ${status}`, `Investor KYC Level ${targetLevel} verification was ${status.toLowerCase()}.`, approve ? 'success' : 'warning');
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'KYC update failed', 'error');
@@ -767,6 +799,11 @@ export default function AdminPortal() {
       }
 
       addToast(`Payment proof ${approve ? 'approved' : 'rejected'}.`, 'success');
+      logPlatformActivity(
+        `Payment ${approve ? 'Approved' : 'Rejected'}`,
+        `Payment verification for booking was ${approve ? 'approved and allocated' : 'rejected'}.`,
+        approve ? 'success' : 'warning'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Payment review failed', 'error');
@@ -917,6 +954,7 @@ export default function AdminPortal() {
         .eq('id', disbRecord.id);
 
       addToast(`Declared yield batch for ${disMonth}: ${formatCurrency(totalDistributed, currency)} allocated across ${yieldInserts.length} investors!`, 'success');
+      logPlatformActivity('Yield Batch Declared', `${disMonth} yield batch declared for "${proj?.project_title || 'Project'}": ${formatCurrency(totalDistributed, currency)} allocated across ${yieldInserts.length} investors.`, 'success');
       setDividendProjectId('');
       setGrossSales('');
       setNetProfit('');
@@ -1932,15 +1970,61 @@ export default function AdminPortal() {
   // Calculated Metrics
   const totalAumRaised = activeInvestments.reduce((sum, i) => sum + Number(i.amount_invested_bdt || 0), 0);
   const activeInvestorsCount = allInvestors.filter(i => i.kyc_verified).length;
-  const activeProjectsCount = projects.filter(p => ['Active', 'Trading', 'Funding'].includes(p.status)).length;
+  const activeProjectsCount = projects.filter(p => 
+    ['Active', 'Trading', 'Funding', 'Active Capital Raise', 'Diligence', 'Origination'].includes(p.status) && p.status !== 'Closed'
+  ).length;
   const totalYieldDisbursed = yieldDisbursements.reduce((sum, y) => sum + Number(y.total_disbursed_bdt || 0), 0);
-  const totalFeeSpreadCaptured = projects.reduce((sum, p) => sum + (Number(p.target_raise_bdt) * 0.05), 0);
+  const totalFeeSpreadCaptured = projects.reduce((sum, p) => sum + (Number(p.amount_raised_bdt || 0) * 0.05), 0);
+  const totalPipelineSpreadTarget = projects.reduce((sum, p) => sum + (Number(p.target_raise_bdt || 0) * 0.05), 0);
 
   const pendingKycCount = kycSubmissions.filter(s => s.status === 'Pending').length;
   const pendingPaymentsCount = paymentSubmissions.filter(s => s.investment_bookings?.status === 'Proof_Submitted').length;
   const pendingLeadsCount = inquiryLeads.filter(l => l.status === 'New').length;
   const pendingCashTicketsCount = cashTickets.filter(t => t.status === 'Pending_Review').length;
   const pendingCohortCount = cohortApplications.filter(a => ['New_Submission', 'Under_Director_Review', 'KAM_Assigned', 'Diligence_In_Progress'].includes(a.status)).length;
+
+  // Synthesize rich Activity Stream from real records + logged events
+  const synthesizedActivityStream = [
+    ...recentNotifications,
+    ...paymentSubmissions.map(p => ({
+      id: 'pay-' + p.id,
+      title: 'Payment Proof Submitted',
+      message: `৳${Number(p.investment_bookings?.amount_bdt || 0).toLocaleString()} proof uploaded via ${p.payment_method || 'Bank Transfer'}.`,
+      type: p.investment_bookings?.status === 'Approved' ? 'success' : 'warning',
+      created_at: p.created_at
+    })),
+    ...inquiryLeads.map(l => ({
+      id: 'lead-' + l.id,
+      title: 'New Prospective Lead',
+      message: `${l.name} inquired for ${l.investment_range || 'deal access'} via ${l.source_channel || 'Web'}.`,
+      type: 'info',
+      created_at: l.created_at
+    })),
+    ...kycSubmissions.map(k => ({
+      id: 'kyc-' + k.id,
+      title: `KYC Level ${k.target_level} Submission`,
+      message: `${k.investors?.alias_name || 'Investor'} submitted identity verification documents.`,
+      type: k.status === 'Approved' ? 'success' : 'warning',
+      created_at: k.created_at
+    })),
+    ...yieldDisbursements.map(y => ({
+      id: 'yield-' + y.id,
+      title: `Yield Batch Declared`,
+      message: `৳${Number(y.total_disbursed_bdt || 0).toLocaleString()} allocated for ${y.disbursement_month || 'month'}.`,
+      type: 'success',
+      created_at: y.created_at
+    })),
+    ...cohortApplications.map(a => ({
+      id: 'app-' + a.id,
+      title: `Cohort SME Application`,
+      message: `"${a.brand_name}" submitted SME expansion pitch for ৳${Number(a.requested_funding_bdt || 0).toLocaleString()}.`,
+      type: 'info',
+      created_at: a.created_at
+    }))
+  ]
+  .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  .slice(0, 10);
 
   // Global Search Items Computation
   const searchResults = globalSearchQuery.trim() === '' ? [] : [
@@ -1961,7 +2045,7 @@ export default function AdminPortal() {
         user={user}
         signOut={signOut}
         currency={currency}
-        totalFeeSpreadCaptured={totalFeeSpreadCaptured}
+        totalFeeSpreadCaptured={totalPipelineSpreadTarget}
         pendingCounts={{
           kycPayments: pendingKycCount + pendingPaymentsCount,
           cohort: pendingCohortCount,
@@ -1976,6 +2060,8 @@ export default function AdminPortal() {
         <AdminHeader
           activeTab={activeTab}
           onAddProject={() => handleOpenProjectModal()}
+          onRefresh={() => fetchAdminData()}
+          isRefreshing={loading}
         />
 
         {/* ---------------------------------------------------- */}
@@ -1988,6 +2074,7 @@ export default function AdminPortal() {
             activeProjectsCount={activeProjectsCount}
             totalYieldDisbursed={totalYieldDisbursed}
             totalFeeSpreadCaptured={totalFeeSpreadCaptured}
+            totalPipelineSpreadTarget={totalPipelineSpreadTarget}
             inquiryLeads={inquiryLeads}
             pendingKycCount={pendingKycCount}
             pendingPaymentsCount={pendingPaymentsCount}
@@ -1995,11 +2082,13 @@ export default function AdminPortal() {
             pendingCashTicketsCount={pendingCashTicketsCount}
             projects={projects}
             allKams={allKams}
-            recentNotifications={recentNotifications}
+            recentNotifications={synthesizedActivityStream}
             currency={currency}
             setActiveTab={setActiveTab}
             setInvestorSubTab={setInvestorSubTab}
             onOpenProjectModal={() => handleOpenProjectModal()}
+            onRefresh={() => fetchAdminData()}
+            isRefreshing={loading}
           />
         )}
 

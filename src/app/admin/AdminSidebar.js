@@ -2,7 +2,7 @@
 import React from 'react';
 import {
   Activity, Layers, Building2, Users, TrendingUp, ArrowUpRight, Calculator,
-  Award, MessageSquare, FileText, BarChart2, Bot, Sparkles,
+  Award, MessageSquare, FileText, BarChart2, Bot, Sparkles, Wallet, Settings,
   LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/currency';
@@ -57,7 +57,7 @@ export default function AdminSidebar({
             background: '#10b981', boxShadow: '0 0 10px #10b981'
           }} />
           <span style={{ fontWeight: '800', fontSize: '0.82rem', letterSpacing: '0.04em', color: '#cbd5e1', textTransform: 'uppercase' }}>
-            Operations Hub <span style={{ color: '#D4AF37' }}>v0.5.2</span>
+            Operations Hub <span style={{ color: '#D4AF37' }}>v0.5.4</span>
           </span>
         </div>
         <button
@@ -164,7 +164,7 @@ export default function AdminSidebar({
               )}
             </button>
             <NavBtn tabKey="dividend" label="Yield Engine" Icon={TrendingUp} />
-            <NavBtn tabKey="cash-pipeline" label="Cash Concierge" Icon={ArrowUpRight} />
+            <NavBtn tabKey="cash-pipeline" label="Cash Concierge" Icon={Wallet} />
           </div>
         </div>
 
@@ -203,7 +203,7 @@ export default function AdminSidebar({
           <p className="admin-nav-group-label sidebar-hide-on-collapse">PLATFORM</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             <NavBtn tabKey="bot-management" label="Bots & Access Control" Icon={Bot} />
-            <NavBtn tabKey="settings" label="Settings" Icon={Sparkles} />
+            <NavBtn tabKey="settings" label="Settings" Icon={Settings} />
           </div>
         </div>
 

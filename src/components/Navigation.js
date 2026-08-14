@@ -285,7 +285,7 @@ export default function Navigation() {
             GRO10X <span style={{ color: '#D4AF37' }}>CAPITAL</span>
           </div>
           <div className="hide-mobile" style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700' }}>
-            v0.6.4{role ? ` • ${role.toUpperCase()}` : ''}
+            v0.6.5{role ? ` • ${role.toUpperCase()}` : ''}
           </div>
         </div>
       </Link>

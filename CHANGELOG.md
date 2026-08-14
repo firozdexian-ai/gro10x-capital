@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.5] — 2026-08-15
+**Admin Bots & Access Control Tab 11 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **KPI Card Hierarchy**: Standardized all 4 KPI card headers with uppercase styling, `letterSpacing: 0.04em`, and `fontWeight: 800`.
+- **Sub-Tab Navigation**: Standardized all 4 sub-tab buttons with platform `tab-toggle-btn` styling and dedicated Lucide icons (`Bot`, `Users`, `ShieldCheck`, `LayoutGrid`).
+- **Filter Pill Fix**: Fixed 'Alls' typo in User Access Directory role filter pills by adopting explicit `{ key, label }` structure.
+- **Activity Telemetry**: Instrumented all 3 transactional handlers (`handleRegisterWebhook`, `handleSaveBotConfig`, `handleGeneratePin`) with `safeLogActivity` and wired `logPlatformActivity` prop from `page.js`.
+- **Table Empty States**: Added elevated empty state rows with Lucide icons (`Users`, `ShieldCheck`) to both the Telegram User Access Directory table and the PIN Security Audit Logs table.
+
+---
+
 ## [v0.6.4] — 2026-08-15
 **Admin Analytics Tab 10 Comprehensive Overhaul**
 

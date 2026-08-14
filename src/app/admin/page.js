@@ -2539,7 +2539,7 @@ export default function AdminPortal() {
 
         {/* BOT MANAGEMENT & ACCESS CONTROL TAB */}
         {activeTab === 'bot-management' && (
-          <BotManagementTab currency={currency} addToast={addToast} />
+          <BotManagementTab currency={currency} addToast={addToast} logPlatformActivity={logPlatformActivity} />
         )}
 
         {/* SETTINGS TAB */}

@@ -1,8 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { Bot, Users, ShieldCheck, LayoutGrid, Key, RefreshCw, Smartphone, ExternalLink, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
-export default function BotManagementTab({ currency, addToast }) {
+/**
+ * BotManagementTab Component (Tab 11)
+ * Handles Telegram Bots Ecosystem, User Access Directory, PIN Security Logs,
+ * and Mini-App Command Matrix.
+ */
+export default function BotManagementTab({ currency, addToast, logPlatformActivity }) {
   const [botSubTab, setBotSubTab] = useState('bots'); // 'bots' | 'directory' | 'pins' | 'commands'
   const [botConfigs, setBotConfigs] = useState([]);
   const [authPins, setAuthPins] = useState([]);
@@ -112,6 +118,13 @@ export default function BotManagementTab({ currency, addToast }) {
     }
   };
 
+  // Safe Activity Logger Helper
+  const safeLogActivity = (title, message, type = 'info') => {
+    if (typeof logPlatformActivity === 'function') {
+      logPlatformActivity(title, message, type);
+    }
+  };
+
   // Register Webhook with Telegram API
   const handleRegisterWebhook = async (botKey) => {
     try {
@@ -123,6 +136,7 @@ export default function BotManagementTab({ currency, addToast }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to register webhook');
       addToast(`✓ Telegram Webhook registered for ${botKey}! Endpoint: ${data.webhookUrl}`, 'success');
+      safeLogActivity('Telegram Webhook Registered', `Registered webhook endpoint for ${botKey}`, 'success');
     } catch (err) {
       addToast(err.message || 'Webhook registration failed', 'error');
     }
@@ -164,6 +178,7 @@ export default function BotManagementTab({ currency, addToast }) {
       if (error) throw error;
 
       addToast(`Bot Configuration '${botForm.bot_name}' saved successfully!`, 'success');
+      safeLogActivity('Bot Configuration Updated', `Updated credentials & endpoints for ${botForm.bot_name} (${botForm.bot_username || botForm.bot_key})`, 'info');
       setEditingBotKey(null);
       fetchBotData();
     } catch (err) {
@@ -198,6 +213,7 @@ export default function BotManagementTab({ currency, addToast }) {
       if (error) throw error;
 
       addToast(`Temporary Access PIN (${generatedPin}) generated for ${pinForm.linked_name || pinForm.phone_number}! Active for 15 mins.`, 'success');
+      safeLogActivity('Security PIN Generated', `Generated 15-minute temporary access PIN for ${pinForm.linked_name || pinForm.phone_number} (${pinForm.user_role})`, 'warning');
       setShowPinModal(false);
       setPinForm({ phone_number: '', user_role: 'investor', linked_name: '' });
       fetchBotData();
@@ -221,13 +237,13 @@ export default function BotManagementTab({ currency, addToast }) {
       {/* 4-TILE HEADER KPI STRIP */}
       <div className="kpi-grid">
         <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Configured Telegram Bots</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Configured Telegram Bots</p>
           <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#fff', margin: 0 }}>3 Active Bots</h3>
           <span style={{ fontSize: '0.7rem', color: '#10b981' }}>● Team, Investor & Client Bots</span>
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Telegram Linked Users</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Telegram Linked Users</p>
           <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>
             {allUsersDirectory.filter(u => u.verified).length}
           </h3>
@@ -235,7 +251,7 @@ export default function BotManagementTab({ currency, addToast }) {
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Active Auth PINs</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Auth PINs</p>
           <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
             {authPins.filter(p => new Date(p.pin_expires_at) > new Date()).length}
           </h3>
@@ -243,7 +259,7 @@ export default function BotManagementTab({ currency, addToast }) {
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Management Bot Token</p>
+          <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Management Bot Token</p>
           <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#10b981', margin: 0, fontFamily: 'monospace' }}>
             8824027905:...
           </h3>
@@ -252,31 +268,25 @@ export default function BotManagementTab({ currency, addToast }) {
       </div>
 
       {/* SUB-TABS SELECTOR */}
-      <div className="tab-toggle-group" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
-        <button 
-          onClick={() => setBotSubTab('bots')}
-          style={{ background: 'transparent', border: 'none', borderBottom: botSubTab === 'bots' ? '2px solid #D4AF37' : '2px solid transparent', color: botSubTab === 'bots' ? '#D4AF37' : '#94a3b8', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
-        >
-          The 3 Bots Ecosystem ({botConfigs.length})
-        </button>
-        <button 
-          onClick={() => setBotSubTab('directory')}
-          style={{ background: 'transparent', border: 'none', borderBottom: botSubTab === 'directory' ? '2px solid #D4AF37' : '2px solid transparent', color: botSubTab === 'directory' ? '#D4AF37' : '#94a3b8', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
-        >
-          Telegram User Access Directory ({allUsersDirectory.length})
-        </button>
-        <button 
-          onClick={() => setBotSubTab('pins')}
-          style={{ background: 'transparent', border: 'none', borderBottom: botSubTab === 'pins' ? '2px solid #D4AF37' : '2px solid transparent', color: botSubTab === 'pins' ? '#D4AF37' : '#94a3b8', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
-        >
-          PIN & Web Security Logs ({authPins.length})
-        </button>
-        <button 
-          onClick={() => setBotSubTab('commands')}
-          style={{ background: 'transparent', border: 'none', borderBottom: botSubTab === 'commands' ? '2px solid #D4AF37' : '2px solid transparent', color: botSubTab === 'commands' ? '#D4AF37' : '#94a3b8', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
-        >
-          Commands & Mini App Matrix
-        </button>
+      <div className="tab-toggle-group" style={{ width: 'fit-content' }}>
+        {[
+          { key: 'bots', label: `The 3 Bots Ecosystem (${botConfigs.length})`, icon: Bot },
+          { key: 'directory', label: `Telegram User Access Directory (${allUsersDirectory.length})`, icon: Users },
+          { key: 'pins', label: `PIN & Web Security Logs (${authPins.length})`, icon: ShieldCheck },
+          { key: 'commands', label: 'Commands & Mini App Matrix', icon: LayoutGrid },
+        ].map(t => {
+          const TabIcon = t.icon;
+          return (
+            <button 
+              key={t.key}
+              onClick={() => setBotSubTab(t.key)}
+              className={`tab-toggle-btn ${botSubTab === t.key ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+            >
+              <TabIcon size={15} /> {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* SUB-TAB 1: THE 3 BOTS ECOSYSTEM */}
@@ -383,23 +393,28 @@ export default function BotManagementTab({ currency, addToast }) {
           {/* CONTROLS ROW */}
           <div className="dir-controls">
             <div style={{ display: 'flex', gap: '0.4rem' }}>
-              {['All', 'admin', 'kam', 'promoter', 'investor'].map(r => (
+              {[
+                { key: 'All', label: 'All' },
+                { key: 'admin', label: 'Admins' },
+                { key: 'kam', label: 'KAMs' },
+                { key: 'promoter', label: 'Promoters' },
+                { key: 'investor', label: 'Investors' }
+              ].map(r => (
                 <button
-                  key={r}
-                  onClick={() => setRoleFilter(r)}
+                  key={r.key}
+                  onClick={() => setRoleFilter(r.key)}
                   style={{
                     padding: '0.35rem 0.75rem',
                     borderRadius: '6px',
                     border: 'none',
-                    background: roleFilter === r ? '#D4AF37' : 'rgba(255,255,255,0.05)',
-                    color: roleFilter === r ? '#000' : '#94a3b8',
+                    background: roleFilter === r.key ? '#D4AF37' : 'rgba(255,255,255,0.05)',
+                    color: roleFilter === r.key ? '#000' : '#94a3b8',
                     fontWeight: 'bold',
                     fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    textTransform: 'capitalize'
+                    cursor: 'pointer'
                   }}
                 >
-                  {r}s
+                  {r.label}
                 </button>
               ))}
             </div>
@@ -427,6 +442,14 @@ export default function BotManagementTab({ currency, addToast }) {
                 </tr>
               </thead>
               <tbody>
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#475569' }}>
+                      <Users size={24} style={{ opacity: 0.35, display: 'block', margin: '0 auto 0.5rem' }} />
+                      No platform users found matching your search or role filter.
+                    </td>
+                  </tr>
+                )}
                 {filteredUsers.map(user => (
                   <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <td style={{ padding: '0.75rem', fontWeight: 'bold', color: '#fff' }}>{user.name}</td>
@@ -523,6 +546,14 @@ export default function BotManagementTab({ currency, addToast }) {
                 </tr>
               </thead>
               <tbody>
+                {authPins.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#475569' }}>
+                      <ShieldCheck size={24} style={{ opacity: 0.35, display: 'block', margin: '0 auto 0.5rem' }} />
+                      No authentication PIN logs recorded yet.
+                    </td>
+                  </tr>
+                )}
                 {authPins.map(pin => {
                   const isExpired = new Date(pin.pin_expires_at) < new Date();
 

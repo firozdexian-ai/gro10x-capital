@@ -5,7 +5,7 @@ import { PlusCircle, ChevronRight, RefreshCw } from 'lucide-react';
 /** Tab metadata map — single source of truth for breadcrumb + title */
 const TAB_META = {
   dashboard:          { crumb: 'Command Center',    title: 'Command Center Overview' },
-  kanban:             { crumb: 'Deal Pipeline',     title: '100-Project Onboarding Pipeline' },
+  kanban:             { crumb: 'Deal Pipeline',     title: 'Deal Pipeline Management' },
   'business-registry':{ crumb: 'Business Registry', title: 'Business Registry & Cohort Applications' },
   investors:          { crumb: 'Investor Hub',      title: 'Investor Operations Hub' },
   dividend:           { crumb: 'Yield Engine',      title: 'Dividend & Yield Distribution Engine' },

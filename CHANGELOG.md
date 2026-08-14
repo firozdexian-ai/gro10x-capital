@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.5] — 2026-08-14
+**Admin Deal Pipeline Tab 2 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Canonical Stage Mapping & Resilient Card Matching**: Implemented `STAGE_STATUS_MAP` and `isProjectInStage()` matching engine supporting all legacy status strings (`Active Capital Raise`, `Live & Trading`, etc.), ensuring all active campaigns reliably render in their corresponding Kanban columns and table filters.
+- **Stage Advance Workflow & Friendly Titles**: Integrated `STAGE_TRANSITIONS` mapping so advance buttons and confirmation modals display friendly human-readable stage names (e.g. `2. Diligence & Valuation`, `3. Active Capital Raise`, `4. Active National Grid Hub`) rather than raw internal enum IDs.
+- **Showcase Published vs. Live Badge Disambiguation**: Differentiated `• Published` (amber badge for showcase projects) from `• Live` (emerald badge reserved strictly for active trading grid hubs).
+- **Inline Stage Quick-Add**: Added quick `+` column header trigger to open project onboarding modal pre-configured for the selected kanban stage.
+- **Clickable KAM Assignment Shortcut**: Made unassigned KAM warning label directly interactive, opening the project modal for immediate KAM delegation.
+- **Icon Modernization**: Replaced emoji buttons with accessible Lucide `<Users />` icon controls.
+- **Table View Actions & Progress Suite**: Upgraded Table View with mini gradient progress bars, dynamic `{pct}% (৳Raised)` progress figures, investor drilldown buttons, and stage advance triggers.
+- **Header Title Refinement**: Cleaned hardcoded pipeline title in `AdminHeader` to `Deal Pipeline Management`.
+
+---
+
 ## [v0.5.4] — 2026-08-14
 **Admin Command Center Tab 1 Comprehensive Overhaul**
 

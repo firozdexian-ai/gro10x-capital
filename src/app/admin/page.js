@@ -428,6 +428,9 @@ export default function AdminPortal() {
 
   const handleConfirmAdvanceStage = async () => {
     if (!advanceModal.project || !advanceModal.targetStage) return;
+    const stageDisplayTitle = advanceModal.targetStageTitle || 
+      kanbanStages.find(s => s.id === advanceModal.targetStage)?.title || 
+      advanceModal.targetStage;
     try {
       const { error } = await supabase
         .from('funding_projects')
@@ -436,18 +439,18 @@ export default function AdminPortal() {
 
       if (error) throw error;
 
-      addToast(`Project advanced to ${advanceModal.targetStage}`, 'success');
-      logPlatformActivity('Project Stage Advanced', `"${advanceModal.project.project_title}" advanced to ${advanceModal.targetStage}`, 'info');
-      setAdvanceModal({ open: false, project: null, targetStage: '' });
+      addToast(`Project advanced to ${stageDisplayTitle}`, 'success');
+      logPlatformActivity('Project Stage Advanced', `"${advanceModal.project.project_title}" advanced to ${stageDisplayTitle}`, 'info');
+      setAdvanceModal({ open: false, project: null, targetStage: '', targetStageTitle: '' });
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to advance stage', 'error');
     }
   };
 
-  // Open Project Modal for Create or Edit
-  const handleOpenProjectModal = async (projectToEdit = null) => {
-    if (projectToEdit) {
+  // Open Project Modal for Create or Edit (with optional default status)
+  const handleOpenProjectModal = async (projectToEdit = null, defaultStatus = 'Origination') => {
+    if (projectToEdit && typeof projectToEdit === 'object') {
       setEditingProjectId(projectToEdit.id);
       
       // Fetch media
@@ -492,12 +495,13 @@ export default function AdminPortal() {
         media_list: mediaData || []
       });
     } else {
+      const initialStatus = typeof projectToEdit === 'string' ? projectToEdit : (defaultStatus || 'Origination');
       setEditingProjectId(null);
       setProjectForm({
         project_title: '',
         business_id: businesses[0]?.id || '',
         funding_type: 'Franchise',
-        status: 'Origination',
+        status: initialStatus || 'Origination',
         target_raise_bdt: 20000000,
         min_otc_investment_bdt: 1000000,
         spv_name: '',
@@ -3153,10 +3157,10 @@ export default function AdminPortal() {
             <AlertCircle size={48} style={{ color: '#D4AF37', margin: '0 auto 1rem auto' }} />
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Advance Project Stage</h3>
             <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Are you sure you want to move <strong>"{advanceModal.project?.project_title}"</strong> to the <strong>"{advanceModal.targetStage}"</strong> stage?
+              Are you sure you want to move <strong>"{advanceModal.project?.project_title}"</strong> to the <strong>"{advanceModal.targetStageTitle || kanbanStages.find(s => s.id === advanceModal.targetStage)?.title || advanceModal.targetStage}"</strong> stage?
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={() => setAdvanceModal({ open: false, project: null, targetStage: '' })} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+              <button onClick={() => setAdvanceModal({ open: false, project: null, targetStage: '', targetStageTitle: '' })} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
                 Cancel
               </button>
               <button onClick={handleConfirmAdvanceStage} style={{ flex: 1, background: '#D4AF37', color: '#000', border: 'none', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>

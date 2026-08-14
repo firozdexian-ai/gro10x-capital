@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.7] — 2026-08-15
+**Admin Valuation Model Tab 3.5 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Eliminated Duplicate Header Block**: Stripped redundant internal purple banner title; now seamlessly aligned with the `AdminHeader` breadcrumb shell.
+- **Live Deal Pipeline Project Linkage**: Added target deal selector dropdown pulling live records from `funding_projects` with automatic baseline parameter pre-population.
+- **Scenario Presets Engine**: Added 1-click preset scenario buttons (Conservative, Base Case, Aggressive Scale) for instant DCF modeling.
+- **Formatted Currency Shorthands**: Replaced raw unformatted integers with live shorthand currency tags (`৳5.00 Crore`, `৳50.0 Lakhs`, etc.) across inputs and summary cards.
+- **Preset Quick-Select Chips**: Added 1-click chip buttons for Pre-Money Valuations (৳2.0Cr to ৳12.0Cr) and Target Raises (৳50L to ৳5.0Cr).
+- **Save Valuation to Deal Pipeline**: Implemented live Supabase mutation to persist calculated `target_raise_bdt`, `equity_investor_share`, and tiered yield options back to the selected project.
+- **Live Telemetry Logging**: Integrated `logPlatformActivity` on valuation scenario save to broadcast DCF parameters to the Command Center activity feed.
+- **Division-by-Zero Safety**: Fully guarded all financial math ratios against zero or negative inputs.
+- **Clipboard Export Suite**: Added 1-click formatted plain-text valuation summary export for investor memo sharing.
+
+---
+
 ## [v0.5.6] — 2026-08-14
 **Admin Business Registry Tab 3 Comprehensive Overhaul**
 

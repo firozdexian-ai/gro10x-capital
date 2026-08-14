@@ -2172,8 +2172,13 @@ export default function AdminPortal() {
         {/* ---------------------------------------------------- */}
         {activeTab === 'valuation-model' && (
           <ValuationModelTab
+            projects={projects}
+            businesses={businesses}
             currency={currency}
             setCurrency={setCurrency}
+            addToast={addToast}
+            logPlatformActivity={logPlatformActivity}
+            fetchAdminData={fetchAdminData}
           />
         )}
 

@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Inbox, UserPlus, Plus, Search, Sparkles, Filter } from 'lucide-react';
+import { Inbox, UserPlus, Plus, Search, Sparkles, Filter, FileSpreadsheet, Megaphone, Send, Rocket, UserCheck, Calendar, Phone, Mail, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { formatCurrency } from '../../../lib/currency';
 
 /**
- * InquiryLeadsTab Component (Tab 10)
+ * InquiryLeadsTab Component (Tab 8) — Production Standard
  * Handles Prospective Inquiry Lead Pipeline, Promoter Survey Vault,
  * and Marketing Campaigns Tracker.
  */
-export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
+export default function InquiryLeadsTab({ currency = 'BDT', addToast, logPlatformActivity }) {
   const [leadsSubTab, setLeadsSubTab] = useState('pipeline'); // 'pipeline' | 'survey-vault' | 'campaigns'
   const [leads, setLeads] = useState([]);
   const [preProfiles, setPreProfiles] = useState([]);
@@ -89,6 +89,13 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
     }
   };
 
+  // Safe Activity Logger Helper
+  const safeLogActivity = (title, message, type = 'info') => {
+    if (typeof logPlatformActivity === 'function') {
+      logPlatformActivity(title, message, type);
+    }
+  };
+
   // Lead Status Handler
   const handleUpdateLeadStatus = async (id, newStatus) => {
     try {
@@ -98,7 +105,13 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
         .eq('id', id);
 
       if (error) throw error;
+      const targetLead = leads.find(l => l.id === id);
       addToast && addToast(`Lead status updated to ${newStatus.replace(/_/g, ' ')}`, 'success');
+      safeLogActivity(
+        'Lead Status Updated',
+        `Updated status of lead ${targetLead?.name || '#' + id} to ${newStatus.replace(/_/g, ' ')}`,
+        'info'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast('Failed to update lead status', 'error');
@@ -117,7 +130,16 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
         .eq('id', leadId);
 
       if (error) throw error;
+      const targetLead = leads.find(l => l.id === leadId);
+      const targetProm = allPromoters.find(p => p.id === promoterId);
       addToast && addToast(promoterId ? 'Promoter assigned! Lead status moved to Promoter Assigned.' : 'Promoter unassigned', 'success');
+      safeLogActivity(
+        'Promoter Assigned to Lead',
+        promoterId 
+          ? `Assigned promoter ${targetProm?.alias_name || 'Promoter'} to lead ${targetLead?.name || '#' + leadId}` 
+          : `Unassigned promoter from lead ${targetLead?.name || '#' + leadId}`,
+        'info'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast('Failed to assign promoter', 'error');
@@ -133,7 +155,16 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
         .eq('id', leadId);
 
       if (error) throw error;
+      const targetLead = leads.find(l => l.id === leadId);
+      const targetKam = allKams.find(k => k.id === kamId);
       addToast && addToast('Managing Partner assigned to lead.', 'success');
+      safeLogActivity(
+        'Account Manager Assigned',
+        kamId 
+          ? `Assigned ${targetKam?.full_name || 'Managing Partner'} to lead ${targetLead?.name || '#' + leadId}`
+          : `Removed assigned partner from lead ${targetLead?.name || '#' + leadId}`,
+        'info'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast('Failed to assign Managing Partner', 'error');
@@ -149,7 +180,13 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
         .eq('id', leadId);
 
       if (error) throw error;
+      const targetLead = leads.find(l => l.id === leadId);
       addToast && addToast('Lead notes and follow-up date saved.', 'success');
+      safeLogActivity(
+        'Lead CRM Updated',
+        `Saved notes & follow-up schedule for lead ${targetLead?.name || '#' + leadId}`,
+        'info'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast('Failed to save lead details', 'error');
@@ -182,6 +219,11 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       if (error) throw error;
 
       addToast && addToast('New prospective lead logged successfully!', 'success');
+      safeLogActivity(
+        'Prospective Lead Logged',
+        `Logged inquiry lead for ${addLeadForm.name} (${addLeadForm.investment_range}) via ${addLeadForm.source_channel}`,
+        'success'
+      );
       setAddLeadForm({ name: '', phone: '', email: '', investment_range: '৳10L - ৳50L', source_channel: 'Admin_Entry', notes: '', referral_code: '', meeting_preference: 'Online Call', target_project_id: '' });
       setShowAddLeadForm(false);
       fetchAllData();
@@ -206,6 +248,11 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       if (!res.ok) throw new Error(data.error || 'Failed to dispatch Telegram invite');
 
       addToast && addToast(`Telegram Bot invite link generated for ${data.full_name}! Status updated to Invite Sent.`, 'success');
+      safeLogActivity(
+        'Telegram Bot Invite Dispatched',
+        `Generated Telegram invitation link for ${data.full_name || 'survey profile #' + preProfileId}`,
+        'info'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast(err.message || 'Failed to send Telegram invite', 'error');
@@ -254,6 +301,11 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       }
 
       addToast && addToast(`Promoted pre-profile '${preProfile.full_name}' to full Verified Investor profile!`, 'success');
+      safeLogActivity(
+        'Pre-Profile Converted to Investor',
+        `Promoted survey pre-profile for ${preProfile.full_name} to full Verified Investor profile (Category: ${invPayload.investor_category})`,
+        'success'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast(err.message || 'Failed to convert investor', 'error');
@@ -283,6 +335,11 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       if (error) throw error;
 
       addToast && addToast(`Marketing Campaign '${campaignForm.campaign_name}' created!`, 'success');
+      safeLogActivity(
+        'Marketing Campaign Created',
+        `Launched marketing campaign '${campaignForm.campaign_name}' (${payload.campaign_type}, Budget: ৳${payload.budget_bdt.toLocaleString()})`,
+        'success'
+      );
       setCampaignForm({ campaign_name: '', campaign_type: 'Event', start_date: '', end_date: '', budget_bdt: '', notes: '' });
       setShowCampaignForm(false);
       fetchAllData();
@@ -298,7 +355,13 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
     try {
       const { error } = await supabase.from('marketing_campaigns').update({ status: 'Completed' }).eq('id', id);
       if (error) throw error;
+      const targetCamp = campaigns.find(c => c.id === id);
       addToast && addToast('Campaign marked as Completed.', 'info');
+      safeLogActivity(
+        'Marketing Campaign Completed',
+        `Marked campaign '${targetCamp?.campaign_name || '#' + id}' as completed`,
+        'info'
+      );
       fetchAllData();
     } catch (err) {
       addToast && addToast('Failed to update campaign status', 'error');
@@ -320,63 +383,82 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* 5-TILE FUNNEL KPI STRIP */}
-      <div className="kpi-grid-5">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        
+        {/* Card 1: Total Inquiries */}
         <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total Inquiries</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#fff', margin: 0 }}>{leads.length}</h3>
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Web & Public Ingest</span>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Total Inquiries
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#fff', margin: 0 }}>{leads.length}</h3>
+          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Web &amp; Public Ingest</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Unworked (New)</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>
+        {/* Card 2: Unworked (New) */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(245,158,11,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Unworked (New)
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>
             {leads.filter(l => l.status === 'New').length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>Awaiting Promoter Tag</span>
+          <span style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Awaiting Promoter Tag</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Promoter Surveys</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{preProfiles.length}</h3>
-          <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>Enriched Investor Files</span>
+        {/* Card 3: Promoter Surveys */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(59,130,246,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Promoter Surveys
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{preProfiles.length}</h3>
+          <span style={{ fontSize: '0.72rem', color: '#3b82f6' }}>Enriched Investor Files</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Pending Bot Invites</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
+        {/* Card 4: Pending Bot Invites */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(212,175,55,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Pending Bot Invites
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
             {preProfiles.filter(p => p.survey_status === 'Complete' || p.survey_status === 'In_Progress').length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#D4AF37' }}>Awaiting Telegram Verification</span>
+          <span style={{ fontSize: '0.72rem', color: '#D4AF37' }}>Awaiting Telegram Verification</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Converted Investors</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
+        {/* Card 5: Converted Investors */}
+        <div className="glass-card-premium" style={{ padding: '1.25rem' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Converted Investors
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
             {leads.filter(l => l.status === 'Converted').length + preProfiles.filter(p => p.survey_status === 'Converted').length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#10b981' }}>Full Active Portfolios</span>
+          <span style={{ fontSize: '0.72rem', color: '#10b981' }}>Full Active Portfolios</span>
         </div>
       </div>
 
       {/* SUB-TABS SELECTOR */}
-      <div className="tab-toggle-group" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+      <div className="tab-toggle-group" style={{ width: 'fit-content' }}>
         <button 
           onClick={() => setLeadsSubTab('pipeline')}
           className={`tab-toggle-btn ${leadsSubTab === 'pipeline' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          Inquiry Lead Pipeline ({leads.length})
+          <Inbox size={15} /> Inquiry Lead Pipeline ({leads.length})
         </button>
         <button 
           onClick={() => setLeadsSubTab('survey-vault')}
           className={`tab-toggle-btn ${leadsSubTab === 'survey-vault' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          Promoter Survey Vault ({preProfiles.length})
+          <FileSpreadsheet size={15} /> Promoter Survey Vault ({preProfiles.length})
         </button>
         <button 
           onClick={() => setLeadsSubTab('campaigns')}
           className={`tab-toggle-btn ${leadsSubTab === 'campaigns' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          Marketing Campaigns ({campaigns.length})
+          <Megaphone size={15} /> Marketing Campaigns ({campaigns.length})
         </button>
       </div>
 
@@ -385,16 +467,20 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       {/* ---------------------------------------------------- */}
       {leadsSubTab === 'pipeline' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>Public Prospective Inquiry Leads</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Assign promoters to conduct information gathering surveys and reduce investor friction.</p>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+                Public Prospective Inquiry Leads
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+                Assign promoters to conduct information gathering surveys and reduce investor friction.
+              </p>
             </div>
             
             <button 
               onClick={() => setShowAddLeadForm(!showAddLeadForm)}
               className={showAddLeadForm ? 'btn-sm' : 'btn-sm btn-gold'}
-              style={{ background: showAddLeadForm ? 'rgba(255,255,255,0.1)' : undefined, color: showAddLeadForm ? '#fff' : undefined, padding: '0.45rem 0.95rem' }}
+              style={{ background: showAddLeadForm ? 'rgba(255,255,255,0.1)' : undefined, color: showAddLeadForm ? '#fff' : undefined, padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               {showAddLeadForm ? '✕ Close Form' : '+ Add Lead Manually'}
             </button>
@@ -402,24 +488,29 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
 
           {/* COLLAPSIBLE ADD LEAD FORM */}
           {showAddLeadForm && (
-            <div className="glass-card-premium" style={{ padding: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: '#D4AF37', fontSize: '0.95rem' }}>Log New Offline / Call-In Inquiry Lead</h4>
-              <form onSubmit={handleAddManualLead} className="form-grid-3col" style={{ fontSize: '0.85rem' }}>
+            <div className="glass-card-premium" style={{ padding: '1.75rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#D4AF37', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Plus size={18} /> Log New Offline / Call-In Inquiry Lead
+              </h4>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 1.25rem 0' }}>
+                Record prospective investor contacts received via phone calls, private referrals, or offline networking events.
+              </p>
+              <form onSubmit={handleAddManualLead} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Lead Full Name *</label>
-                  <input type="text" placeholder="e.g. Dr. Kazi Mahbub" value={addLeadForm.name} onChange={(e) => setAddLeadForm({ ...addLeadForm, name: e.target.value })} className="form-input" required />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Lead Full Name *</label>
+                  <input type="text" placeholder="e.g. Dr. Kazi Mahbub" value={addLeadForm.name} onChange={(e) => setAddLeadForm({ ...addLeadForm, name: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Phone Number *</label>
-                  <input type="text" placeholder="+88017..." value={addLeadForm.phone} onChange={(e) => setAddLeadForm({ ...addLeadForm, phone: e.target.value })} className="form-input" required />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Phone Number *</label>
+                  <input type="text" placeholder="+88017..." value={addLeadForm.phone} onChange={(e) => setAddLeadForm({ ...addLeadForm, phone: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Email Address</label>
-                  <input type="email" placeholder="kazi@gmail.com" value={addLeadForm.email} onChange={(e) => setAddLeadForm({ ...addLeadForm, email: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Email Address</label>
+                  <input type="email" placeholder="kazi@gmail.com" value={addLeadForm.email} onChange={(e) => setAddLeadForm({ ...addLeadForm, email: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Target CapEx Range</label>
-                  <select value={addLeadForm.investment_range} onChange={(e) => setAddLeadForm({ ...addLeadForm, investment_range: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Target CapEx Range</label>
+                  <select value={addLeadForm.investment_range} onChange={(e) => setAddLeadForm({ ...addLeadForm, investment_range: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="৳1L - ৳5L">৳1L - ৳5L (Retail)</option>
                     <option value="৳5L - ৳10L">৳5L - ৳10L</option>
                     <option value="৳10L - ৳50L">৳10L - ৳50L (Standard HNI)</option>
@@ -428,8 +519,8 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Source Channel</label>
-                  <select value={addLeadForm.source_channel} onChange={(e) => setAddLeadForm({ ...addLeadForm, source_channel: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Source Channel</label>
+                  <select value={addLeadForm.source_channel} onChange={(e) => setAddLeadForm({ ...addLeadForm, source_channel: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="Admin_Entry">Admin Manual Intake</option>
                     <option value="Website">Public Website</option>
                     <option value="Promoter_Referral">Promoter Referral</option>
@@ -438,20 +529,20 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Target Project Campaign (Optional)</label>
-                  <select value={addLeadForm.target_project_id} onChange={(e) => setAddLeadForm({ ...addLeadForm, target_project_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Target Project Campaign (Optional)</label>
+                  <select value={addLeadForm.target_project_id} onChange={(e) => setAddLeadForm({ ...addLeadForm, target_project_id: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="">-- General Platform Inquiry --</option>
                     {allProjects.map(p => (
                       <option key={p.id} value={p.id}>{p.businesses?.brand_name} - {p.project_title}</option>
                     ))}
                   </select>
                 </div>
-                <div style={{ gridColumn: 'span 3' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Initial Notes</label>
-                  <input type="text" placeholder="e.g. Referred by Tanvir, interested in Gulshan outlet deal" value={addLeadForm.notes} onChange={(e) => setAddLeadForm({ ...addLeadForm, notes: e.target.value })} className="form-input" />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Initial Notes</label>
+                  <textarea rows={2} placeholder="e.g. Referred by Tanvir, interested in Gulshan outlet deal" value={addLeadForm.notes} onChange={(e) => setAddLeadForm({ ...addLeadForm, notes: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
-                <div style={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                  <button type="submit" disabled={savingLead} className="btn-gold" style={{ padding: '0.6rem 1.5rem' }}>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button type="submit" disabled={savingLead} className="btn-gold" style={{ padding: '0.75rem 1.75rem', fontWeight: '700', borderRadius: '6px' }}>
                     {savingLead ? 'Logging...' : 'Log Lead'}
                   </button>
                 </div>
@@ -459,179 +550,194 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
             </div>
           )}
 
-          {/* CONTROLS ROW: SEARCH & STATUS PILL FILTERS */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-            <div className="doc-filter-pills">
-              {['All', 'New', 'Promoter_Assigned', 'Survey_In_Progress', 'Survey_Complete', 'Telegram_Invite_Sent', 'Converted', 'Not_Interested'].map(st => (
+          {/* FILTER BAR & SEARCH */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {['All', 'New', 'Promoter_Assigned', 'Survey_In_Progress', 'Survey_Complete', 'Telegram_Invite_Sent', 'Converted', 'Not_Interested'].map(f => (
                 <button
-                  key={st}
-                  onClick={() => setLeadFilter(st)}
-                  className={`btn-sm ${leadFilter === st ? 'btn-gold' : ''}`}
+                  key={f}
+                  onClick={() => setLeadFilter(f)}
+                  className={`btn-sm ${leadFilter === f ? 'btn-gold' : ''}`}
                   style={{
-                    background: leadFilter === st ? undefined : 'rgba(255,255,255,0.05)',
-                    color: leadFilter === st ? undefined : '#94a3b8'
+                    background: leadFilter === f ? undefined : 'rgba(255,255,255,0.05)',
+                    color: leadFilter === f ? undefined : '#94a3b8',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    padding: '0.35rem 0.65rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
                   }}
                 >
-                  {st.replace(/_/g, ' ')}
+                  {f.replace(/_/g, ' ')}
                 </button>
               ))}
             </div>
 
-            <input 
-              type="text"
-              placeholder="🔍 Search name or phone..."
-              value={leadSearch}
-              onChange={(e) => setLeadSearch(e.target.value)}
-              style={{ width: '220px', padding: '0.45rem 0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
-            />
+            <div style={{ position: 'relative', width: '240px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                type="text"
+                placeholder="Search name or phone..."
+                value={leadSearch}
+                onChange={(e) => setLeadSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem 0.75rem 0.45rem 2rem',
+                  background: '#0f172a',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '0.8rem'
+                }}
+              />
+            </div>
           </div>
 
           {/* LEADS LIST */}
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Loading inquiry leads pipeline...</div>
-          ) : filteredLeads.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderColor: 'rgba(255,255,255,0.08)', borderRadius: '16px' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', margin: '0 auto 1rem auto' }}>
-                <Inbox size={26} style={{ color: '#D4AF37' }} />
+          {filteredLeads.length === 0 ? (
+            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+                <Inbox size={28} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.5rem 0' }}>
-                No prospective leads found
-              </h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.88rem', maxWidth: '440px', margin: '0 auto 1.5rem auto', lineHeight: '1.5' }}>
-                {leadSearch || leadFilter !== 'All' 
-                  ? 'No inquiry leads match your current search or status filter criteria.'
-                  : 'Web inquiries, promoter referrals, and event registrations will automatically appear here.'}
-              </p>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                  No Prospective Leads Found
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '480px', margin: 0 }}>
+                  Web inquiries, promoter referrals, and event registrations will automatically appear here.
+                </p>
+              </div>
               <button
-                type="button"
                 onClick={() => setShowAddLeadForm(true)}
                 className="btn-gold"
-                style={{ padding: '0.6rem 1.4rem', fontSize: '0.85rem', fontWeight: '700', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
               >
-                <Plus size={15} /> Log Lead Manually
+                <Plus size={16} /> Log Lead Manually
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {filteredLeads.map(lead => {
                 const isSelected = selectedLead?.id === lead.id;
-                const assignedPromoter = allPromoters.find(p => p.id === lead.assigned_promoter_id);
+                const isNew = lead.status === 'New';
+                const isConverted = lead.status === 'Converted';
 
                 return (
-                  <div key={lead.id} className="lead-card" style={{ borderLeft: lead.status === 'New' ? '4px solid #ec4899' : lead.status === 'Converted' ? '4px solid #10b981' : '4px solid #3b82f6' }}>
+                  <div key={lead.id} className="lead-card" style={{ borderLeft: isConverted ? '4px solid #10b981' : isNew ? '4px solid #f59e0b' : '4px solid #3b82f6' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#fff', fontWeight: 'bold' }}>{lead.name}</h4>
-                            <span className="status-badge status-badge--warning">
-                              {lead.investment_range || 'N/A'}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
+                          <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#fff', fontWeight: 'bold' }}>{lead.name}</h4>
+                          <span className="status-badge status-badge--gold">
+                            {lead.investment_range || '৳10L - ৳50L'}
+                          </span>
+                          {lead.funding_projects?.project_title && (
+                            <span className="status-badge status-badge--info">
+                              🎯 {lead.funding_projects.businesses?.brand_name}
                             </span>
-                            {lead.funding_projects?.project_title && (
-                              <span className="status-badge status-badge--gold">
-                                🎯 {lead.funding_projects.businesses?.brand_name} ({lead.funding_projects.project_title})
-                              </span>
-                            )}
-                          </div>
+                          )}
+                          <span className={isConverted ? 'status-badge status-badge--success' : isNew ? 'status-badge status-badge--warning' : 'status-badge status-badge--info'}>
+                            {lead.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
 
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', gap: '1rem', marginTop: '0.2rem' }}>
-                            <span>📞 {lead.phone}</span>
-                            {lead.email && <span>📧 {lead.email}</span>}
-                            <span>Source: {lead.source_channel || 'Website'}</span>
-                            <span>Captured: {new Date(lead.created_at).toLocaleDateString()}</span>
-                          </div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', gap: '1rem', marginTop: '0.2rem' }}>
+                          <span>📞 {lead.phone}</span>
+                          <span>Source: <strong style={{ color: '#cbd5e1' }}>{lead.source_channel?.replace(/_/g, ' ')}</strong></span>
+                          <span>Assigned Promoter: <strong style={{ color: '#D4AF37' }}>{lead.promoters?.alias_name || 'Unassigned'}</strong></span>
+                          <span>Managing Partner: <strong style={{ color: '#3b82f6' }}>{lead.kams?.full_name || 'Unassigned'}</strong></span>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                        {/* INLINE PROMOTER ASSIGNMENT DROPDOWN */}
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ display: 'block', fontSize: '0.65rem', color: '#64748b' }}>Assigned Promoter</span>
-                          <select 
-                            value={lead.assigned_promoter_id || ''}
-                            onChange={(e) => handleAssignPromoter(lead.id, e.target.value)}
-                            style={{ padding: '0.35rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: assignedPromoter ? '#10b981' : '#94a3b8', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}
-                          >
-                            <option value="">-- Assign Promoter --</option>
-                            {allPromoters.map(p => (
-                              <option key={p.id} value={p.id}>{p.alias_name || p.full_name} ({p.referral_code})</option>
-                            ))}
-                          </select>
-                        </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        {/* PROMOTER SELECTOR */}
+                        <select
+                          value={lead.assigned_promoter_id || ''}
+                          onChange={(e) => handleAssignPromoter(lead.id, e.target.value)}
+                          style={{ padding: '0.35rem 0.6rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#D4AF37', borderRadius: '4px', fontSize: '0.75rem' }}
+                        >
+                          <option value="">-- Assign Promoter --</option>
+                          {allPromoters.map(p => (
+                            <option key={p.id} value={p.id}>{p.alias_name} ({p.referral_code})</option>
+                          ))}
+                        </select>
 
                         {/* STATUS SELECTOR */}
-                        <div>
-                          <span style={{ display: 'block', fontSize: '0.65rem', color: '#64748b' }}>Pipeline Stage</span>
-                          <select 
-                            value={lead.status}
-                            onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value)}
-                            style={{ padding: '0.35rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#D4AF37', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}
-                          >
-                            <option value="New">New</option>
-                            <option value="Promoter_Assigned">Promoter Assigned</option>
-                            <option value="Survey_In_Progress">Survey In Progress</option>
-                            <option value="Survey_Complete">Survey Complete</option>
-                            <option value="Telegram_Invite_Sent">Telegram Invite Sent</option>
-                            <option value="Converted">Converted</option>
-                            <option value="Not_Interested">Not Interested</option>
-                          </select>
-                        </div>
+                        <select
+                          value={lead.status}
+                          onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value)}
+                          style={{ padding: '0.35rem 0.6rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }}
+                        >
+                          <option value="New">New</option>
+                          <option value="Promoter_Assigned">Promoter Assigned</option>
+                          <option value="Survey_In_Progress">Survey In Progress</option>
+                          <option value="Survey_Complete">Survey Complete</option>
+                          <option value="Telegram_Invite_Sent">Telegram Invite Sent</option>
+                          <option value="Converted">Converted</option>
+                          <option value="Not_Interested">Not Interested</option>
+                        </select>
 
                         <button 
                           onClick={() => setSelectedLead(isSelected ? null : lead)}
                           className="btn-sm"
-                          style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.4rem 0.75rem' }}
+                          style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.35rem 0.75rem' }}
                         >
-                          {isSelected ? 'Close ▲' : 'Inspect ▼'}
+                          {isSelected ? 'Close ▲' : 'Manage ▼'}
                         </button>
                       </div>
                     </div>
 
-                    {/* EXPANDED LEAD DRAWER */}
+                    {/* EXPANDED LEAD DETAIL DRAWER */}
                     {isSelected && (
-                      <div className="inspector-grid" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '6px', fontSize: '0.8rem' }}>
-                        <div>
-                          <h5 style={{ margin: '0 0 0.5rem 0', color: '#D4AF37', fontSize: '0.85rem' }}>📋 Lead Dossier & KAM Assignment</h5>
-                          <div style={{ background: '#0f172a', padding: '0.75rem', borderRadius: '4px', display: 'flex', flexDirection: 'column', gap: '0.4rem', color: '#cbd5e1' }}>
-                            <div>Meeting Preference: <strong style={{ color: '#fff' }}>{lead.meeting_preference || 'Online Call'}</strong></div>
-                            <div>Referral Code Used: <strong style={{ color: '#10b981' }}>{lead.referral_code || 'None'}</strong></div>
-                            
-                            <div style={{ marginTop: '0.4rem' }}>
-                              <label style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.2rem' }}>Managing Partner (KAM)</label>
-                              <select 
-                                value={lead.assigned_kam_id || ''}
-                                onChange={(e) => handleAssignKam(lead.id, e.target.value)}
-                                style={{ width: '100%', padding: '0.4rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
-                              >
-                                <option value="">-- Unassigned --</option>
-                                {allKams.map(k => (
-                                  <option key={k.id} value={k.id}>{k.full_name} ({k.title})</option>
-                                ))}
-                              </select>
-                            </div>
+                      <div className="inspector-grid" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '6px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem' }}>
+                          <h5 style={{ margin: 0, color: '#D4AF37' }}>CRM Details &amp; Assignment</h5>
+                          <div>Email: <strong style={{ color: '#fff' }}>{lead.email || 'Unlisted'}</strong></div>
+                          <div>Meeting Preference: <strong style={{ color: '#fff' }}>{lead.meeting_preference || 'Online Call'}</strong></div>
+                          <div>Referral Code Used: <strong style={{ color: '#D4AF37' }}>{lead.referral_code || 'Direct Platform'}</strong></div>
+
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.2rem' }}>Assign Managing Partner (KAM):</label>
+                            <select
+                              value={lead.assigned_kam_id || ''}
+                              onChange={(e) => handleAssignKam(lead.id, e.target.value)}
+                              style={{ width: '100%', padding: '0.4rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#3b82f6', borderRadius: '4px', fontSize: '0.8rem' }}
+                            >
+                              <option value="">-- Unassigned --</option>
+                              {allKams.map(k => (
+                                <option key={k.id} value={k.id}>{k.full_name} ({k.title || 'Managing Partner'})</option>
+                              ))}
+                            </select>
                           </div>
                         </div>
 
-                        <div>
-                          <h5 style={{ margin: '0 0 0.5rem 0', color: '#3b82f6', fontSize: '0.85rem' }}>📝 Admin Notes & Follow-Up Date</h5>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <textarea 
-                              rows={2} 
-                              defaultValue={lead.notes || ''} 
-                              onBlur={(e) => handleSaveLeadDetails(lead.id, e.target.value, lead.follow_up_date)}
-                              placeholder="Enter outreach notes, investor feedback, preferred call time..." 
-                              className="form-input"
-                              style={{ fontSize: '0.8rem', padding: '0.5rem' }}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <h5 style={{ margin: 0, color: '#D4AF37', fontSize: '0.8rem' }}>Lead Notes &amp; Follow-up Schedule</h5>
+                          <textarea
+                            defaultValue={lead.notes || ''}
+                            id={`notes-${lead.id}`}
+                            rows={2}
+                            placeholder="Add interaction notes..."
+                            style={{ width: '100%', padding: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
+                          />
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <input
+                              type="date"
+                              id={`date-${lead.id}`}
+                              defaultValue={lead.follow_up_date || ''}
+                              style={{ padding: '0.35rem 0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
                             />
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Follow-Up Date:</span>
-                              <input 
-                                type="date" 
-                                defaultValue={lead.follow_up_date || ''}
-                                onChange={(e) => handleSaveLeadDetails(lead.id, lead.notes, e.target.value)}
-                                style={{ padding: '0.35rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }}
-                              />
-                            </div>
+                            <button
+                              onClick={() => {
+                                const n = document.getElementById(`notes-${lead.id}`)?.value;
+                                const d = document.getElementById(`date-${lead.id}`)?.value;
+                                handleSaveLeadDetails(lead.id, n, d);
+                              }}
+                              className="btn-sm btn-gold"
+                              style={{ padding: '0.4rem 0.8rem' }}
+                            >
+                              Save Notes
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -650,15 +756,27 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       {leadsSubTab === 'survey-vault' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>Promoter Investor Survey Vault</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+              Promoter Investor Survey Vault
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
               Enriched investor profiles filled out by promoters to remove friction from the investor onboarding process.
             </p>
           </div>
 
           {preProfiles.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-              No promoter surveys submitted yet. When promoters complete investor information gathering, pre-profiles will appear here.
+            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', display: 'grid', placeItems: 'center', color: '#3b82f6' }}>
+                <FileSpreadsheet size={28} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                  No Promoter Investor Surveys Submitted Yet
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '500px', margin: 0 }}>
+                  Pre-onboarding questionnaires and financial profile surveys conducted by promoters will appear here for verification and direct investor conversion.
+                </p>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -670,9 +788,9 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
 
                 return (
                   <div key={profile.id} className="lead-card" style={{ borderLeft: isConverted ? '4px solid #10b981' : isInviteSent ? '4px solid #3b82f6' : isComplete ? '4px solid #D4AF37' : '4px solid #a855f7' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
                           <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 'bold' }}>{profile.full_name}</h4>
                           <span className="status-badge status-badge--gold">
                             {profile.investor_category || 'HNI'}
@@ -689,7 +807,7 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                           )}
                         </div>
 
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', gap: '1rem', marginTop: '0.2rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', gap: '1rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
                           <span>📞 {profile.phone}</span>
                           <span>Promoter: <strong style={{ color: '#D4AF37' }}>{profile.promoters?.alias_name || 'Promoter'}</strong></span>
                           <span>Est. Capacity: <strong style={{ color: '#10b981' }}>{formatCurrency(profile.estimated_investment_capacity_bdt || 0, currency)}</strong></span>
@@ -697,16 +815,16 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                         {/* DISPATCH TELEGRAM BOT INVITE */}
                         {!isConverted && (
                           <button
                             onClick={() => handleSendTelegramInvite(profile.id)}
                             disabled={sendingInviteId === profile.id}
                             className="btn-sm"
-                            style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', padding: '0.4rem 0.85rem' }}
+                            style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', padding: '0.45rem 0.95rem', borderRadius: '6px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                           >
-                            {sendingInviteId === profile.id ? 'Sending Invite...' : isInviteSent ? '📱 Re-send Telegram Invite' : '📱 Send Telegram Invite'}
+                            <Send size={13} /> {sendingInviteId === profile.id ? 'Sending Invite...' : isInviteSent ? 'Re-send Telegram Invite' : 'Send Telegram Invite'}
                           </button>
                         )}
 
@@ -715,9 +833,9 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                           <button
                             onClick={() => handleConvertPreProfileToInvestor(profile)}
                             className="btn-sm btn-gold"
-                            style={{ background: '#10b981', color: '#000', padding: '0.4rem 0.85rem' }}
+                            style={{ background: '#10b981', color: '#000', padding: '0.45rem 0.95rem', borderRadius: '6px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                           >
-                            🚀 Convert to Verified Investor
+                            <Rocket size={13} /> Convert to Verified Investor
                           </button>
                         )}
 
@@ -728,7 +846,7 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                         <button 
                           onClick={() => setSelectedPreProfile(isSelected ? null : profile)}
                           className="btn-sm"
-                          style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.4rem 0.75rem' }}
+                          style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.45rem 0.85rem', borderRadius: '6px', fontWeight: '600' }}
                         >
                           {isSelected ? 'Close ▲' : 'Inspect Dossier ▼'}
                         </button>
@@ -737,17 +855,17 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
 
                     {/* EXPANDED PROFILE DOSSIER */}
                     {isSelected && (
-                      <div className="inspector-grid" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '6px', fontSize: '0.8rem', color: '#cbd5e1' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                          <h5 style={{ margin: 0, color: '#D4AF37' }}>Identity & Financial Dossier</h5>
+                      <div className="inspector-grid" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)', padding: '1.25rem', borderRadius: '6px', fontSize: '0.8rem', color: '#cbd5e1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                          <h5 style={{ margin: 0, color: '#D4AF37', fontSize: '0.9rem' }}>Identity &amp; Financial Dossier</h5>
                           <div>NID Number: <strong style={{ color: '#fff' }}>{profile.nid_number || 'Unprovided'}</strong></div>
                           <div>Email: <strong style={{ color: '#fff' }}>{profile.email || 'Unprovided'}</strong></div>
                           <div>Source of Funds: <strong style={{ color: '#3b82f6' }}>{profile.source_of_funds || 'Declared Personal Savings'}</strong></div>
-                          <div>Preferred Meeting Format: <strong style={{ color: '#fff' }}>{profile.preferred_meeting_type}</strong></div>
+                          <div>Preferred Meeting Format: <strong style={{ color: '#fff' }}>{profile.preferred_meeting_type || 'Online Call'}</strong></div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                          <h5 style={{ margin: 0, color: '#3b82f6' }}>Social Links & Verification</h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                          <h5 style={{ margin: 0, color: '#3b82f6', fontSize: '0.9rem' }}>Social Links &amp; Verification</h5>
                           {profile.linkedin_url ? (
                             <div>LinkedIn: <a href={profile.linkedin_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>{profile.linkedin_url}</a></div>
                           ) : (
@@ -775,16 +893,20 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
       {/* ---------------------------------------------------- */}
       {leadsSubTab === 'campaigns' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>Marketing Campaign Tracker</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Track events, referral drives, and marketing channel investments.</p>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+                Marketing Campaign Tracker
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+                Track events, referral drives, and marketing channel investments.
+              </p>
             </div>
             
             <button 
               onClick={() => setShowCampaignForm(!showCampaignForm)}
               className={showCampaignForm ? 'btn-sm' : 'btn-sm btn-gold'}
-              style={{ background: showCampaignForm ? 'rgba(255,255,255,0.1)' : undefined, color: showCampaignForm ? '#fff' : undefined, padding: '0.45rem 0.95rem' }}
+              style={{ background: showCampaignForm ? 'rgba(255,255,255,0.1)' : undefined, color: showCampaignForm ? '#fff' : undefined, padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               {showCampaignForm ? '✕ Close Form' : '+ Create Campaign'}
             </button>
@@ -792,16 +914,21 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
 
           {/* COLLAPSIBLE ADD CAMPAIGN FORM */}
           {showCampaignForm && (
-            <div className="glass-card-premium" style={{ padding: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: '#D4AF37', fontSize: '0.95rem' }}>Create New Marketing Campaign</h4>
-              <form onSubmit={handleAddCampaign} className="form-grid-3col" style={{ fontSize: '0.85rem' }}>
+            <div className="glass-card-premium" style={{ padding: '1.75rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#D4AF37', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Plus size={18} /> Create New Marketing Campaign
+              </h4>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 1.25rem 0' }}>
+                Set up marketing drives, offline franchise expos, webinars, or targeted social media campaigns to track acquisition budget and performance.
+              </p>
+              <form onSubmit={handleAddCampaign} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Campaign Name *</label>
-                  <input type="text" placeholder="e.g. Q3 Franchise Expo Dhaka" value={campaignForm.campaign_name} onChange={(e) => setCampaignForm({ ...campaignForm, campaign_name: e.target.value })} className="form-input" required />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Campaign Name *</label>
+                  <input type="text" placeholder="e.g. Q3 Franchise Expo Dhaka" value={campaignForm.campaign_name} onChange={(e) => setCampaignForm({ ...campaignForm, campaign_name: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Campaign Type</label>
-                  <select value={campaignForm.campaign_type} onChange={(e) => setCampaignForm({ ...campaignForm, campaign_type: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Campaign Type</label>
+                  <select value={campaignForm.campaign_type} onChange={(e) => setCampaignForm({ ...campaignForm, campaign_type: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="Event">Event / Expo</option>
                     <option value="Social_Media">Social Media Ads</option>
                     <option value="WhatsApp_Blast">WhatsApp / Telegram Blast</option>
@@ -811,23 +938,23 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Budget BDT</label>
-                  <input type="number" placeholder="e.g. 50000" value={campaignForm.budget_bdt} onChange={(e) => setCampaignForm({ ...campaignForm, budget_bdt: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Budget BDT</label>
+                  <input type="number" placeholder="e.g. 50000" value={campaignForm.budget_bdt} onChange={(e) => setCampaignForm({ ...campaignForm, budget_bdt: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Start Date</label>
-                  <input type="date" value={campaignForm.start_date} onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Start Date</label>
+                  <input type="date" value={campaignForm.start_date} onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>End Date</label>
-                  <input type="date" value={campaignForm.end_date} onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>End Date</label>
+                  <input type="date" value={campaignForm.end_date} onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Notes</label>
-                  <input type="text" placeholder="Target 100 HNI leads..." value={campaignForm.notes} onChange={(e) => setCampaignForm({ ...campaignForm, notes: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Notes</label>
+                  <input type="text" placeholder="Target 100 HNI leads..." value={campaignForm.notes} onChange={(e) => setCampaignForm({ ...campaignForm, notes: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
-                <div style={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                  <button type="submit" disabled={savingCampaign} className="btn-gold" style={{ padding: '0.6rem 1.5rem' }}>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button type="submit" disabled={savingCampaign} className="btn-gold" style={{ padding: '0.75rem 1.75rem', fontWeight: '700', borderRadius: '6px' }}>
                     {savingCampaign ? 'Creating...' : 'Create Campaign'}
                   </button>
                 </div>
@@ -837,9 +964,28 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
 
           {/* CAMPAIGN CARDS GRID */}
           {campaigns.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>No marketing campaigns logged yet.</div>
+            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)', display: 'grid', placeItems: 'center', color: '#c084fc' }}>
+                <Megaphone size={28} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                  No Marketing Campaigns Tracked Yet
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '500px', margin: 0 }}>
+                  Log expos, private dinner events, digital ads, and promoter referral drives to monitor acquisition cost and investor lead volume.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCampaignForm(true)}
+                className="btn-gold"
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
+              >
+                <Plus size={16} /> Create First Campaign
+              </button>
+            </div>
           ) : (
-            <div className="campaign-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
               {campaigns.map(camp => {
                 const isActive = camp.status === 'Active';
                 return (
@@ -868,7 +1014,7 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
                       <button 
                         onClick={() => handleCloseCampaign(camp.id)}
                         className="btn-sm"
-                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', marginTop: 'auto' }}
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', marginTop: 'auto', padding: '0.4rem', borderRadius: '4px', cursor: 'pointer' }}
                       >
                         Mark Campaign Completed
                       </button>

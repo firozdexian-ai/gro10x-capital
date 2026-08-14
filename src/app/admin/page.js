@@ -2534,7 +2534,7 @@ export default function AdminPortal() {
 
         {/* INQUIRY LEADS TAB */}
         {activeTab === 'leads-marketing' && (
-          <InquiryLeadsTab currency={currency} addToast={addToast} />
+          <InquiryLeadsTab currency={currency} addToast={addToast} logPlatformActivity={logPlatformActivity} />
         )}
 
         {/* BOT MANAGEMENT & ACCESS CONTROL TAB */}

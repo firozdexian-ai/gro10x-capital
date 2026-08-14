@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.2] — 2026-08-15
+**Admin Leads & Marketing Tab 8 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Elevated Empty States**: Replaced bare text with platform-standard glass empty states for both Sub-Tab 2 (Promoter Survey Vault with `FileSpreadsheet` icon) and Sub-Tab 3 (Marketing Campaigns Tracker with `Megaphone` icon and `+ Create First Campaign` CTA).
+- **All-Caps KPI Hierarchy**: Standardized all 5 KPI card headers with uppercase styling, `letterSpacing: '0.04em'`, and `fontWeight: '600'`.
+- **End-to-End Activity Telemetry**: Passed `logPlatformActivity` from `page.js` to `InquiryLeadsTab.js` and instrumented all 8 CRM & Marketing transactional handlers (`handleUpdateLeadStatus`, `handleAssignPromoter`, `handleAssignKam`, `handleSaveLeadDetails`, `handleAddManualLead`, `handleSendTelegramInvite`, `handleConvertPreProfileToInvestor`, `handleAddCampaign`, `handleCloseCampaign`).
+
+---
+
 ## [v0.6.1] — 2026-08-15
 **Admin Team & Promoters Tab 7 Comprehensive Overhaul & Role Architecture**
 

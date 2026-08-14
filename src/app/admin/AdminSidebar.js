@@ -18,7 +18,8 @@ import { formatCurrency } from '../../lib/currency';
  *   user                   (object)   — Supabase user { email }
  *   signOut                (fn)       — sign-out callback
  *   currency               (string)   — active currency code
- *   totalFeeSpreadCaptured (number)   — 5% deal spread total (BDT)
+ *   totalFeeSpreadCaptured (number)   — dynamic deal spread total in BDT (driven by dealSpreadPct × project targets)
+ *   dealSpreadPct          (number)   — deal spread percentage from platform_settings (default: 5)
  *   pendingCounts          (object)   — { kycPayments, cohort, leads }
  */
 export default function AdminSidebar({

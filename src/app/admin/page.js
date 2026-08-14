@@ -1473,6 +1473,11 @@ export default function AdminPortal() {
         .eq('id', payoutId);
       if (error) throw error;
       addToast('Payout marked as cleared.', 'success');
+      logPlatformActivity(
+        'Commission Payout Cleared',
+        `Cleared promoter commission withdrawal request #${payoutId}`,
+        'success'
+      );
       fetchAdminData();
     } catch (err) {
       addToast('Error clearing payout.', 'error');
@@ -1488,6 +1493,11 @@ export default function AdminPortal() {
         .eq('id', payoutId);
       if (error) throw error;
       addToast('Payout request rejected.', 'info');
+      logPlatformActivity(
+        'Commission Payout Rejected',
+        `Declined promoter commission payout request #${payoutId}`,
+        'warning'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to reject payout', 'error');
@@ -1517,7 +1527,14 @@ export default function AdminPortal() {
       const { data, error } = await supabase.from('team').insert([payload]).select().single();
       if (error) throw error;
 
-      addToast(`Team Member '${kamForm.full_name}' pre-registered! Ask them to send /start to @gro10xmanbot.`, 'success');
+      const roleDisplay = payload.team_type === 'admin' ? 'Director / Principal' : payload.team_type === 'manager' ? 'Managing Partner' : payload.team_type === 'support' ? 'Operations Support' : 'Key Account Manager';
+
+      addToast(`Team Member '${kamForm.full_name}' pre-registered as ${roleDisplay}! Ask them to send /start to @gro10xmanbot.`, 'success');
+      logPlatformActivity(
+        'Team Member Pre-Registered',
+        `Onboarded ${kamForm.full_name} as ${roleDisplay} (${payload.region})`,
+        'success'
+      );
       setKamForm({ full_name: '', team_type: 'kam', designation: 'Managing Partner', title: 'Managing Partner', region: 'Dhaka HQ', email: '', phone: '', joined_at: new Date().toISOString().slice(0, 10) });
       setShowKamForm(false);
       fetchAdminData();
@@ -1537,7 +1554,13 @@ export default function AdminPortal() {
         .eq('id', kamId);
 
       if (error) throw error;
-      addToast(`Managing Partner status updated to ${!currentActive ? 'Active' : 'Inactive'}.`, 'success');
+      const kamObj = allKams.find(k => k.id === kamId);
+      addToast(`Team Member '${kamObj?.full_name || 'Member'}' status updated to ${!currentActive ? 'Active' : 'Inactive'}.`, 'success');
+      logPlatformActivity(
+        'Team Member Status Toggled',
+        `Toggled ${kamObj?.full_name || 'Team member #' + kamId} status to ${!currentActive ? 'Active' : 'Inactive'}`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to update KAM status', 'error');
@@ -1577,6 +1600,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast(`Promoter onboarded! Code: ${referralCode}. Direct them to GRO10X Telegram Bot to complete onboarding.`, 'success');
+      logPlatformActivity(
+        'Growth Promoter Onboarded',
+        `Registered promoter ${promoterForm.alias_name} (${promoterForm.full_name}) with referral code ${referralCode} and tier ${payload.tier}`,
+        'success'
+      );
       setPromoterForm({ full_name: '', alias_name: '', phone: '', email: '', tier: 'Trainee', joined_at: new Date().toISOString().slice(0, 10) });
       setShowPromoterForm(false);
       fetchAdminData();
@@ -1600,7 +1628,13 @@ export default function AdminPortal() {
         .eq('id', promoterId);
 
       if (error) throw error;
-      addToast(`Deal promotion access ${!currentCanPromote ? 'granted' : 'revoked'}.`, 'success');
+      const promObj = allPromoters.find(p => p.id === promoterId);
+      addToast(`Deal promotion access ${!currentCanPromote ? 'granted' : 'revoked'} for ${promObj?.alias_name || 'Promoter'}.`, 'success');
+      logPlatformActivity(
+        'Promoter Deal Permission Updated',
+        `Deal sharing access ${!currentCanPromote ? 'unlocked' : 'locked'} for promoter ${promObj?.alias_name || '#' + promoterId}`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to update deal permission', 'error');
@@ -1616,7 +1650,13 @@ export default function AdminPortal() {
         .eq('id', promoterId);
 
       if (error) throw error;
-      addToast(`Promoter status updated to ${!currentActive ? 'Active' : 'Inactive'}.`, 'success');
+      const promObj = allPromoters.find(p => p.id === promoterId);
+      addToast(`Promoter '${promObj?.alias_name || 'Promoter'}' status updated to ${!currentActive ? 'Active' : 'Inactive'}.`, 'success');
+      logPlatformActivity(
+        'Promoter Status Toggled',
+        `Toggled promoter ${promObj?.alias_name || '#' + promoterId} status to ${!currentActive ? 'Active' : 'Inactive'}`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to update promoter status', 'error');
@@ -1636,7 +1676,13 @@ export default function AdminPortal() {
         .eq('id', promoterId);
 
       if (error) throw error;
-      addToast(`Promoter tier updated to ${newTier.replace('_', ' ')}.`, 'success');
+      const promObj = allPromoters.find(p => p.id === promoterId);
+      addToast(`Promoter '${promObj?.alias_name || 'Promoter'}' tier updated to ${newTier.replace('_', ' ')}.`, 'success');
+      logPlatformActivity(
+        'Promoter Tier Overridden',
+        `Manually updated promoter ${promObj?.alias_name || '#' + promoterId} tier to ${newTier.replace('_', ' ')}`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to update promoter tier', 'error');
@@ -1676,6 +1722,11 @@ export default function AdminPortal() {
       }
 
       addToast(`Scanned all promoters. Upgraded ${upgradedCount} promoter(s) based on live milestones!`, 'success');
+      logPlatformActivity(
+        'Promoter Tiers Auto-Scanned',
+        `Automated milestone scan completed: upgraded ${upgradedCount} growth promoter(s) based on verified leads & raised capital`,
+        'success'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to auto-check promoter tiers', 'error');
@@ -2452,6 +2503,7 @@ export default function AdminPortal() {
             handleAutoCheckPromoterTiers={handleAutoCheckPromoterTiers}
             handleAddPromoter={handleAddPromoter}
             handleTogglePromoterDeals={handleTogglePromoterDeals}
+            handleTogglePromoterActive={handleTogglePromoterActive}
             handlePromoterTierOverride={handlePromoterTierOverride}
             handleClearPayout={handleClearPayout}
             handleRejectPayout={handleRejectPayout}

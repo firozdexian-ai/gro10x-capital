@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.1] — 2026-08-15
+**Admin Team & Promoters Tab 7 Comprehensive Overhaul & Role Architecture**
+
+### Upgrades & Fixes
+- **Explicit Role Architecture Integration**: Upgraded the Team Onboarding form with a dedicated Role & Responsibility selector covering Director / Principal Partner, Managing Partner (HNI Advisory), Key Account Manager (Operations & Audits), and Operations Support.
+- **Distinct Colored Role Badges**: Added role-based visual pills across all team cards (🟣 Purple for Director, 🟡 Gold for Managing Partner, 🔵 Blue for KAM, ⚪ Slate for Support).
+- **Elevated Empty States**: Replaced bare text with platform-standard empty states across all 3 sub-tabs (Managing Partners, Promoter Network, Commission Payout Queue).
+- **Commission Payout Queue Fixes**: Fixed promoter name resolution in payout table, upgraded status badges, and added gold `Mark Cleared` and danger `Reject` action buttons.
+- **Promoter Management**: Wired `handleTogglePromoterActive` on each promoter card, fixed Trainee tier dropdown typo (`No Usual Access`), and maintained gamified milestone progress, CRM leads drilldown, and target progress tracking.
+- **Shorthand KPI Formatting**: Applied `formatShorthand()` on Total Commission Earned with `Exact: ৳X` sub-label and standardized all 4 KPI card labels to uppercase with 600 weight.
+- **Comprehensive Activity Telemetry**: Integrated `logPlatformActivity` across all 8 Team & Promoter handlers in `page.js`.
+
+---
+
 ## [v0.6.0] — 2026-08-15
 **Admin Cash Concierge Tab 6 Comprehensive Overhaul**
 

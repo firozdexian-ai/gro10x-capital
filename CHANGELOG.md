@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.0] — 2026-08-15
+**Admin Cash Concierge Tab 6 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Confidential OTC Pipeline Queue Empty State**: Replaced bare placeholder text with full platform-standard empty state card featuring a gold ShieldCheck badge, informative description, and a `Log First OTC Ticket` CTA button.
+- **Filter Reset CTA**: Added an intuitive `Reset Filter to All` fallback action when specific ticket filter statuses return 0 results.
+- **Shorthand Currency Formatting**: Implemented `formatShorthand()` on the Active Pipeline Value KPI card with exact value in the sub-label.
+- **All-Caps KPI Hierarchy**: Standardized all 4 KPI card headers to uppercase with tracking (`0.04em`) and 600 weight.
+- **Enriched Form Placeholders**: Added explicit BDT shorthand notation on the Target Commitment Amount input (`e.g. 10000000 (= ৳1.0 Crore)`).
+- **Comprehensive Activity Telemetry**: Integrated `logPlatformActivity` across all 7 Cash Concierge transactional handlers (Ticket Creation, Status Updates, KAM Assignment, Consultation Confirmation, Diligence Notes, Funds Clearance, Telegram Notifications).
+
+---
+
 ## [v0.5.9] — 2026-08-15
 **Admin Yield Engine & Disbursement Ledger Tab 5 Comprehensive Overhaul**
 

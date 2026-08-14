@@ -1220,6 +1220,11 @@ export default function AdminPortal() {
 
       if (error) throw error;
       addToast(`Cash ticket status updated to ${newStatus.replace('_', ' ')}.`, 'success');
+      logPlatformActivity(
+        'OTC Ticket Status Updated',
+        `Cash concierge advisory ticket #${ticketId} status changed to ${newStatus.replace('_', ' ')}`,
+        newStatus === 'Closed' ? 'info' : newStatus === 'Rejected' ? 'warning' : 'success'
+      );
       
       if (selectedCashTicket?.id === ticketId) {
         setSelectedCashTicket(prev => ({ ...prev, status: newStatus, ...updates }));
@@ -1241,6 +1246,11 @@ export default function AdminPortal() {
       if (error) throw error;
       const assignedKam = allKams.find(k => k.id === kamId);
       addToast(`Assigned ${assignedKam?.full_name || 'Managing Partner'} to cash ticket.`, 'success');
+      logPlatformActivity(
+        'Managing Partner Assigned',
+        `Assigned ${assignedKam?.full_name || 'Managing Partner'} to OTC consultation ticket #${ticketId}`,
+        'info'
+      );
       
       if (selectedCashTicket?.id === ticketId) {
         setSelectedCashTicket(prev => ({ ...prev, kam_id: kamId, kams: assignedKam }));
@@ -1272,6 +1282,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('OTC Consultation Meeting confirmed & scheduled!', 'success');
+      logPlatformActivity(
+        'OTC Consultation Scheduled',
+        `Confirmed ${cashMeetingForm.format.replace('_', ' ')} consultation on ${new Date(cashMeetingForm.date).toLocaleString()} for ticket #${ticketId}`,
+        'success'
+      );
       if (selectedCashTicket?.id === ticketId) {
         setSelectedCashTicket(prev => ({
           ...prev,
@@ -1308,6 +1323,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('Advisory note saved to ticket file.', 'success');
+      logPlatformActivity(
+        'OTC Advisory Note Added',
+        `Internal diligence note logged on OTC consultation ticket #${ticketId}`,
+        'info'
+      );
       setCashNoteInput('');
       if (selectedCashTicket?.id === ticketId) {
         setSelectedCashTicket(prev => ({ ...prev, admin_notes: newNotes }));
@@ -1342,6 +1362,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('Funds marked as Cleared & Verified!', 'success');
+      logPlatformActivity(
+        'OTC Escrow Funds Cleared',
+        `Cleared & verified funds transfer reference (${cashFundsRef}) for OTC ticket #${ticketId}`,
+        'success'
+      );
       setCashFundsRef('');
       if (selectedCashTicket?.id === ticketId) {
         setSelectedCashTicket(prev => ({
@@ -1369,6 +1394,7 @@ export default function AdminPortal() {
     setSavingCashAction(true);
     try {
       const inv = allInvestors.find(i => i.id === adminTicketForm.investor_id);
+      const proj = projects.find(p => p.id === adminTicketForm.target_project_id);
       
       const payload = {
         investor_id: adminTicketForm.investor_id,
@@ -1386,6 +1412,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('New OTC Cash Ticket logged successfully!', 'success');
+      logPlatformActivity(
+        'OTC Ticket Created',
+        `New confidential OTC advisory ticket created for ${inv?.alias_name || 'HNI Investor'} (${formatCurrency(adminTicketForm.ticket_amount_bdt, currency)}) targeting "${proj?.businesses?.brand_name || 'Project'}"`,
+        'success'
+      );
       setAdminTicketForm({
         investor_id: '', target_project_id: '', ticket_amount_bdt: '', preferred_meeting_time: 'Weekday Afternoon', meeting_format: 'In_Person', admin_notes: ''
       });
@@ -1412,8 +1443,18 @@ export default function AdminPortal() {
 
       if (data.sent_telegram) {
         addToast(`Sent Telegram push to ${ticket.investors?.alias_name}!`, 'success');
+        logPlatformActivity(
+          'Telegram Cash Push Sent',
+          `Dispatched ${messageType.replace('_', ' ')} Telegram alert to investor ${ticket.investors?.alias_name}`,
+          'success'
+        );
       } else {
         addToast(`Notification logged in portal (${data.has_telegram_id ? 'Telegram push failed' : 'No Telegram chat ID registered'}).`, 'info');
+        logPlatformActivity(
+          'OTC Advisory Notice Recorded',
+          `Notification recorded for ticket #${ticket.id} (${data.has_telegram_id ? 'Telegram push failed' : 'No Telegram chat ID'})`,
+          'info'
+        );
       }
       fetchAdminData();
     } catch (err) {

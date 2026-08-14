@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, X, Send, CheckCircle2, User, Phone, DollarSign, Calendar, Sparkles } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 
 export default function LeadBot() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,8 +119,8 @@ export default function LeadBot() {
 
   return (
     <>
-      {/* FLOATING BOT BUTTON */}
-      {!isOpen && (
+      {/* FLOATING BOT BUTTON — Hide on internal operational admin pages */}
+      {!isOpen && !pathname?.startsWith('/admin') && (
         <button
           onClick={() => setIsOpen(true)}
           style={{

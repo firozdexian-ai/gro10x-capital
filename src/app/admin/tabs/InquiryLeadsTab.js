@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Inbox, UserPlus, Plus, Search, Sparkles, Filter } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { formatCurrency } from '../../../lib/currency';
 
@@ -328,24 +329,24 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Unworked (New)</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#ec4899', margin: 0 }}>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>
             {leads.filter(l => l.status === 'New').length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#ec4899' }}>Awaiting Promoter Tag</span>
+          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>Awaiting Promoter Tag</span>
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Promoter Surveys</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#a855f7', margin: 0 }}>{preProfiles.length}</h3>
-          <span style={{ fontSize: '0.7rem', color: '#a855f7' }}>Enriched Investor Files</span>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{preProfiles.length}</h3>
+          <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>Enriched Investor Files</span>
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Pending Bot Invites</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>
+          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
             {preProfiles.filter(p => p.survey_status === 'Complete' || p.survey_status === 'In_Progress').length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>Awaiting Telegram Verification</span>
+          <span style={{ fontSize: '0.7rem', color: '#D4AF37' }}>Awaiting Telegram Verification</span>
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
@@ -489,7 +490,27 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast }) {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Loading inquiry leads pipeline...</div>
           ) : filteredLeads.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>No inquiry leads found in this view.</div>
+            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderColor: 'rgba(255,255,255,0.08)', borderRadius: '16px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', margin: '0 auto 1rem auto' }}>
+                <Inbox size={26} style={{ color: '#D4AF37' }} />
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.5rem 0' }}>
+                No prospective leads found
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.88rem', maxWidth: '440px', margin: '0 auto 1.5rem auto', lineHeight: '1.5' }}>
+                {leadSearch || leadFilter !== 'All' 
+                  ? 'No inquiry leads match your current search or status filter criteria.'
+                  : 'Web inquiries, promoter referrals, and event registrations will automatically appear here.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAddLeadForm(true)}
+                className="btn-gold"
+                style={{ padding: '0.6rem 1.4rem', fontSize: '0.85rem', fontWeight: '700', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Plus size={15} /> Log Lead Manually
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {filteredLeads.map(lead => {

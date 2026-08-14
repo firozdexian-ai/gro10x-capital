@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
-import { Globe, PlusCircle, Search, ChevronRight } from 'lucide-react';
-import { CURRENCY_RATES } from '../../lib/currency';
+import { PlusCircle, ChevronRight, Sparkles } from 'lucide-react';
 
 /** Tab metadata map — single source of truth for breadcrumb + title */
 const TAB_META = {
@@ -20,30 +19,11 @@ const TAB_META = {
 };
 
 /**
- * AdminHeader — Sticky top bar for the GRO10X admin panel.
- *
- * Props:
- *   activeTab          (string)   — currently active tab key
- *   setActiveTab       (fn)       — tab setter (used by search results)
- *   currency           (string)   — active currency code
- *   setCurrency        (fn)       — currency setter
- *   searchResults      (array)    — pre-computed results [ { type, title, sub, tab } ]
- *   globalSearchQuery  (string)   — current search text
- *   setGlobalSearchQuery (fn)     — search text setter
- *   showSearchResults  (boolean)  — whether dropdown is visible
- *   setShowSearchResults (fn)     — dropdown visibility setter
- *   onAddProject       (fn)       — callback for "Onboard Project" button (kanban tab)
+ * AdminHeader — Clean top breadcrumb & title bar for the GRO10X admin panel.
+ * Search & currency are centrally housed in the global navigation bar.
  */
 export default function AdminHeader({
   activeTab,
-  setActiveTab,
-  currency,
-  setCurrency,
-  searchResults = [],
-  globalSearchQuery,
-  setGlobalSearchQuery,
-  showSearchResults,
-  setShowSearchResults,
   onAddProject,
 }) {
   const meta = TAB_META[activeTab] || { crumb: activeTab, title: activeTab };
@@ -53,85 +33,20 @@ export default function AdminHeader({
 
       {/* LEFT: Breadcrumb + Page Title */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '600', marginBottom: '0.2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#64748b', fontWeight: '600', marginBottom: '0.25rem' }}>
           <span>GRO10X OS</span>
           <ChevronRight size={12} />
-          <span>Admin</span>
+          <span>Admin Command Center</span>
           <ChevronRight size={12} />
-          <span style={{ color: '#D4AF37' }}>{meta.crumb}</span>
+          <span style={{ color: '#D4AF37', fontWeight: '700' }}>{meta.crumb}</span>
         </div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: '1.65rem', fontWeight: '800', margin: 0, letterSpacing: '-0.02em', color: '#f8fafc' }}>
           {meta.title}
         </h1>
       </div>
 
-      {/* RIGHT: Search + Currency + Contextual Action */}
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-
-        {/* GLOBAL IN-MEMORY SEARCH */}
-        <div className="admin-search-box">
-          <Search
-            size={15}
-            style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
-          />
-          <input
-            type="text"
-            placeholder="Search investors, deals, leads..."
-            value={globalSearchQuery}
-            onChange={(e) => {
-              setGlobalSearchQuery(e.target.value);
-              setShowSearchResults(true);
-            }}
-            onFocus={() => setShowSearchResults(true)}
-            onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-            className="admin-search-input"
-          />
-          {showSearchResults && searchResults.length > 0 && (
-            <div className="admin-search-results">
-              {searchResults.map((res, idx) => (
-                <div
-                  key={idx}
-                  className="admin-search-item"
-                  onClick={() => {
-                    setActiveTab(res.tab);
-                    setGlobalSearchQuery('');
-                    setShowSearchResults(false);
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 'bold', color: '#fff' }}>{res.title}</p>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{res.sub}</span>
-                  </div>
-                  <span className={`status-badge ${
-                    res.type === 'Investor' ? 'status-badge--gold'
-                    : res.type === 'Project' ? 'status-badge--info'
-                    : 'status-badge--purple'
-                  }`}>
-                    {res.type}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* CURRENCY SELECTOR */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', padding: '0.45rem 0.75rem', borderRadius: '8px' }}>
-          <Globe size={16} style={{ color: '#D4AF37' }} />
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', outline: 'none' }}
-          >
-            {Object.keys(CURRENCY_RATES).map(code => (
-              <option key={code} value={code} style={{ background: '#0f172a', color: '#fff' }}>
-                {CURRENCY_RATES[code].label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* CONTEXTUAL ACTION — Onboard Project (kanban only) */}
+      {/* RIGHT: Contextual Actions */}
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
         {activeTab === 'kanban' && (
           <button
             onClick={onAddProject}
@@ -141,7 +56,6 @@ export default function AdminHeader({
             <PlusCircle size={16} /> Onboard Project
           </button>
         )}
-
       </div>
     </header>
   );

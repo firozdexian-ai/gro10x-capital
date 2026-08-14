@@ -284,8 +284,8 @@ export default function Navigation() {
           <div style={{ fontSize: '1.15rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.1 }}>
             GRO10X <span style={{ color: '#D4AF37' }}>CAPITAL</span>
           </div>
-          <div className="hide-mobile" style={{ fontSize: '0.62rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            v0.4.0{role ? ` • ${role.toUpperCase()}` : ''}
+          <div className="hide-mobile" style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700' }}>
+            v0.5.2{role ? ` • ${role.toUpperCase()}` : ''}
           </div>
         </div>
       </Link>

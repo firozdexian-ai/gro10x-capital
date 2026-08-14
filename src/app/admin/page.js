@@ -1975,14 +1975,6 @@ export default function AdminPortal() {
         {/* HEADER */}
         <AdminHeader
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          currency={currency}
-          setCurrency={setCurrency}
-          searchResults={searchResults}
-          globalSearchQuery={globalSearchQuery}
-          setGlobalSearchQuery={setGlobalSearchQuery}
-          showSearchResults={showSearchResults}
-          setShowSearchResults={setShowSearchResults}
           onAddProject={() => handleOpenProjectModal()}
         />
 

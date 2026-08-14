@@ -49,28 +49,22 @@ export default function AdminSidebar({
   return (
     <aside className={`admin-sidebar ${sidebarCollapsed ? 'admin-sidebar--collapsed' : ''}`}>
 
-      {/* ── LOGO & COLLAPSE TOGGLE ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '0.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      {/* ── SIDEBAR HEADER & COLLAPSE TOGGLE ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="sidebar-hide-on-collapse" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{
-            width: '38px', height: '38px',
-            background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)',
-            borderRadius: '10px', display: 'grid', placeItems: 'center',
-            color: '#070a14', fontWeight: '900', fontSize: '1.2rem', flexShrink: 0,
-          }}>G</div>
-          <div className="sidebar-hide-on-collapse">
-            <span style={{ fontWeight: '900', fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
-              GRO10X <span style={{ color: '#D4AF37' }}>ADMIN</span>
-            </span>
-            <p style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', margin: 0, fontWeight: '700' }}>
-              Command Center v0.5.0
-            </p>
-          </div>
+            width: '8px', height: '8px', borderRadius: '50%',
+            background: '#10b981', boxShadow: '0 0 10px #10b981'
+          }} />
+          <span style={{ fontWeight: '800', fontSize: '0.82rem', letterSpacing: '0.04em', color: '#cbd5e1', textTransform: 'uppercase' }}>
+            Operations Hub <span style={{ color: '#D4AF37' }}>v0.5.2</span>
+          </span>
         </div>
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           className="admin-sidebar-toggle"
           title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          style={{ margin: sidebarCollapsed ? '0 auto' : '0' }}
         >
           {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>

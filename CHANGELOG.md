@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.3] — 2026-08-14
+**Admin Header De-clutter, Floating LeadBot Fix & KPI Palette Harmonization**
+
+### Upgrades
+- **Header De-clutter**: Eliminated redundant duplicate search bar and currency selector from `AdminHeader`, keeping search centralized in global `Navigation`.
+- **Sidebar Header Clean**: Replaced redundant logo banner in `AdminSidebar` with a clean `Operations Hub v0.5.3` status indicator.
+- **LeadBot Visibility**: Restricted floating public "Talk to Advisor" button from appearing on Admin command center pages.
+- **KPI Color Harmonization**: Converted clashing pink/purple text to high-contrast amber, sky-blue, and gold tokens in `InquiryLeadsTab`.
+- **Empty State UX**: Added icon-driven empty state card with quick manual lead intake CTA.
+
+---
+
 ## [v0.5.2] — 2026-08-14
 **UI/UX Platform Polish & Responsive Design System**
 

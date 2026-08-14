@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.8] — 2026-08-15
+**Admin Investor Operations Hub Tab 4 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **All Investors Table Empty State Suite**: Added custom empty state with icon, descriptive copy, `⊕ Onboard First Investor`, and `Copy /investor-onboard Link` CTAs with 1-click clipboard integration.
+- **Search on Investment Bookings Sub-tab**: Added live text search (investor alias, deal title, brand name) alongside status filter pills.
+- **Total AUM Raised Shorthand Formatting**: Formatted KPI with Bengali currency shorthands (`৳4.50 Crore`, `৳50.0 Lakhs`) and exact sub-label.
+- **Polished Bookings Empty State**: Upgraded bare table placeholder to match platform standard with icon, title, and descriptive copy.
+- **Onboard Investor Modal Upgrades**: Added `Preferred Contact Channel` (WhatsApp / Telegram / Phone / Email) and `Initial Internal Notes` fields with automatic note logging to `investor_notes`.
+- **Complete Activity Telemetry**: Integrated `logPlatformActivity` across all investor actions (Onboard, Assign KAM, Status Update, Privacy Toggle, Booking Update, Note Log).
+- **Row-level Quick Actions**: Upgraded table row action button with clear visual styling and direction indicators (`Inspect Profile →`).
+
+---
+
 ## [v0.5.7] — 2026-08-15
 **Admin Valuation Model Tab 3.5 Comprehensive Overhaul**
 

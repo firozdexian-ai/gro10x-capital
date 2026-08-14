@@ -77,7 +77,8 @@ export default function AdminPortal() {
     alias_name: '', phone: '', email: '',
     investor_category: 'HNI', requires_anonymity: false,
     origin_source: 'Admin', origin_promoter_id: '',
-    referral_code_used: '', onboarding_status: 'Invited'
+    referral_code_used: '', onboarding_status: 'Invited',
+    preferred_channel: 'WhatsApp', initial_note: ''
   });
   const [savingInvestor, setSavingInvestor] = useState(false);
 
@@ -1645,7 +1646,14 @@ export default function AdminPortal() {
         .update({ assigned_kam_id: kamId || null })
         .eq('id', investorId);
       if (error) throw error;
+      const assignedKam = allKams.find(k => k.id === kamId);
+      const targetInv = allInvestors.find(i => i.id === investorId);
       addToast('KAM assigned to investor.', 'success');
+      logPlatformActivity(
+        'KAM Assigned to Investor',
+        `Assigned ${assignedKam ? assignedKam.full_name : 'Unassigned'} to investor "${targetInv ? targetInv.alias_name : 'Investor'}"`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast('Failed to assign KAM.', 'error');
@@ -1675,16 +1683,36 @@ export default function AdminPortal() {
         kyc_verified: false
       };
 
-      const { error } = await supabase.from('investors').insert([payload]);
+      const { data: newInv, error } = await supabase
+        .from('investors')
+        .insert([payload])
+        .select()
+        .single();
       if (error) throw error;
 
+      // Log initial note if provided
+      if (newInvestorForm.initial_note.trim() && newInv?.id) {
+        await supabase.from('investor_notes').insert([{
+          investor_id: newInv.id,
+          created_by_kam_id: null,
+          note_type: 'General',
+          content: `Preferred Channel: ${newInvestorForm.preferred_channel} | Note: ${newInvestorForm.initial_note.trim()}`
+        }]);
+      }
+
       addToast(`Investor "${newInvestorForm.alias_name}" onboarded successfully!`, 'success');
+      logPlatformActivity(
+        'Investor Onboarded',
+        `Directly onboarded investor "${newInvestorForm.alias_name}" (${newInvestorForm.investor_category}) via Admin Console`,
+        'success'
+      );
       setShowAddInvestorModal(false);
       setNewInvestorForm({
         alias_name: '', phone: '', email: '',
         investor_category: 'HNI', requires_anonymity: false,
         origin_source: 'Admin', origin_promoter_id: '',
-        referral_code_used: '', onboarding_status: 'Invited'
+        referral_code_used: '', onboarding_status: 'Invited',
+        preferred_channel: 'WhatsApp', initial_note: ''
       });
       fetchAdminData();
     } catch (err) {
@@ -1704,7 +1732,13 @@ export default function AdminPortal() {
         .eq('id', investorId);
 
       if (error) throw error;
+      const targetInv = allInvestors.find(i => i.id === investorId);
       addToast(`Investor status updated to ${newStatus.replace('_', ' ')}`, 'success');
+      logPlatformActivity(
+        'Investor Status Updated',
+        `Investor "${targetInv ? targetInv.alias_name : 'Investor'}" status moved to ${newStatus.replace('_', ' ')}`,
+        'info'
+      );
       if (selectedInvestor && selectedInvestor.id === investorId) {
         setSelectedInvestor(prev => ({ ...prev, onboarding_status: newStatus, kyc_verified: isVerified }));
       }
@@ -1724,7 +1758,13 @@ export default function AdminPortal() {
         .eq('id', investorId);
 
       if (error) throw error;
+      const targetInv = allInvestors.find(i => i.id === investorId);
       addToast(`Privacy coverage ${newVal ? 'ENABLED (Alias Only)' : 'DISABLED'}`, 'success');
+      logPlatformActivity(
+        'Investor Privacy Toggled',
+        `Privacy coverage for "${targetInv ? targetInv.alias_name : 'Investor'}" was ${newVal ? 'ENABLED' : 'DISABLED'}`,
+        'info'
+      );
       if (selectedInvestor && selectedInvestor.id === investorId) {
         setSelectedInvestor(prev => ({ ...prev, requires_anonymity: newVal }));
       }
@@ -1752,6 +1792,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('KAM/Admin note logged.', 'success');
+      logPlatformActivity(
+        'Investor Note Added',
+        `Logged a new ${newNoteForm.note_type} note on investor file`,
+        'info'
+      );
       setNewNoteForm({ note_type: 'General', content: '' });
 
       const { data: updatedNotes } = await supabase
@@ -1776,6 +1821,11 @@ export default function AdminPortal() {
 
       if (error) throw error;
       addToast(`Booking status updated to ${newStatus.replace('_', ' ')}`, 'success');
+      logPlatformActivity(
+        'Booking Status Updated',
+        `Investment booking marked as ${newStatus.replace('_', ' ')}`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to update booking status', 'error');
@@ -2212,6 +2262,7 @@ export default function AdminPortal() {
             paymentSubmissions={paymentSubmissions}
             handlePaymentReview={handlePaymentReview}
             currency={currency}
+            addToast={addToast}
           />
         )}
 
@@ -3114,6 +3165,33 @@ export default function AdminPortal() {
                       <option key={p.id} value={p.id}>{p.alias_name || p.full_name} ({p.referral_code})</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Preferred Contact Channel</label>
+                  <select 
+                    value={newInvestorForm.preferred_channel}
+                    onChange={(e) => setNewInvestorForm({ ...newInvestorForm, preferred_channel: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
+                  >
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Telegram">Telegram</option>
+                    <option value="Phone">Phone / Direct Call</option>
+                    <option value="Email">Email</option>
+                  </select>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Initial Internal Note (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={newInvestorForm.initial_note}
+                    onChange={(e) => setNewInvestorForm({ ...newInvestorForm, initial_note: e.target.value })}
+                    placeholder="e.g. Met at Dhaka Angel Summit, ৳50L ticket"
+                    className="form-input"
+                  />
                 </div>
               </div>
 

@@ -1,14 +1,44 @@
 'use client';
-import React from 'react';
-import { Search, PlusCircle, Lock, CheckCircle, ShieldAlert, CreditCard, Users, FileText } from 'lucide-react';
-import { formatCurrency } from '../../../lib/currency';
+import React, { useState } from 'react';
+import { 
+  Search, PlusCircle, Lock, CheckCircle, ShieldAlert, CreditCard, 
+  Users, FileText, ExternalLink, Copy, Check, Filter, UserCheck, 
+  Sparkles, ArrowRight, ShieldCheck, Phone, Mail, Send
+} from 'lucide-react';
+import { formatCurrency, CURRENCY_RATES } from '../../../lib/currency';
+
+/** Shorthand Bengali/Crore currency formatter helper */
+function formatShorthand(val, curr = 'BDT') {
+  const num = Number(val) || 0;
+  const rate = CURRENCY_RATES[curr]?.rate || 1;
+  const symbol = CURRENCY_RATES[curr]?.symbol || '৳';
+  const converted = num * rate;
+
+  if (curr === 'BDT') {
+    if (converted >= 10000000) {
+      return `${symbol}${(converted / 10000000).toFixed(2)} Crore`;
+    }
+    if (converted >= 100000) {
+      return `${symbol}${(converted / 100000).toFixed(1)} Lakhs`;
+    }
+    return `${symbol}${converted.toLocaleString()}`;
+  }
+
+  if (converted >= 1000000) {
+    return `${symbol}${(converted / 1000000).toFixed(2)}M`;
+  }
+  if (converted >= 1000) {
+    return `${symbol}${(converted / 1000).toFixed(1)}K`;
+  }
+  return `${symbol}${converted.toLocaleString()}`;
+}
 
 /**
- * InvestorHubTab — Upgraded Tab 4 Investor Hub & Operations for GRO10X Admin.
+ * InvestorHubTab — Production Tab 4 Investor Hub & Operations for GRO10X Admin.
  *
  * Sub-tabs:
- *   1. 'all-investors' — Searchable investor table with lifecycle status and KAM assignment
- *   2. 'bookings'      — Investment bookings queue with status updater
+ *   1. 'all-investors' — Searchable investor table with lifecycle status, KAM assignment & empty state CTAs
+ *   2. 'bookings'      — Searchable investment bookings queue with status updater
  *   3. 'kyc'           — KYC clearance verification queue
  *   4. 'payments'      — Payment proof clearance queue
  */
@@ -45,45 +75,113 @@ export default function InvestorHubTab({
   handlePaymentReview,
   // Shared
   currency = 'BDT',
+  addToast,
 }) {
+  // Local search state for Bookings sub-tab
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Copy Onboarding Link Handler
+  const handleCopyOnboardLink = () => {
+    if (typeof window !== 'undefined') {
+      const url = `${window.location.origin}/investor-onboard`;
+      navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2200);
+      if (addToast) addToast('Investor onboarding link copied!', 'info');
+    }
+  };
+
+  // Filtered Investors
+  const filteredInvestors = allInvestors.filter(inv => {
+    const q = (investorSearch || '').toLowerCase().trim();
+    const matchesSearch = !q ||
+      (inv.alias_name && inv.alias_name.toLowerCase().includes(q)) ||
+      (inv.phone && inv.phone.includes(q)) ||
+      (inv.email && inv.email.toLowerCase().includes(q)) ||
+      (inv.investor_category && inv.investor_category.toLowerCase().includes(q));
+    const matchesStatus = investorStatusFilter === 'All' || (inv.onboarding_status || 'Invited') === investorStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Filtered Bookings
+  const filteredBookings = allBookings.filter(b => {
+    const matchesStatus = bookingStatusFilter === 'All' || b.status === bookingStatusFilter;
+    const q = (bookingSearch || '').toLowerCase().trim();
+    const matchesSearch = !q ||
+      (b.investors?.alias_name && b.investors.alias_name.toLowerCase().includes(q)) ||
+      (b.funding_projects?.project_title && b.funding_projects.project_title.toLowerCase().includes(q)) ||
+      (b.funding_projects?.businesses?.brand_name && b.funding_projects.businesses.brand_name.toLowerCase().includes(q));
+    return matchesStatus && matchesSearch;
+  });
+
   return (
     <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* ── KPI METRIC STRIP ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total Investors</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>{allInvestors.length}</h3>
-          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Platform Total</span>
+        
+        {/* Card 1: Total Investors */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(212,175,55,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Total Investors
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
+            {allInvestors.length}
+          </h3>
+          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Platform Registry Total</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>KYC Verified (Active+)</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
+        {/* Card 2: KYC Verified */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(16,185,129,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            KYC Verified (Active+)
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
             {allInvestors.filter(i => i.kyc_verified || ['KYC_L2','KYC_L3','Active','VIP'].includes(i.onboarding_status)).length}
           </h3>
           <span style={{ fontSize: '0.72rem', color: '#10b981' }}>Clearance Passed</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total AUM Raised</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>
-            {formatCurrency(totalAumRaised, currency)}
+        {/* Card 3: Total AUM Raised */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(59,130,246,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Total AUM Raised
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>
+            {formatShorthand(totalAumRaised, currency)}
           </h3>
-          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Settled Capital</span>
+          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+            Exact: {formatCurrency(totalAumRaised, currency)}
+          </span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>KYC Queue</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: pendingKycCount > 0 ? '#ef4444' : '#10b981', margin: 0 }}>{pendingKycCount}</h3>
-          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Awaiting Review</span>
+        {/* Card 4: KYC Queue */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: pendingKycCount > 0 ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            KYC Queue
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: pendingKycCount > 0 ? '#ef4444' : '#10b981', margin: 0 }}>
+            {pendingKycCount}
+          </h3>
+          <span style={{ fontSize: '0.72rem', color: pendingKycCount > 0 ? '#ef4444' : '#64748b' }}>
+            {pendingKycCount > 0 ? 'Action Required' : 'Awaiting Review'}
+          </span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Payment Queue</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: pendingPaymentsCount > 0 ? '#f59e0b' : '#10b981', margin: 0 }}>{pendingPaymentsCount}</h3>
-          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Proof Clearance</span>
+        {/* Card 5: Payment Queue */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: pendingPaymentsCount > 0 ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Payment Queue
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: pendingPaymentsCount > 0 ? '#f59e0b' : '#10b981', margin: 0 }}>
+            {pendingPaymentsCount}
+          </h3>
+          <span style={{ fontSize: '0.72rem', color: pendingPaymentsCount > 0 ? '#f59e0b' : '#64748b' }}>
+            {pendingPaymentsCount > 0 ? 'Proof Clearance Pending' : 'Proof Clearance'}
+          </span>
         </div>
+
       </div>
 
       {/* ── 4 SUB-TABS SELECTOR STRIP ── */}
@@ -91,7 +189,7 @@ export default function InvestorHubTab({
         <button
           onClick={() => setInvestorSubTab('all-investors')}
           className={`tab-toggle-btn ${investorSubTab === 'all-investors' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <Users size={15} /> All Investors ({allInvestors.length})
         </button>
@@ -99,7 +197,7 @@ export default function InvestorHubTab({
         <button
           onClick={() => setInvestorSubTab('bookings')}
           className={`tab-toggle-btn ${investorSubTab === 'bookings' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <FileText size={15} /> Investment Bookings ({allBookings.length})
           {allBookings.filter(b => b.status === 'Proof_Submitted').length > 0 && (
@@ -112,7 +210,7 @@ export default function InvestorHubTab({
         <button
           onClick={() => setInvestorSubTab('kyc')}
           className={`tab-toggle-btn ${investorSubTab === 'kyc' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <ShieldAlert size={15} /> KYC Queue
           {pendingKycCount > 0 && (
@@ -125,7 +223,7 @@ export default function InvestorHubTab({
         <button
           onClick={() => setInvestorSubTab('payments')}
           className={`tab-toggle-btn ${investorSubTab === 'payments' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <CreditCard size={15} /> Payment Queue
           {pendingPaymentsCount > 0 && (
@@ -142,14 +240,14 @@ export default function InvestorHubTab({
           
           {/* Search & Filter Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', background: '#0f172a', padding: '0.85rem 1.15rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '1rem', flex: 1, alignItems: 'center', minWidth: '280px' }}>
+            <div style={{ display: 'flex', gap: '1rem', flex: 1, alignItems: 'center', minWidth: '280px', flexWrap: 'wrap' }}>
               
               {/* Search */}
-              <div style={{ position: 'relative', width: '280px' }}>
+              <div style={{ position: 'relative', width: '300px' }}>
                 <Search size={15} style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                 <input
                   type="text"
-                  placeholder="Search investor alias or contact..."
+                  placeholder="Search investor alias, phone, email, category..."
                   value={investorSearch}
                   onChange={(e) => setInvestorSearch(e.target.value)}
                   style={{ width: '100%', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.5rem 0.8rem 0.5rem 2.2rem', borderRadius: '6px', fontSize: '0.85rem' }}
@@ -175,44 +273,103 @@ export default function InvestorHubTab({
                 </select>
               </div>
 
+              {(investorSearch || investorStatusFilter !== 'All') && (
+                <button
+                  onClick={() => { setInvestorSearch(''); setInvestorStatusFilter('All'); }}
+                  className="btn-outline"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', color: '#94a3b8' }}
+                >
+                  Clear Filters
+                </button>
+              )}
+
             </div>
 
-            {/* Onboard Button */}
-            <button
-              onClick={() => setShowAddInvestorModal(true)}
-              className="btn-gold"
-              style={{ padding: '0.65rem 1.2rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
-            >
-              <PlusCircle size={18} /> Onboard Investor
-            </button>
+            {/* Top Action CTAs */}
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+              <button
+                onClick={handleCopyOnboardLink}
+                className="btn-outline"
+                title="Copy public investor onboarding link"
+                style={{ padding: '0.55rem 0.85rem', fontSize: '0.82rem', borderRadius: '8px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {copiedLink ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
+                {copiedLink ? 'Link Copied!' : 'Copy /onboard Link'}
+              </button>
+
+              <button
+                onClick={() => setShowAddInvestorModal(true)}
+                className="btn-gold"
+                style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
+              >
+                <PlusCircle size={16} /> Onboard Investor
+              </button>
+            </div>
+
           </div>
 
-          {/* Table */}
+          {/* Table or Polished Empty State */}
           <div className="glass-card" style={{ overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8', background: 'rgba(0,0,0,0.2)' }}>
-                  <th style={{ padding: '0.85rem 1rem' }}>Investor Alias</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Category</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Lifecycle Status</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>KYC Level</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Total Invested</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Origin Source</th>
-                  <th style={{ padding: '0.85rem 1rem' }}>Assigned KAM</th>
-                  <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allInvestors
-                  .filter(inv => {
-                    const matchesSearch = !investorSearch ||
-                      (inv.alias_name && inv.alias_name.toLowerCase().includes(investorSearch.toLowerCase())) ||
-                      (inv.phone && inv.phone.includes(investorSearch)) ||
-                      (inv.email && inv.email.toLowerCase().includes(investorSearch.toLowerCase()));
-                    const matchesStatus = investorStatusFilter === 'All' || (inv.onboarding_status || 'Invited') === investorStatusFilter;
-                    return matchesSearch && matchesStatus;
-                  })
-                  .map(inv => {
+            {allInvestors.length === 0 ? (
+              /* Platform-level Empty State */
+              <div style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+                  <Users size={28} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                    No Investors Onboarded Yet
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '460px', margin: 0 }}>
+                    Directly onboard high-net-worth individuals, institutional partners, and family offices, or share the self-service onboarding link.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    onClick={handleCopyOnboardLink}
+                    className="btn-outline"
+                    style={{ padding: '0.6rem 1rem', fontSize: '0.82rem', borderRadius: '8px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    {copiedLink ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
+                    {copiedLink ? 'Link Copied!' : 'Copy /investor-onboard Link'}
+                  </button>
+                  <button
+                    onClick={() => setShowAddInvestorModal(true)}
+                    className="btn-gold"
+                    style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
+                  >
+                    <PlusCircle size={16} /> Onboard First Investor
+                  </button>
+                </div>
+              </div>
+            ) : filteredInvestors.length === 0 ? (
+              /* Filter Mismatch Empty State */
+              <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem' }}>No investors match your current search or status filter.</p>
+                <button
+                  onClick={() => { setInvestorSearch(''); setInvestorStatusFilter('All'); }}
+                  className="btn-outline"
+                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '6px', color: '#D4AF37' }}
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8', background: 'rgba(0,0,0,0.2)' }}>
+                    <th style={{ padding: '0.85rem 1rem' }}>Investor Alias</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Category</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Lifecycle Status</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>KYC Level</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Total Invested</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Origin Source</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Assigned KAM</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInvestors.map(inv => {
                     const invInvestments = activeInvestments.filter(i => i.investor_id === inv.id);
                     const totalInvAmt = invInvestments.reduce((acc, i) => acc + Number(i.amount_invested_bdt || 0), 0);
                     const status = inv.onboarding_status || (inv.kyc_verified ? 'Active' : 'Invited');
@@ -305,18 +462,20 @@ export default function InvestorHubTab({
                               setInvestorDrawerTab('profile');
                             }}
                             className="btn-sm"
-                            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                           >
-                            Inspect Profile
+                            Inspect Profile →
                           </button>
                         </td>
 
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            )}
           </div>
+
         </div>
       )}
 
@@ -324,30 +483,70 @@ export default function InvestorHubTab({
       {investorSubTab === 'bookings' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
-          {/* Status Filter Toggle */}
-          <div className="tab-toggle-group" style={{ width: 'fit-content' }}>
-            {['All', 'Pending_Proof', 'Proof_Submitted', 'Approved', 'Rejected'].map(st => (
-              <button
-                key={st}
-                onClick={() => setBookingStatusFilter(st)}
-                className={`tab-toggle-btn ${bookingStatusFilter === st ? 'active' : ''}`}
-                style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-              >
-                {st.replace(/_/g, ' ')}
-              </button>
-            ))}
+          {/* Controls Bar: Status Filter Toggle + Text Search */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', background: '#0f172a', padding: '0.85rem 1.15rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap' }}>
+            
+            {/* Status Filter Toggle */}
+            <div className="tab-toggle-group" style={{ width: 'fit-content' }}>
+              {['All', 'Pending_Proof', 'Proof_Submitted', 'Approved', 'Rejected'].map(st => (
+                <button
+                  key={st}
+                  onClick={() => setBookingStatusFilter(st)}
+                  className={`tab-toggle-btn ${bookingStatusFilter === st ? 'active' : ''}`}
+                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                >
+                  {st.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+
+            {/* Bookings Search Bar */}
+            <div style={{ position: 'relative', width: '280px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                type="text"
+                placeholder="Search investor, deal, or brand..."
+                value={bookingSearch}
+                onChange={(e) => setBookingSearch(e.target.value)}
+                style={{ width: '100%', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.45rem 0.75rem 0.45rem 2rem', borderRadius: '6px', fontSize: '0.82rem' }}
+              />
+            </div>
+
           </div>
 
           {/* Table */}
-          <div className="glass-card">
-            {allBookings.filter(b => bookingStatusFilter === 'All' || b.status === bookingStatusFilter).length === 0 ? (
+          <div className="glass-card" style={{ overflow: 'hidden' }}>
+            {allBookings.length === 0 ? (
+              /* Platform-level Bookings Empty State */
+              <div style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', display: 'grid', placeItems: 'center', color: '#3b82f6' }}>
+                  <FileText size={28} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                    No Investment Bookings Recorded
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '460px', margin: 0 }}>
+                    Investment allocations initiated by registered investors across active Deal Pipeline campaigns will appear here for verification.
+                  </p>
+                </div>
+              </div>
+            ) : filteredBookings.length === 0 ? (
+              /* Filter Mismatch Empty State */
               <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
-                No investment bookings found for this filter.
+                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem' }}>No investment bookings match your current filter.</p>
+                <button
+                  onClick={() => { setBookingStatusFilter('All'); setBookingSearch(''); }}
+                  className="btn-outline"
+                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', borderRadius: '6px', color: '#D4AF37' }}
+                >
+                  Reset Filter
+                </button>
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8' }}>
+                  <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8', background: 'rgba(0,0,0,0.2)' }}>
                     <th style={{ padding: '0.85rem 1rem' }}>Investor</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Target Campaign</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Booking Amount</th>
@@ -355,67 +554,65 @@ export default function InvestorHubTab({
                     <th style={{ padding: '0.85rem 1rem' }}>Type</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Status</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Date</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>Action</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {allBookings
-                    .filter(b => bookingStatusFilter === 'All' || b.status === bookingStatusFilter)
-                    .map(b => (
-                      <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '0.85rem 1rem', fontWeight: 'bold', color: '#D4AF37' }}>
-                          {b.investors?.alias_name || 'Anonymous Investor'}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          <span style={{ color: '#fff', fontWeight: '600' }}>{b.funding_projects?.businesses?.brand_name}</span> - {b.funding_projects?.project_title}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem', fontWeight: 'bold', color: '#10b981' }}>
-                          {formatCurrency(b.amount_bdt, currency)}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          Option {b.yield_option}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          <span className="status-badge status-badge--muted">
-                            {b.booking_type || 'Primary'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          <select
-                            value={b.status}
-                            onChange={(e) => handleUpdateBookingStatus(b.id, e.target.value)}
-                            style={{
-                              background: b.status === 'Approved' ? 'rgba(16,185,129,0.2)' : b.status === 'Proof_Submitted' ? 'rgba(212,175,55,0.2)' : 'rgba(15,23,42,0.8)',
-                              color: b.status === 'Approved' ? '#10b981' : b.status === 'Proof_Submitted' ? '#D4AF37' : '#fff',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              padding: '0.35rem 0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.78rem',
-                              fontWeight: 'bold'
-                            }}
+                  {filteredBookings.map(b => (
+                    <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 'bold', color: '#D4AF37' }}>
+                        {b.investors?.alias_name || 'Anonymous Investor'}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{ color: '#fff', fontWeight: '600' }}>{b.funding_projects?.businesses?.brand_name}</span> - {b.funding_projects?.project_title}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 'bold', color: '#10b981' }}>
+                        {formatCurrency(b.amount_bdt, currency)}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        Option {b.yield_option}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span className="status-badge status-badge--muted">
+                          {b.booking_type || 'Primary'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <select
+                          value={b.status}
+                          onChange={(e) => handleUpdateBookingStatus(b.id, e.target.value)}
+                          style={{
+                            background: b.status === 'Approved' ? 'rgba(16,185,129,0.2)' : b.status === 'Proof_Submitted' ? 'rgba(212,175,55,0.2)' : 'rgba(15,23,42,0.8)',
+                            color: b.status === 'Approved' ? '#10b981' : b.status === 'Proof_Submitted' ? '#D4AF37' : '#fff',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            padding: '0.35rem 0.5rem',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          <option value="Pending_Proof">Pending Proof</option>
+                          <option value="Proof_Submitted">Proof Submitted</option>
+                          <option value="Approved">Approved</option>
+                          <option value="Rejected">Rejected</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', color: '#64748b', fontSize: '0.75rem' }}>
+                        {new Date(b.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                        {b.status === 'Proof_Submitted' && (
+                          <button
+                            onClick={() => setInvestorSubTab('payments')}
+                            className="btn-sm"
+                            style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                           >
-                            <option value="Pending_Proof">Pending Proof</option>
-                            <option value="Proof_Submitted">Proof Submitted</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Rejected">Rejected</option>
-                          </select>
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem', color: '#64748b', fontSize: '0.75rem' }}>
-                          {new Date(b.created_at).toLocaleDateString()}
-                        </td>
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          {b.status === 'Proof_Submitted' && (
-                            <button
-                              onClick={() => setInvestorSubTab('payments')}
-                              className="btn-sm"
-                              style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
-                            >
-                              Review Proof →
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                            Review Proof →
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}

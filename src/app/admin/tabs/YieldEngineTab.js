@@ -1,10 +1,39 @@
 'use client';
 import React from 'react';
-import { TrendingUp, RefreshCw, FileSpreadsheet, Send, Download } from 'lucide-react';
-import { formatCurrency } from '../../../lib/currency';
+import { 
+  TrendingUp, RefreshCw, FileSpreadsheet, Send, Download, 
+  Coins, Sparkles, ArrowRight, FileText, CheckCircle, AlertCircle
+} from 'lucide-react';
+import { formatCurrency, CURRENCY_RATES } from '../../../lib/currency';
+
+/** Shorthand Bengali/Crore currency formatter helper */
+function formatShorthand(val, curr = 'BDT') {
+  const num = Number(val) || 0;
+  const rate = CURRENCY_RATES[curr]?.rate || 1;
+  const symbol = CURRENCY_RATES[curr]?.symbol || '৳';
+  const converted = num * rate;
+
+  if (curr === 'BDT') {
+    if (converted >= 10000000) {
+      return `${symbol}${(converted / 10000000).toFixed(2)} Crore`;
+    }
+    if (converted >= 100000) {
+      return `${symbol}${(converted / 100000).toFixed(1)} Lakhs`;
+    }
+    return `${symbol}${converted.toLocaleString()}`;
+  }
+
+  if (converted >= 1000000) {
+    return `${symbol}${(converted / 1000000).toFixed(2)}M`;
+  }
+  if (converted >= 1000) {
+    return `${symbol}${(converted / 1000).toFixed(1)}K`;
+  }
+  return `${symbol}${converted.toLocaleString()}`;
+}
 
 /**
- * YieldEngineTab — Upgraded Tab 5 Yield Engine & Disbursement Management for GRO10X Admin.
+ * YieldEngineTab — Production Tab 5 Yield Engine & Disbursement Management for GRO10X Admin.
  *
  * Sub-tabs:
  *   1. 'declare'     — Form to declare monthly yield batch & projected investor allocation preview
@@ -70,37 +99,63 @@ export default function YieldEngineTab({
       
       {/* ── KPI METRIC STRIP ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Batches Declared</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>{yieldDisbursements.length}</h3>
+        
+        {/* Card 1: Batches Declared */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(212,175,55,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Batches Declared
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
+            {yieldDisbursements.length}
+          </h3>
           <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Completed Cycles</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>All-Time Distributed</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
-            {formatCurrency(totalDistributed, currency)}
+        {/* Card 2: All-Time Distributed */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(16,185,129,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            All-Time Distributed
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
+            {formatShorthand(totalDistributed, currency)}
           </h3>
-          <span style={{ fontSize: '0.72rem', color: '#10b981' }}>Credited Capital</span>
+          <span style={{ fontSize: '0.72rem', color: '#10b981' }}>
+            Exact: {formatCurrency(totalDistributed, currency)}
+          </span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total Payee Rows</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{allInvestorYields.length}</h3>
+        {/* Card 3: Total Payee Rows */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(59,130,246,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Total Payee Rows
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>
+            {allInvestorYields.length}
+          </h3>
           <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Investor Credits</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Unacknowledged</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: unacknowledgedCount > 0 ? '#f59e0b' : '#10b981', margin: 0 }}>
+        {/* Card 4: Unacknowledged */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: unacknowledgedCount > 0 ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Unacknowledged
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: unacknowledgedCount > 0 ? '#f59e0b' : '#10b981', margin: 0 }}>
             {unacknowledgedCount}
           </h3>
-          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Awaiting Telegram Confirmation</span>
+          <span style={{ fontSize: '0.72rem', color: unacknowledgedCount > 0 ? '#f59e0b' : '#64748b' }}>
+            {unacknowledgedCount > 0 ? 'Pending Telegram Receipt' : 'Awaiting Telegram Confirmation'}
+          </span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>POS Reports on File</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#8b5cf6', margin: 0 }}>{allPosReports.length}</h3>
+        {/* Card 5: POS Reports on File */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(139,92,246,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            POS Reports on File
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#8b5cf6', margin: 0 }}>
+            {allPosReports.length}
+          </h3>
           <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Ingested Sales Files</span>
         </div>
       </div>
@@ -110,7 +165,7 @@ export default function YieldEngineTab({
         <button
           onClick={() => setYieldSubTab('declare')}
           className={`tab-toggle-btn ${yieldSubTab === 'declare' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <TrendingUp size={15} /> Declare Monthly Yield
         </button>
@@ -118,7 +173,7 @@ export default function YieldEngineTab({
         <button
           onClick={() => setYieldSubTab('ledger')}
           className={`tab-toggle-btn ${yieldSubTab === 'ledger' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <FileSpreadsheet size={15} /> Disbursement Ledger ({yieldDisbursements.length})
         </button>
@@ -126,7 +181,7 @@ export default function YieldEngineTab({
         <button
           onClick={() => setYieldSubTab('pos-reports')}
           className={`tab-toggle-btn ${yieldSubTab === 'pos-reports' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
           <RefreshCw size={15} /> POS Sales Reports ({allPosReports.length})
         </button>
@@ -153,7 +208,7 @@ export default function YieldEngineTab({
                 >
                   <option value="">-- Choose Active Campaign --</option>
                   {projects.filter(p => ['Trading', 'Active', 'Origination', 'Funding'].includes(p.status)).map(p => (
-                    <option key={p.id} value={p.id}>{p.project_title}</option>
+                    <option key={p.id} value={p.id}>{p.businesses?.brand_name ? `${p.businesses.brand_name} - ` : ''}{p.project_title}</option>
                   ))}
                 </select>
               </div>
@@ -204,7 +259,7 @@ export default function YieldEngineTab({
                   type="number"
                   value={grossSales}
                   onChange={(e) => setGrossSales(e.target.value)}
-                  placeholder="e.g. 1800000"
+                  placeholder="e.g. 1800000 (= ৳18.0 Lakhs)"
                   style={{ width: '100%', padding: '0.7rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }}
                   required
                 />
@@ -216,7 +271,7 @@ export default function YieldEngineTab({
                   type="number"
                   value={netProfit}
                   onChange={(e) => setNetProfit(e.target.value)}
-                  placeholder="e.g. 420000"
+                  placeholder="e.g. 420000 (= ৳4.20 Lakhs)"
                   style={{ width: '100%', padding: '0.7rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }}
                   required
                 />
@@ -225,7 +280,8 @@ export default function YieldEngineTab({
               <button
                 type="submit"
                 disabled={isDistributing}
-                style={{ background: 'linear-gradient(135deg, #D4AF37, #b89628)', color: '#000', padding: '0.85rem', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '0.95rem', cursor: isDistributing ? 'not-allowed' : 'pointer', marginTop: '0.5rem' }}
+                className="btn-gold"
+                style={{ padding: '0.85rem', justifyContent: 'center', fontSize: '0.95rem', cursor: isDistributing ? 'not-allowed' : 'pointer', marginTop: '0.5rem', fontWeight: '700' }}
               >
                 {isDistributing ? 'Distributing...' : 'Declare & Allocate Yield Batch'}
               </button>
@@ -239,38 +295,44 @@ export default function YieldEngineTab({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
               <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Option 1 (10% Gross)</span>
-                <h4 style={{ margin: '0.2rem 0 0 0', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                  {formatCurrency(grossSales ? Number(grossSales) * 0.10 : 0, currency)}
+                <h4 style={{ margin: '0.2rem 0 0 0', color: '#fff', fontSize: '1.15rem', fontWeight: 'bold' }}>
+                  {formatShorthand(grossSales ? Number(grossSales) * 0.10 : 0, currency)}
                 </h4>
               </div>
               <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Option 2 (12% Gross)</span>
-                <h4 style={{ margin: '0.2rem 0 0 0', color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                  {formatCurrency(grossSales ? Number(grossSales) * 0.12 : 0, currency)}
+                <h4 style={{ margin: '0.2rem 0 0 0', color: '#fff', fontSize: '1.15rem', fontWeight: 'bold' }}>
+                  {formatShorthand(grossSales ? Number(grossSales) * 0.12 : 0, currency)}
                 </h4>
               </div>
               <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Option 3 (35% Net)</span>
-                <h4 style={{ margin: '0.2rem 0 0 0', color: '#10b981', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                  {formatCurrency(netProfit ? Number(netProfit) * 0.35 : 0, currency)}
+                <h4 style={{ margin: '0.2rem 0 0 0', color: '#10b981', fontSize: '1.15rem', fontWeight: 'bold' }}>
+                  {formatShorthand(netProfit ? Number(netProfit) * 0.35 : 0, currency)}
                 </h4>
               </div>
             </div>
 
             {/* Investor Table Preview */}
             <div className="glass-card" style={{ padding: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: '#D4AF37', fontSize: '1rem' }}>
-                📋 Projected Investor Allocation Preview
+              <h4 style={{ margin: '0 0 1rem 0', color: '#D4AF37', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <FileSpreadsheet size={16} /> Projected Investor Allocation Preview
               </h4>
               
               {!dividendProjectId ? (
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Select a campaign to preview individual investor yield shares.</p>
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>Select an active campaign from the form to preview individual investor yield shares.</p>
+                </div>
               ) : (() => {
                 const proj = projects.find(p => p.id === dividendProjectId);
                 const projInvs = activeInvestments.filter(i => i.project_id === dividendProjectId);
 
                 if (projInvs.length === 0) {
-                  return <p style={{ color: '#ef4444', fontSize: '0.85rem' }}>No active investors settled for this campaign yet.</p>;
+                  return (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
+                      <p style={{ margin: 0, fontSize: '0.85rem' }}>No active settled investors found for this campaign yet.</p>
+                    </div>
+                  );
                 }
 
                 const r1 = Number(proj?.yield_option_1_rate || 10) / 100;
@@ -293,10 +355,10 @@ export default function YieldEngineTab({
                   <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.8rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: '#94a3b8' }}>
-                        <th style={{ padding: '0.5rem' }}>Investor</th>
-                        <th style={{ padding: '0.5rem' }}>Option</th>
-                        <th style={{ padding: '0.5rem' }}>Invested BDT</th>
-                        <th style={{ padding: '0.5rem', textAlign: 'right' }}>Projected Yield</th>
+                        <th style={{ padding: '0.6rem 0.5rem' }}>Investor</th>
+                        <th style={{ padding: '0.6rem 0.5rem' }}>Option</th>
+                        <th style={{ padding: '0.6rem 0.5rem' }}>Invested Capital</th>
+                        <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right' }}>Projected Yield</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -309,10 +371,10 @@ export default function YieldEngineTab({
 
                         return (
                           <tr key={inv.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <td style={{ padding: '0.5rem', fontWeight: 'bold', color: '#D4AF37' }}>{inv.investors?.alias_name}</td>
-                            <td style={{ padding: '0.5rem' }}>Option {opt}</td>
-                            <td style={{ padding: '0.5rem' }}>{formatCurrency(inv.amount_invested_bdt, currency)}</td>
-                            <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 'bold', color: '#10b981' }}>{formatCurrency(Math.round(share), currency)}</td>
+                            <td style={{ padding: '0.6rem 0.5rem', fontWeight: 'bold', color: '#D4AF37' }}>{inv.investors?.alias_name || 'Investor'}</td>
+                            <td style={{ padding: '0.6rem 0.5rem' }}>Option {opt}</td>
+                            <td style={{ padding: '0.6rem 0.5rem' }}>{formatCurrency(inv.amount_invested_bdt, currency)}</td>
+                            <td style={{ padding: '0.6rem 0.5rem', textAlign: 'right', fontWeight: 'bold', color: '#10b981' }}>{formatCurrency(Math.round(share), currency)}</td>
                           </tr>
                         );
                       })}
@@ -331,9 +393,29 @@ export default function YieldEngineTab({
       {yieldSubTab === 'ledger' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          <div className="glass-card">
+          <div className="glass-card" style={{ overflow: 'hidden' }}>
             {yieldDisbursements.length === 0 ? (
-              <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>No yield disbursement records declared yet.</div>
+              /* Polished Empty State */
+              <div style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+                  <FileSpreadsheet size={28} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                    No Yield Disbursements Declared Yet
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '480px', margin: 0 }}>
+                    Monthly yield batches declared from operational POS sales and profits will be logged here with complete per-investor audit drilldowns and Telegram notifications.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setYieldSubTab('declare')}
+                  className="btn-gold"
+                  style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700', marginTop: '0.5rem' }}
+                >
+                  <TrendingUp size={16} /> Declare First Yield Batch
+                </button>
+              </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
                 <thead>
@@ -385,14 +467,14 @@ export default function YieldEngineTab({
                                   }
                                 }}
                                 className="btn-sm"
-                                style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                                style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                               >
                                 {isSelected ? 'Hide Breakdown ▲' : 'Inspect Breakdown ▼'}
                               </button>
                               <button
                                 onClick={() => handleDownloadYieldCSV(disb)}
                                 className="btn-sm"
-                                style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                                style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '0.35rem 0.65rem', borderRadius: '6px' }}
                                 title="Download Payout CSV Statement"
                               >
                                 <Download size={13} style={{ display: 'inline', marginRight: '0.2rem' }} /> CSV
@@ -588,7 +670,7 @@ export default function YieldEngineTab({
                     <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Gross Sales (BDT)</label>
                     <input
                       type="number"
-                      placeholder="1800000"
+                      placeholder="e.g. 1800000 (= ৳18.0 Lakhs)"
                       value={posEntryForm.gross_sales_bdt}
                       onChange={(e) => setPosEntryForm({ ...posEntryForm, gross_sales_bdt: e.target.value })}
                       style={{ width: '100%', padding: '0.7rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
@@ -599,7 +681,7 @@ export default function YieldEngineTab({
                     <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Net Profit (BDT)</label>
                     <input
                       type="number"
-                      placeholder="420000"
+                      placeholder="e.g. 420000 (= ৳4.20 Lakhs)"
                       value={posEntryForm.net_profit_bdt}
                       onChange={(e) => setPosEntryForm({ ...posEntryForm, net_profit_bdt: e.target.value })}
                       style={{ width: '100%', padding: '0.7rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
@@ -619,7 +701,7 @@ export default function YieldEngineTab({
                   />
                 </div>
 
-                <button type="submit" disabled={savingPosReport} className="btn-gold" style={{ padding: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                <button type="submit" disabled={savingPosReport} className="btn-gold" style={{ padding: '0.75rem', justifyContent: 'center', marginTop: '0.5rem', fontWeight: '700' }}>
                   {savingPosReport ? 'Submitting Report...' : 'Submit POS Report'}
                 </button>
               </form>
@@ -668,7 +750,7 @@ export default function YieldEngineTab({
                   />
                 </div>
 
-                <button type="submit" disabled={uploadingCSV} className="btn-gold" style={{ padding: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                <button type="submit" disabled={uploadingCSV} className="btn-gold" style={{ padding: '0.75rem', justifyContent: 'center', marginTop: '0.5rem', fontWeight: '700' }}>
                   {uploadingCSV ? 'Parsing & Uploading...' : 'Upload & Ingest CSV'}
                 </button>
               </form>
@@ -676,32 +758,44 @@ export default function YieldEngineTab({
           </div>
 
           {/* Ingested Reports Register Table */}
-          <div className="glass-card" style={{ padding: '1.75rem' }}>
-            <h3 style={{ fontSize: '1.15rem', marginBottom: '1.25rem', color: '#f8fafc' }}>POS Ingested Sales Register</h3>
+          <div className="glass-card" style={{ padding: '1.75rem', overflow: 'hidden' }}>
+            <h3 style={{ fontSize: '1.15rem', marginBottom: '1.25rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <RefreshCw size={18} /> POS Ingested Sales Register
+            </h3>
             
             {allPosReports.length === 0 ? (
-              <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No POS sales reports ingested yet.</p>
+              <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', display: 'grid', placeItems: 'center', color: '#8b5cf6' }}>
+                  <FileText size={24} />
+                </div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#f8fafc', margin: 0 }}>
+                  No POS Sales Reports Ingested
+                </h4>
+                <p style={{ color: '#94a3b8', fontSize: '0.82rem', maxWidth: '380px', margin: 0 }}>
+                  Sales and gross profit statements submitted manually or uploaded via CSV batch files will appear in this audit register.
+                </p>
+              </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.8rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8' }}>
-                    <th style={{ padding: '0.65rem' }}>Month / Date</th>
-                    <th style={{ padding: '0.65rem' }}>Brand</th>
-                    <th style={{ padding: '0.65rem' }}>Gross Sales</th>
-                    <th style={{ padding: '0.65rem' }}>Net Profit</th>
-                    <th style={{ padding: '0.65rem' }}>Source</th>
+                  <tr style={{ borderBottom: '1px solid rgba(212,175,55,0.2)', textAlign: 'left', color: '#94a3b8', background: 'rgba(0,0,0,0.2)' }}>
+                    <th style={{ padding: '0.65rem 0.8rem' }}>Month / Date</th>
+                    <th style={{ padding: '0.65rem 0.8rem' }}>Brand</th>
+                    <th style={{ padding: '0.65rem 0.8rem' }}>Gross Sales</th>
+                    <th style={{ padding: '0.65rem 0.8rem' }}>Net Profit</th>
+                    <th style={{ padding: '0.65rem 0.8rem' }}>Source</th>
                   </tr>
                 </thead>
                 <tbody>
                   {allPosReports.map(pos => (
                     <tr key={pos.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '0.65rem', fontWeight: 'bold', color: '#D4AF37' }}>
+                      <td style={{ padding: '0.65rem 0.8rem', fontWeight: 'bold', color: '#D4AF37' }}>
                         {pos.report_month || pos.date}
                       </td>
-                      <td style={{ padding: '0.65rem' }}>{pos.businesses?.brand_name || 'SPV Brand'}</td>
-                      <td style={{ padding: '0.65rem', fontWeight: 'bold', color: '#fff' }}>{formatCurrency(pos.gross_sales_bdt, currency)}</td>
-                      <td style={{ padding: '0.65rem', color: '#10b981' }}>{formatCurrency(pos.net_profit_bdt, currency)}</td>
-                      <td style={{ padding: '0.65rem' }}>
+                      <td style={{ padding: '0.65rem 0.8rem' }}>{pos.businesses?.brand_name || 'SPV Brand'}</td>
+                      <td style={{ padding: '0.65rem 0.8rem', fontWeight: 'bold', color: '#fff' }}>{formatCurrency(pos.gross_sales_bdt, currency)}</td>
+                      <td style={{ padding: '0.65rem 0.8rem', color: '#10b981' }}>{formatCurrency(pos.net_profit_bdt, currency)}</td>
+                      <td style={{ padding: '0.65rem 0.8rem' }}>
                         <span className={`status-badge ${pos.sync_source === 'CSV_Upload' ? 'status-badge--info' : 'status-badge--muted'}`}>
                           {pos.sync_source || 'Manual'}
                         </span>

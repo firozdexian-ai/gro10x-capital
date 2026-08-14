@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.9] — 2026-08-15
+**Admin Yield Engine & Disbursement Ledger Tab 5 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Disbursement Ledger Empty State**: Replaced bare placeholder text with full platform-standard empty state card featuring custom icon, descriptive guidance, and `Declare First Yield Batch` CTA.
+- **POS Ingested Sales Register Empty State**: Replaced muted inline text with custom icon and informative guidance.
+- **Shorthand Currency Formatting**: Implemented `formatShorthand()` on the All-Time Distributed KPI card and real-time Option Pool calculation cards (10%/12%/35%) with exact subtext.
+- **All-Caps KPI Hierarchy**: Standardized all 5 KPI card headers to uppercase with tracking (`0.04em`) and 600 weight.
+- **Enriched Form Placeholders**: Added explicit BDT shorthand notation on Gross Sales and Net Profit inputs across both Declare Yield and Manual POS Ingestion forms.
+- **Comprehensive Activity Telemetry**: Integrated `logPlatformActivity` across all 5 POS & yield operations (POS Manual Entry, POS CSV Upload, Payment Proof Attachment, Disbursement Finalisation, Telegram Broadcast Push).
+
+---
+
 ## [v0.5.8] — 2026-08-15
 **Admin Investor Operations Hub Tab 4 Comprehensive Overhaul**
 

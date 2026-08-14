@@ -997,6 +997,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('POS Monthly Sales Report submitted successfully!', 'success');
+      logPlatformActivity(
+        'POS Report Ingested',
+        `Manual POS sales report for "${proj?.businesses?.brand_name || 'Campaign'}" (${posEntryForm.report_month}) submitted: ${formatCurrency(posEntryForm.gross_sales_bdt, currency)} gross sales`,
+        'success'
+      );
       setPosEntryForm({ project_id: '', report_month: 'Aug 2026', gross_sales_bdt: '', net_profit_bdt: '', transaction_count: '' });
       fetchAdminData();
     } catch (err) {
@@ -1046,6 +1051,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast(`Uploaded ${records.length} POS rows from CSV successfully!`, 'success');
+      logPlatformActivity(
+        'POS CSV Batch Ingested',
+        `Batch uploaded ${records.length} daily POS sales records for "${proj?.businesses?.brand_name || 'Campaign'}"`,
+        'success'
+      );
       setPosCSVFile(null);
       fetchAdminData();
     } catch (err) {
@@ -1089,6 +1099,11 @@ export default function AdminPortal() {
       if (error) throw error;
 
       addToast('Disbursement payment proof & reference saved.', 'success');
+      logPlatformActivity(
+        'Disbursement Proof Saved',
+        `Attached banking reference (${disbPaymentForm.payment_txn_ref || 'Ref'}) & settlement receipt to disbursement batch`,
+        'info'
+      );
       setSelectedDisbursement(prev => ({
         ...prev,
         payment_txn_ref: disbPaymentForm.payment_txn_ref,
@@ -1114,6 +1129,11 @@ export default function AdminPortal() {
 
       if (error) throw error;
       addToast('Disbursement batch marked as Finalised.', 'success');
+      logPlatformActivity(
+        'Yield Disbursement Finalised',
+        `Disbursement batch ${disbId} marked as Finalised and locked for payouts`,
+        'success'
+      );
       setSelectedDisbursement(prev => ({ ...prev, status: 'Finalised' }));
       fetchAdminData();
     } catch (err) {
@@ -1134,6 +1154,11 @@ export default function AdminPortal() {
       if (!res.ok) throw new Error(data.error || 'Failed to send Telegram push');
 
       addToast(`Pushed Telegram notifications! (${data.notified_count} sent out of ${data.total_investors} investors)`, 'success');
+      logPlatformActivity(
+        'Telegram Yield Push Sent',
+        `Broadcasted yield distribution notifications to ${data.notified_count} investors via Telegram Bot`,
+        'success'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Telegram push failed', 'error');

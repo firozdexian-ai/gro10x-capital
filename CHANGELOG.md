@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.3] — 2026-08-15
+**Admin Legal & Compliance Tab 9 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Elevated Empty States for All 4 Sub-Tabs**: Added platform-standard elevated empty states with rich context, Lucide icons, and CTA triggers for Contract Issuance Engine (`FileText`), SPV Registry (`Building2`), KYC/AML Compliance Queue (`ShieldCheck`), and Document Audit Trail (`BookOpen`).
+- **Sub-Tab Button Navigation**: Attached dedicated Lucide icons (`FileText`, `Building2`, `ShieldCheck`, `BookOpen`) to all 4 sub-tab buttons.
+- **KPI Hierarchy & Label Typography**: Upgraded all 4 KPI card headers with uppercase styling, `letterSpacing: '0.04em'`, `fontWeight: '600'`, and fixed "Awaiting E-Signature" label.
+- **End-to-End Activity Telemetry**: Passed `logPlatformActivity` from `page.js` to `LegalComplianceTab.js` and instrumented all 8 legal & compliance transactional handlers (`handleIssueDocument`, `handleBulkIssueToProject`, `handleMarkSigned`, `handleRevokeDoc`, `handleSaveSpv`, `handleToggleComplianceField`, `handleVerifyKyc`, `handleFlagAml`).
+
+---
+
 ## [v0.6.2] — 2026-08-15
 **Admin Leads & Marketing Tab 8 Comprehensive Overhaul**
 

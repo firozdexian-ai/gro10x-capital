@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { FileText, Building2, ShieldCheck, BookOpen, Plus, Search, Layers, Lock, CheckCircle2, AlertTriangle, UploadCloud, Eye, Trash2, ArrowUpRight } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { formatCurrency } from '../../../lib/currency';
 
 /**
- * LegalComplianceTab Component (Tab 8)
+ * LegalComplianceTab Component (Tab 9) — Production Standard
  * Handles Contract Issuance Engine, SPV Registry, KYC/AML Compliance Queue,
  * and Document Audit Log.
  */
-export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
+export default function LegalComplianceTab({ currency = 'BDT', addToast, logPlatformActivity }) {
   const [legalSubTab, setLegalSubTab] = useState('contracts'); // 'contracts' | 'spv' | 'kyc' | 'audit'
   const [legalDocs, setLegalDocs] = useState([]);
   const [spvRegistry, setSpvRegistry] = useState([]);
@@ -95,6 +96,13 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
     }
   };
 
+  // Safe Activity Logger Helper
+  const safeLogActivity = (title, message, type = 'info') => {
+    if (typeof logPlatformActivity === 'function') {
+      logPlatformActivity(title, message, type);
+    }
+  };
+
   // Upload PDF Handler
   const handleUploadDocumentPdf = async (e) => {
     const file = e.target.files[0];
@@ -134,6 +142,7 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
     }
     setIssuingDoc(true);
     try {
+      const targetInv = allInvestors.find(i => i.id === issueDocForm.investor_id);
       const payload = {
         investor_id: issueDocForm.investor_id,
         investment_id: issueDocForm.investment_id || null,
@@ -150,6 +159,11 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       if (error) throw error;
 
       addToast && addToast('Legal document successfully issued to investor!', 'success');
+      safeLogActivity(
+        'Legal Document Issued',
+        `Issued ${payload.document_title} (${payload.doc_type.replace(/_/g, ' ')}) to investor ${targetInv?.alias_name || targetInv?.full_name || 'Investor'}`,
+        'success'
+      );
       setIssueDocForm({ investor_id: '', investment_id: '', spv_id: '', doc_type: 'Share_Certificate', document_title: '', doc_url: '', expiry_date: '', notes: '' });
       setShowIssueDocForm(false);
       fetchAllLegalData();
@@ -174,12 +188,13 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
     }
 
     try {
+      const targetProject = allProjects.find(p => p.id === projectId);
       const payloads = projectInvestments.map(inv => ({
         investor_id: inv.investor_id,
         investment_id: inv.id,
         spv_id: projectId,
         doc_type: docType,
-        document_title: `${docType.replace(/_/g, ' ')} - ${inv.funding_projects?.project_title}`,
+        document_title: `${docType.replace(/_/g, ' ')} - ${inv.funding_projects?.project_title || targetProject?.project_title}`,
         doc_url: 'https://gro10x.com/templates/spv_agreement_draft.pdf',
         is_signed: false
       }));
@@ -188,6 +203,11 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       if (error) throw error;
 
       addToast && addToast(`Bulk issued ${docType.replace(/_/g, ' ')} to ${projectInvestments.length} investors!`, 'success');
+      safeLogActivity(
+        'Bulk Contracts Issued',
+        `Bulk issued ${docType.replace(/_/g, ' ')} contracts to ${projectInvestments.length} investors for deal: ${targetProject?.project_title || 'SPV Deal'}`,
+        'success'
+      );
       fetchAllLegalData();
     } catch (err) {
       addToast && addToast('Failed bulk issuance', 'error');
@@ -203,7 +223,13 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
         .eq('id', docId);
 
       if (error) throw error;
+      const targetDoc = legalDocs.find(d => d.id === docId);
       addToast && addToast('Document marked as E-Signed.', 'success');
+      safeLogActivity(
+        'Contract E-Signed',
+        `Marked document '${targetDoc?.document_title || '#' + docId}' as verified e-signed`,
+        'success'
+      );
       fetchAllLegalData();
     } catch (err) {
       addToast && addToast('Failed to mark document signed', 'error');
@@ -213,9 +239,15 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
   // Revoke Document
   const handleRevokeDoc = async (docId) => {
     try {
+      const targetDoc = legalDocs.find(d => d.id === docId);
       const { error } = await supabase.from('legal_documents').delete().eq('id', docId);
       if (error) throw error;
       addToast && addToast('Document revoked & deleted.', 'info');
+      safeLogActivity(
+        'Legal Document Revoked',
+        `Revoked and removed legal document '${targetDoc?.document_title || '#' + docId}'`,
+        'warning'
+      );
       fetchAllLegalData();
     } catch (err) {
       addToast && addToast('Failed to revoke document', 'error');
@@ -256,6 +288,11 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       if (error) throw error;
 
       addToast && addToast(`SPV Entity '${spvForm.spv_legal_name}' registered successfully!`, 'success');
+      safeLogActivity(
+        'SPV Entity Registered',
+        `Registered SPV entity '${spvForm.spv_legal_name}' (${spvForm.spv_entity_type}, CJS Reg: ${spvForm.registration_number || 'Pending'})`,
+        'success'
+      );
       setSpvForm({ project_id: '', spv_legal_name: '', spv_entity_type: 'Pvt Ltd', registration_number: '', registration_date: '', tin_number: '', bin_number: '', registered_address: '', authorized_capital_bdt: '', paid_up_capital_bdt: '', directors_raw: '', moa_url: '', aoa_url: '', trade_license_url: '', status: 'Active', notes: '' });
       setShowSpvForm(false);
       fetchAllLegalData();
@@ -269,6 +306,7 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
   // Toggle Compliance Check
   const handleToggleComplianceField = async (investorId, field, currentValue) => {
     try {
+      const targetInv = allInvestors.find(i => i.id === investorId);
       const existing = complianceRecords.find(c => c.investor_id === investorId);
       if (existing) {
         const { error } = await supabase
@@ -283,6 +321,11 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
         if (error) throw error;
       }
       addToast && addToast('Compliance checklist updated.', 'success');
+      safeLogActivity(
+        'Compliance Check Updated',
+        `Updated ${field.replace(/_/g, ' ')} to ${!currentValue} for investor ${targetInv?.alias_name || targetInv?.full_name || '#' + investorId}`,
+        'info'
+      );
       fetchAllLegalData();
     } catch (err) {
       addToast && addToast('Failed to update compliance checklist', 'error');
@@ -292,6 +335,7 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
   // Verify Investor KYC
   const handleVerifyKyc = async (investorId) => {
     try {
+      const targetInv = allInvestors.find(i => i.id === investorId);
       const existing = complianceRecords.find(c => c.investor_id === investorId);
       if (existing) {
         await supabase
@@ -310,6 +354,11 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
         .eq('id', investorId);
 
       addToast && addToast('Investor KYC verified & promoted to Active Level 2!', 'success');
+      safeLogActivity(
+        'Investor KYC Verified',
+        `Promoted investor ${targetInv?.alias_name || targetInv?.full_name || '#' + investorId} to Active Level 2 KYC status`,
+        'success'
+      );
       fetchAllLegalData();
     } catch (err) {
       addToast && addToast('Failed to verify KYC', 'error');
@@ -319,6 +368,7 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
   // Flag AML
   const handleFlagAml = async (investorId) => {
     try {
+      const targetInv = allInvestors.find(i => i.id === investorId);
       const existing = complianceRecords.find(c => c.investor_id === investorId);
       if (existing) {
         await supabase
@@ -331,6 +381,11 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
           .insert([{ investor_id: investorId, aml_status: 'Flagged', last_reviewed_at: new Date().toISOString() }]);
       }
       addToast && addToast('Investor flagged for AML Compliance Review.', 'warning');
+      safeLogActivity(
+        'AML Alert Flagged',
+        `Flagged investor ${targetInv?.alias_name || targetInv?.full_name || '#' + investorId} for AML compliance audit`,
+        'warning'
+      );
       fetchAllLegalData();
     } catch (err) {
       addToast && addToast('Failed to flag AML status', 'error');
@@ -352,61 +407,78 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* 4-TILE KPI STRIP */}
-      <div className="kpi-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        
+        {/* Card 1: Total Docs Issued */}
         <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Total Docs Issued</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#fff', margin: 0 }}>{legalDocs.length}</h3>
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Share Certs & Subscription Agrmts</span>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Total Docs Issued
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#fff', margin: 0 }}>{legalDocs.length}</h3>
+          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Share Certs &amp; Subscription Agrmts</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Awaiting E-Signature</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>
+        {/* Card 2: Awaiting E-Signature */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(245,158,11,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Awaiting E-Signature
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#f59e0b', margin: 0 }}>
             {legalDocs.filter(d => !d.is_signed).length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>Pending Investor Sign-off</span>
+          <span style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Pending Investor Sign-off</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Pending KYC Reviews</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#ec4899', margin: 0 }}>
+        {/* Card 3: Pending KYC Reviews */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(236,72,153,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Pending KYC Reviews
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#ec4899', margin: 0 }}>
             {complianceRecords.filter(c => c.kyc_status === 'Pending').length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#ec4899' }}>Awaiting Compliance Sign-off</span>
+          <span style={{ fontSize: '0.72rem', color: '#ec4899' }}>Awaiting Compliance Sign-off</span>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem' }}>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.4rem 0' }}>Registered SPV Entities</p>
-          <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{spvRegistry.length}</h3>
-          <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>Special Purpose Vehicles</span>
+        {/* Card 4: Registered SPV Entities */}
+        <div className="glass-card" style={{ padding: '1.25rem', borderColor: 'rgba(59,130,246,0.3)' }}>
+          <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.4rem 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Registered SPV Entities
+          </p>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3b82f6', margin: 0 }}>{spvRegistry.length}</h3>
+          <span style={{ fontSize: '0.72rem', color: '#3b82f6' }}>Special Purpose Vehicles</span>
         </div>
       </div>
 
       {/* SUB-TABS SELECTOR */}
-      <div className="tab-toggle-group" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+      <div className="tab-toggle-group" style={{ width: 'fit-content' }}>
         <button 
           onClick={() => setLegalSubTab('contracts')}
           className={`tab-toggle-btn ${legalSubTab === 'contracts' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          Contract Issuance Engine ({legalDocs.length})
+          <FileText size={15} /> Contract Issuance Engine ({legalDocs.length})
         </button>
         <button 
           onClick={() => setLegalSubTab('spv')}
           className={`tab-toggle-btn ${legalSubTab === 'spv' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          SPV Registry ({spvRegistry.length})
+          <Building2 size={15} /> SPV Registry ({spvRegistry.length})
         </button>
         <button 
           onClick={() => setLegalSubTab('kyc')}
           className={`tab-toggle-btn ${legalSubTab === 'kyc' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          KYC / AML Compliance Queue ({complianceRecords.length})
+          <ShieldCheck size={15} /> KYC / AML Compliance Queue ({complianceRecords.length || allInvestors.length})
         </button>
         <button 
           onClick={() => setLegalSubTab('audit')}
           className={`tab-toggle-btn ${legalSubTab === 'audit' ? 'active' : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
         >
-          Document Audit Log
+          <BookOpen size={15} /> Document Audit Log
         </button>
       </div>
 
@@ -415,25 +487,29 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       {/* ---------------------------------------------------- */}
       {legalSubTab === 'contracts' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>SPV Contracts & Share Certificates Engine</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Issue, upload, and track legal contracts and share certificates across SPV projects.</p>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+                SPV Contracts &amp; Share Certificates Engine
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+                Issue, upload, and track legal contracts and share certificates across SPV projects.
+              </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <button 
                 onClick={() => handleBulkIssueToProject(selectedProject, 'Subscription_Agreement')}
                 className="btn-sm"
-                style={{ background: 'rgba(59,130,246,0.2)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.4)', padding: '0.45rem 0.85rem' }}
+                style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                🗂 Bulk Issue Subscriptions
+                <Layers size={14} /> Bulk Issue Subscriptions
               </button>
 
               <button 
                 onClick={() => setShowIssueDocForm(!showIssueDocForm)}
                 className={showIssueDocForm ? 'btn-sm' : 'btn-sm btn-gold'}
-                style={{ background: showIssueDocForm ? 'rgba(255,255,255,0.1)' : undefined, color: showIssueDocForm ? '#fff' : undefined, padding: '0.45rem 0.95rem' }}
+                style={{ background: showIssueDocForm ? 'rgba(255,255,255,0.1)' : undefined, color: showIssueDocForm ? '#fff' : undefined, padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
               >
                 {showIssueDocForm ? '✕ Close Form' : '+ Issue New Document'}
               </button>
@@ -442,12 +518,17 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
 
           {/* COLLAPSIBLE ISSUE DOCUMENT FORM */}
           {showIssueDocForm && (
-            <div className="glass-card-premium" style={{ padding: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: '#D4AF37', fontSize: '0.95rem' }}>Issue Legal Contract / Share Certificate</h4>
-              <form onSubmit={handleIssueDocument} className="form-grid-3col" style={{ fontSize: '0.85rem' }}>
+            <div className="glass-card-premium" style={{ padding: '1.75rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#D4AF37', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Plus size={18} /> Issue Legal Contract / Share Certificate
+              </h4>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 1.25rem 0' }}>
+                Generate or link an official investment instrument, attach PDF proof, and route to the investor portfolio for electronic verification.
+              </p>
+              <form onSubmit={handleIssueDocument} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Select Investor *</label>
-                  <select value={issueDocForm.investor_id} onChange={(e) => setIssueDocForm({ ...issueDocForm, investor_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Select Investor *</label>
+                  <select value={issueDocForm.investor_id} onChange={(e) => setIssueDocForm({ ...issueDocForm, investor_id: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required>
                     <option value="">-- Select Investor --</option>
                     {allInvestors.map(inv => (
                       <option key={inv.id} value={inv.id}>{inv.alias_name || inv.full_name} ({inv.phone})</option>
@@ -456,8 +537,8 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Linked Investment Booking</label>
-                  <select value={issueDocForm.investment_id} onChange={(e) => setIssueDocForm({ ...issueDocForm, investment_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Linked Investment Booking</label>
+                  <select value={issueDocForm.investment_id} onChange={(e) => setIssueDocForm({ ...issueDocForm, investment_id: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="">-- Unlinked / General --</option>
                     {allInvestments.map(m => (
                       <option key={m.id} value={m.id}>{m.investors?.alias_name} - {m.funding_projects?.project_title} ({formatCurrency(m.amount_invested_bdt, currency)})</option>
@@ -466,8 +547,8 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Document Type *</label>
-                  <select value={issueDocForm.doc_type} onChange={(e) => setIssueDocForm({ ...issueDocForm, doc_type: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Document Type *</label>
+                  <select value={issueDocForm.doc_type} onChange={(e) => setIssueDocForm({ ...issueDocForm, doc_type: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="Share_Certificate">Share Certificate</option>
                     <option value="Subscription_Agreement">Subscription Agreement</option>
                     <option value="Tax_Document">Tax Document</option>
@@ -477,33 +558,33 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Document Title</label>
-                  <input type="text" placeholder="e.g. ORO Hub 4 Share Certificate #104" value={issueDocForm.document_title} onChange={(e) => setIssueDocForm({ ...issueDocForm, document_title: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Document Title</label>
+                  <input type="text" placeholder="e.g. ORO Hub 4 Share Certificate #104" value={issueDocForm.document_title} onChange={(e) => setIssueDocForm({ ...issueDocForm, document_title: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Document PDF File (Upload or paste URL) *</label>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Document PDF File (Upload or paste URL) *</label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input type="text" placeholder="https://..." value={issueDocForm.doc_url} onChange={(e) => setIssueDocForm({ ...issueDocForm, doc_url: e.target.value })} className="form-input" style={{ flex: 1 }} required />
-                    <label style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '0.6rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                      {uploadingPdf ? 'Uploading...' : '📁 Upload PDF'}
+                    <input type="text" placeholder="https://..." value={issueDocForm.doc_url} onChange={(e) => setIssueDocForm({ ...issueDocForm, doc_url: e.target.value })} style={{ flex: 1, padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required />
+                    <label style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '0.65rem 1.25rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <UploadCloud size={16} /> {uploadingPdf ? 'Uploading...' : 'Upload PDF'}
                       <input type="file" accept="application/pdf" onChange={handleUploadDocumentPdf} style={{ display: 'none' }} />
                     </label>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Expiry Date (Optional)</label>
-                  <input type="date" value={issueDocForm.expiry_date} onChange={(e) => setIssueDocForm({ ...issueDocForm, expiry_date: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Expiry Date (Optional)</label>
+                  <input type="date" value={issueDocForm.expiry_date} onChange={(e) => setIssueDocForm({ ...issueDocForm, expiry_date: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Internal Admin Notes</label>
-                  <input type="text" placeholder="Issued upon 100% capital clearance..." value={issueDocForm.notes} onChange={(e) => setIssueDocForm({ ...issueDocForm, notes: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Internal Admin Notes</label>
+                  <input type="text" placeholder="Issued upon 100% capital clearance..." value={issueDocForm.notes} onChange={(e) => setIssueDocForm({ ...issueDocForm, notes: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
-                <div style={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                  <button type="submit" disabled={issuingDoc} className="btn-gold" style={{ padding: '0.6rem 1.5rem' }}>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button type="submit" disabled={issuingDoc} className="btn-gold" style={{ padding: '0.75rem 1.75rem', fontWeight: '700', borderRadius: '6px' }}>
                     {issuingDoc ? 'Issuing...' : 'Issue Document'}
                   </button>
                 </div>
@@ -512,8 +593,8 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
           )}
 
           {/* CONTROLS ROW */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-            <div className="doc-filter-pills">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
               {['All', 'Share_Certificate', 'Subscription_Agreement', 'Tax_Document', 'MOU', 'Termination_Notice'].map(st => (
                 <button
                   key={st}
@@ -521,7 +602,12 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                   className={`btn-sm ${docFilter === st ? 'btn-gold' : ''}`}
                   style={{
                     background: docFilter === st ? undefined : 'rgba(255,255,255,0.05)',
-                    color: docFilter === st ? undefined : '#94a3b8'
+                    color: docFilter === st ? undefined : '#94a3b8',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    padding: '0.35rem 0.65rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
                   }}
                 >
                   {st.replace(/_/g, ' ')}
@@ -529,7 +615,7 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} style={{ padding: '0.45rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}>
                 <option value="All">All Project Campaigns</option>
                 {allProjects.map(p => (
@@ -537,13 +623,16 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                 ))}
               </select>
 
-              <input 
-                type="text"
-                placeholder="🔍 Search doc or investor..."
-                value={docSearch}
-                onChange={(e) => setDocSearch(e.target.value)}
-                style={{ width: '200px', padding: '0.45rem 0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
-              />
+              <div style={{ position: 'relative', width: '200px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                <input 
+                  type="text"
+                  placeholder="Search doc or investor..."
+                  value={docSearch}
+                  onChange={(e) => setDocSearch(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.8rem' }}
+                />
+              </div>
             </div>
           </div>
 
@@ -551,9 +640,28 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>Loading legal documents...</div>
           ) : filteredDocs.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>No legal documents issued matching filters.</div>
+            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+                <FileText size={28} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                  No Legal Documents Issued Yet
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '480px', margin: 0 }}>
+                  Issue SPV share certificates, investment subscription agreements, and term sheets to verified investors.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowIssueDocForm(true)}
+                className="btn-gold"
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
+              >
+                <Plus size={16} /> Issue First Document
+              </button>
+            </div>
           ) : (
-            <div className="campaign-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
               {filteredDocs.map(doc => {
                 const isSigned = doc.is_signed;
 
@@ -582,17 +690,17 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                       <a href={doc.doc_url} target="_blank" rel="noreferrer" style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        📋 View PDF Contract ↗
+                        <Eye size={13} /> View PDF Contract <ArrowUpRight size={13} />
                       </a>
 
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         {!isSigned && (
-                          <button onClick={() => handleMarkSigned(doc.id)} className="btn-sm btn-gold">
+                          <button onClick={() => handleMarkSigned(doc.id)} className="btn-sm btn-gold" style={{ padding: '0.35rem 0.65rem' }}>
                             ✓ Mark Signed
                           </button>
                         )}
-                        <button onClick={() => handleRevokeDoc(doc.id)} className="btn-sm" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
-                          Revoke
+                        <button onClick={() => handleRevokeDoc(doc.id)} className="btn-sm" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.35rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Trash2 size={12} /> Revoke
                         </button>
                       </div>
                     </div>
@@ -609,16 +717,20 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       {/* ---------------------------------------------------- */}
       {legalSubTab === 'spv' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>Special Purpose Vehicle (SPV) Registry</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Register legal entities, CJS registration numbers, TIN/BINs, and directors rosters.</p>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+                Special Purpose Vehicle (SPV) Registry
+              </h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+                Register legal entities, CJS registration numbers, TIN/BINs, and directors rosters.
+              </p>
             </div>
 
             <button 
               onClick={() => setShowSpvForm(!showSpvForm)}
               className={showSpvForm ? 'btn-sm' : 'btn-sm btn-gold'}
-              style={{ background: showSpvForm ? 'rgba(255,255,255,0.1)' : undefined, color: showSpvForm ? '#fff' : undefined, padding: '0.45rem 0.95rem' }}
+              style={{ background: showSpvForm ? 'rgba(255,255,255,0.1)' : undefined, color: showSpvForm ? '#fff' : undefined, padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               {showSpvForm ? '✕ Close Form' : '+ Register New SPV'}
             </button>
@@ -626,17 +738,22 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
 
           {/* COLLAPSIBLE ADD SPV FORM */}
           {showSpvForm && (
-            <div className="glass-card-premium" style={{ padding: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: '#D4AF37', fontSize: '0.95rem' }}>Register New SPV Legal Entity</h4>
-              <form onSubmit={handleSaveSpv} className="form-grid-3col" style={{ fontSize: '0.85rem' }}>
+            <div className="glass-card-premium" style={{ padding: '1.75rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#D4AF37', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Plus size={18} /> Register New SPV Legal Entity
+              </h4>
+              <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0 0 1.25rem 0' }}>
+                Log corporate registration credentials for the Special Purpose Vehicle holding operating company assets and issuing equity shares.
+              </p>
+              <form onSubmit={handleSaveSpv} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>SPV Legal Entity Name *</label>
-                  <input type="text" placeholder="e.g. ORO SPV4 Gulshan Ltd" value={spvForm.spv_legal_name} onChange={(e) => setSpvForm({ ...spvForm, spv_legal_name: e.target.value })} className="form-input" required />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>SPV Legal Entity Name *</label>
+                  <input type="text" placeholder="e.g. ORO SPV4 Gulshan Ltd" value={spvForm.spv_legal_name} onChange={(e) => setSpvForm({ ...spvForm, spv_legal_name: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} required />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Linked Project Deal</label>
-                  <select value={spvForm.project_id} onChange={(e) => setSpvForm({ ...spvForm, project_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Linked Project Deal</label>
+                  <select value={spvForm.project_id} onChange={(e) => setSpvForm({ ...spvForm, project_id: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="">-- Unlinked SPV --</option>
                     {allProjects.map(p => (
                       <option key={p.id} value={p.id}>{p.businesses?.brand_name} - {p.project_title}</option>
@@ -645,8 +762,8 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Entity Type</label>
-                  <select value={spvForm.spv_entity_type} onChange={(e) => setSpvForm({ ...spvForm, spv_entity_type: e.target.value })} style={{ width: '100%', padding: '0.6rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Entity Type</label>
+                  <select value={spvForm.spv_entity_type} onChange={(e) => setSpvForm({ ...spvForm, spv_entity_type: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}>
                     <option value="Pvt Ltd">Private Limited (Pvt Ltd)</option>
                     <option value="LLP">Limited Liability Partnership (LLP)</option>
                     <option value="Trust">Special Purpose Trust</option>
@@ -654,37 +771,37 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>CJS Registration Number</label>
-                  <input type="text" placeholder="C-198234/2026" value={spvForm.registration_number} onChange={(e) => setSpvForm({ ...spvForm, registration_number: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>CJS Registration Number</label>
+                  <input type="text" placeholder="C-198234/2026" value={spvForm.registration_number} onChange={(e) => setSpvForm({ ...spvForm, registration_number: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>TIN Number</label>
-                  <input type="text" placeholder="1234567890" value={spvForm.tin_number} onChange={(e) => setSpvForm({ ...spvForm, tin_number: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>TIN Number</label>
+                  <input type="text" placeholder="1234567890" value={spvForm.tin_number} onChange={(e) => setSpvForm({ ...spvForm, tin_number: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>BIN Number (VAT)</label>
-                  <input type="text" placeholder="001234567-0101" value={spvForm.bin_number} onChange={(e) => setSpvForm({ ...spvForm, bin_number: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>BIN Number (VAT)</label>
+                  <input type="text" placeholder="001234567-0101" value={spvForm.bin_number} onChange={(e) => setSpvForm({ ...spvForm, bin_number: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Authorized Capital (BDT)</label>
-                  <input type="number" placeholder="10000000" value={spvForm.authorized_capital_bdt} onChange={(e) => setSpvForm({ ...spvForm, authorized_capital_bdt: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Authorized Capital (BDT)</label>
+                  <input type="number" placeholder="10000000" value={spvForm.authorized_capital_bdt} onChange={(e) => setSpvForm({ ...spvForm, authorized_capital_bdt: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Paid-Up Capital (BDT)</label>
-                  <input type="number" placeholder="5000000" value={spvForm.paid_up_capital_bdt} onChange={(e) => setSpvForm({ ...spvForm, paid_up_capital_bdt: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Paid-Up Capital (BDT)</label>
+                  <input type="number" placeholder="5000000" value={spvForm.paid_up_capital_bdt} onChange={(e) => setSpvForm({ ...spvForm, paid_up_capital_bdt: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Directors Roster (Comma separated)</label>
-                  <input type="text" placeholder="Tanvir Ahmed, Kazi Mahbub" value={spvForm.directors_raw} onChange={(e) => setSpvForm({ ...spvForm, directors_raw: e.target.value })} className="form-input" />
+                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.35rem' }}>Directors Roster (Comma separated)</label>
+                  <input type="text" placeholder="Tanvir Ahmed, Kazi Mahbub" value={spvForm.directors_raw} onChange={(e) => setSpvForm({ ...spvForm, directors_raw: e.target.value })} style={{ width: '100%', padding: '0.65rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
                 </div>
 
-                <div style={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                  <button type="submit" disabled={savingSpv} className="btn-gold" style={{ padding: '0.6rem 1.5rem' }}>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button type="submit" disabled={savingSpv} className="btn-gold" style={{ padding: '0.75rem 1.75rem', fontWeight: '700', borderRadius: '6px' }}>
                     {savingSpv ? 'Saving...' : 'Register SPV'}
                   </button>
                 </div>
@@ -694,9 +811,28 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
 
           {/* SPV CARDS GRID */}
           {spvRegistry.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>No SPV entities registered yet.</div>
+            <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', display: 'grid', placeItems: 'center', color: '#3b82f6' }}>
+                <Building2 size={28} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                  No SPV Entities Registered Yet
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '500px', margin: 0 }}>
+                  Register Special Purpose Vehicles, Joint Stock (RJSC) registration numbers, TIN/BIN credentials, and board director rosters.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSpvForm(true)}
+                className="btn-gold"
+                style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}
+              >
+                <Plus size={16} /> Register First SPV
+              </button>
+            </div>
           ) : (
-            <div className="campaign-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
               {spvRegistry.map(spv => (
                 <div key={spv.id} className="glass-card" style={{ padding: '1.25rem', borderLeft: '4px solid #3b82f6', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -736,84 +872,104 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       {legalSubTab === 'kyc' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>KYC / AML Compliance Queue</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Audit investor NIDs, bank statements, source of funds, and e-signatures.</p>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+              KYC / AML Compliance Queue
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+              Audit investor NIDs, bank statements, source of funds, and e-signatures.
+            </p>
           </div>
 
           <div className="glass-card" style={{ padding: '1rem', overflowX: 'auto' }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Investor</th>
-                  <th>KYC Status</th>
-                  <th>NID Verified</th>
-                  <th>Bank Stmt</th>
-                  <th>Source Declared</th>
-                  <th>E-Signed</th>
-                  <th>AML Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allInvestors.map(inv => {
-                  const comp = complianceRecords.find(c => c.investor_id === inv.id) || {};
-                  const isVerified = inv.onboarding_status === 'Active' || comp.kyc_status === 'Verified';
-                  const isFlagged = comp.aml_status === 'Flagged';
+            {allInvestors.length === 0 ? (
+              <div style={{ padding: '3rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', display: 'grid', placeItems: 'center', color: '#10b981' }}>
+                  <ShieldCheck size={28} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                    No Investors in Compliance Queue
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '500px', margin: 0 }}>
+                    Onboarded investors will appear here for document verification (NID, bank statements, source of funds, and AML clearing).
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Investor</th>
+                    <th>KYC Status</th>
+                    <th>NID Verified</th>
+                    <th>Bank Stmt</th>
+                    <th>Source Declared</th>
+                    <th>E-Signed</th>
+                    <th>AML Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allInvestors.map(inv => {
+                    const comp = complianceRecords.find(c => c.investor_id === inv.id) || {};
+                    const isVerified = inv.onboarding_status === 'Active' || comp.kyc_status === 'Verified';
+                    const isFlagged = comp.aml_status === 'Flagged';
 
-                  return (
-                    <tr key={inv.id}>
-                      <td>
-                        <div style={{ fontWeight: 'bold', color: '#fff' }}>{inv.alias_name || inv.full_name}</div>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{inv.phone}</span>
-                      </td>
+                    return (
+                      <tr key={inv.id}>
+                        <td>
+                          <div style={{ fontWeight: 'bold', color: '#fff' }}>{inv.alias_name || inv.full_name}</div>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{inv.phone}</span>
+                        </td>
 
-                      <td>
-                        <span className={isVerified ? 'status-badge status-badge--success' : 'status-badge status-badge--warning'}>
-                          {isVerified ? '✓ Verified L2' : 'Pending L1'}
-                        </span>
-                      </td>
+                        <td>
+                          <span className={isVerified ? 'status-badge status-badge--success' : 'status-badge status-badge--warning'}>
+                            {isVerified ? '✓ Verified L2' : 'Pending L1'}
+                          </span>
+                        </td>
 
-                      <td>
-                        <input type="checkbox" checked={!!comp.nid_verified} onChange={() => handleToggleComplianceField(inv.id, 'nid_verified', comp.nid_verified)} />
-                      </td>
+                        <td>
+                          <input type="checkbox" checked={!!comp.nid_verified} onChange={() => handleToggleComplianceField(inv.id, 'nid_verified', comp.nid_verified)} />
+                        </td>
 
-                      <td>
-                        <input type="checkbox" checked={!!comp.bank_statement_received} onChange={() => handleToggleComplianceField(inv.id, 'bank_statement_received', comp.bank_statement_received)} />
-                      </td>
+                        <td>
+                          <input type="checkbox" checked={!!comp.bank_statement_received} onChange={() => handleToggleComplianceField(inv.id, 'bank_statement_received', comp.bank_statement_received)} />
+                        </td>
 
-                      <td>
-                        <input type="checkbox" checked={!!comp.source_of_funds_declared} onChange={() => handleToggleComplianceField(inv.id, 'source_of_funds_declared', comp.source_of_funds_declared)} />
-                      </td>
+                        <td>
+                          <input type="checkbox" checked={!!comp.source_of_funds_declared} onChange={() => handleToggleComplianceField(inv.id, 'source_of_funds_declared', comp.source_of_funds_declared)} />
+                        </td>
 
-                      <td>
-                        <input type="checkbox" checked={!!comp.e_signature_obtained} onChange={() => handleToggleComplianceField(inv.id, 'e_signature_obtained', comp.e_signature_obtained)} />
-                      </td>
+                        <td>
+                          <input type="checkbox" checked={!!comp.e_signature_obtained} onChange={() => handleToggleComplianceField(inv.id, 'e_signature_obtained', comp.e_signature_obtained)} />
+                        </td>
 
-                      <td>
-                        <span className={isFlagged ? 'status-badge status-badge--danger' : 'status-badge status-badge--success'}>
-                          {isFlagged ? '🚩 Flagged' : 'Clear'}
-                        </span>
-                      </td>
+                        <td>
+                          <span className={isFlagged ? 'status-badge status-badge--danger' : 'status-badge status-badge--success'}>
+                            {isFlagged ? '🚩 Flagged' : 'Clear'}
+                          </span>
+                        </td>
 
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                          {!isVerified && (
-                            <button onClick={() => handleVerifyKyc(inv.id)} className="btn-sm btn-gold">
-                              ✓ Verify KYC
-                            </button>
-                          )}
-                          {!isFlagged && (
-                            <button onClick={() => handleFlagAml(inv.id)} className="btn-sm" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
-                              Flag AML
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                            {!isVerified && (
+                              <button onClick={() => handleVerifyKyc(inv.id)} className="btn-sm btn-gold" style={{ padding: '0.35rem 0.65rem' }}>
+                                ✓ Verify KYC
+                              </button>
+                            )}
+                            {!isFlagged && (
+                              <button onClick={() => handleFlagAml(inv.id)} className="btn-sm" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.35rem 0.65rem' }}>
+                                Flag AML
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
@@ -824,43 +980,63 @@ export default function LegalComplianceTab({ currency = 'BDT', addToast }) {
       {legalSubTab === 'audit' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#D4AF37' }}>Legal Document Audit Trail</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.1rem 0 0 0' }}>Immutable chronological record of all contracts and share certificates issued.</p>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#D4AF37', fontWeight: '800' }}>
+              Legal Document Audit Trail
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+              Immutable chronological record of all contracts and share certificates issued.
+            </p>
           </div>
 
           <div className="glass-card" style={{ padding: '1rem', overflowX: 'auto' }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Document Title</th>
-                  <th>Type</th>
-                  <th>Investor</th>
-                  <th>Signed Status</th>
-                  <th style={{ textAlign: 'right' }}>Document Link</th>
-                </tr>
-              </thead>
-              <tbody>
-                {legalDocs.map(doc => (
-                  <tr key={doc.id}>
-                    <td style={{ color: '#94a3b8' }}>{new Date(doc.created_at).toLocaleString()}</td>
-                    <td style={{ fontWeight: 'bold', color: '#fff' }}>{doc.document_title || 'Contract'}</td>
-                    <td style={{ color: '#D4AF37' }}>{doc.doc_type.replace(/_/g, ' ')}</td>
-                    <td style={{ color: '#fff' }}>{doc.investors?.alias_name || doc.investors?.full_name}</td>
-                    <td>
-                      <span className={doc.is_signed ? 'status-badge status-badge--success' : 'status-badge status-badge--warning'}>
-                        {doc.is_signed ? '✓ Signed' : 'Pending'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <a href={doc.doc_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontWeight: 'bold' }}>
-                        View PDF ↗
-                      </a>
-                    </td>
+            {legalDocs.length === 0 ? (
+              <div style={{ padding: '3rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)', display: 'grid', placeItems: 'center', color: '#c084fc' }}>
+                  <BookOpen size={28} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: '0 0 0.35rem 0' }}>
+                    No Documents in Audit Trail
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '500px', margin: 0 }}>
+                    An immutable chronological record of all generated contracts, share certificates, and e-signatures will be logged here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Document Title</th>
+                    <th>Type</th>
+                    <th>Investor</th>
+                    <th>Signed Status</th>
+                    <th style={{ textAlign: 'right' }}>Document Link</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {legalDocs.map(doc => (
+                    <tr key={doc.id}>
+                      <td style={{ color: '#94a3b8' }}>{new Date(doc.created_at).toLocaleString()}</td>
+                      <td style={{ fontWeight: 'bold', color: '#fff' }}>{doc.document_title || 'Contract'}</td>
+                      <td style={{ color: '#D4AF37' }}>{doc.doc_type.replace(/_/g, ' ')}</td>
+                      <td style={{ color: '#fff' }}>{doc.investors?.alias_name || doc.investors?.full_name}</td>
+                      <td>
+                        <span className={doc.is_signed ? 'status-badge status-badge--success' : 'status-badge status-badge--warning'}>
+                          {doc.is_signed ? '✓ Signed' : 'Pending'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <a href={doc.doc_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem', justifyContent: 'flex-end' }}>
+                          View PDF <ArrowUpRight size={13} />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}

@@ -2511,7 +2511,7 @@ export default function AdminPortal() {
           />
         )}
         {activeTab === 'legal' && (
-          <LegalComplianceTab currency={currency} addToast={addToast} />
+          <LegalComplianceTab currency={currency} addToast={addToast} logPlatformActivity={logPlatformActivity} />
         )}
 
         {/* ANALYTICS TAB */}

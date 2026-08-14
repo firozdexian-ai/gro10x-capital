@@ -30,6 +30,7 @@ export default function AdminSidebar({
   signOut,
   currency,
   totalFeeSpreadCaptured,
+  dealSpreadPct = 5,
   pendingCounts = {},
 }) {
   const { kycPayments = 0, cohort = 0, leads = 0 } = pendingCounts;
@@ -57,7 +58,7 @@ export default function AdminSidebar({
             background: '#10b981', boxShadow: '0 0 10px #10b981'
           }} />
           <span style={{ fontWeight: '800', fontSize: '0.82rem', letterSpacing: '0.04em', color: '#cbd5e1', textTransform: 'uppercase' }}>
-            Operations Hub <span style={{ color: '#D4AF37' }}>v0.6.5</span>
+            Operations Hub <span style={{ color: '#D4AF37' }}>v0.6.6</span>
           </span>
         </div>
         <button
@@ -215,7 +216,7 @@ export default function AdminSidebar({
         }}
       >
         <p style={{ color: '#D4AF37', fontSize: '0.72rem', fontWeight: '700', margin: '0 0 0.2rem 0' }}>
-          5% Deal Spread Target
+          {dealSpreadPct}% Deal Spread Target
         </p>
         <p style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981', margin: 0 }}>
           {formatCurrency(totalFeeSpreadCaptured, currency)}

@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.6] — 2026-08-15
+**Admin Settings & Platform Governance Tab 12 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **4-Section Governance Architecture**: Completely restructured Settings into 4 clear governance sections: Platform & Founder Identity, Telegram Alert Dispatchers, Financial & Spread Rules, and Security & Access Control.
+- **8 Dynamic Platform Settings**: Added live database sync for `founder_phone`, `platform_legal_name`, `owner_telegram_chat_id`, `investment_alert_chat_id`, `yield_alert_chat_id`, `deal_spread_pct`, `min_ticket_size_bdt`, `default_promoter_commission_pct`, and `pin_expiry_minutes`.
+- **Dynamic Deal Spread Widget**: Connected `deal_spread_pct` from `platform_settings` directly to the sidebar bottom widget, replacing previous hardcoded 5% formula and label.
+- **Dynamic PIN Expiry Window**: Connected `pin_expiry_minutes` setting directly to the Telegram bot PIN issuance engine.
+- **Activity Telemetry**: Instrumented Settings save handler with `safeLogActivity` and wired prop through `page.js`.
+
+---
+
 ## [v0.6.5] — 2026-08-15
 **Admin Bots & Access Control Tab 11 Comprehensive Overhaul**
 

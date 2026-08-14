@@ -62,6 +62,7 @@ export default function AdminPortal() {
   const [yieldDisbursements, setYieldDisbursements] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
   const [allInvestorNotes, setAllInvestorNotes] = useState([]);
+  const [platformSettings, setPlatformSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
@@ -387,6 +388,18 @@ export default function AdminPortal() {
         .select(`*, businesses(brand_name)`)
         .order('created_at', { ascending: false });
       setAllPosReports(posData || []);
+
+      // Fetch Platform Settings
+      const { data: settingsData } = await supabase
+        .from('platform_settings')
+        .select('*');
+      if (settingsData && settingsData.length > 0) {
+        const sMap = {};
+        settingsData.forEach(item => {
+          if (item.setting_key) sMap[item.setting_key] = item.setting_value;
+        });
+        setPlatformSettings(sMap);
+      }
 
     } catch (err) {
       console.error('Error fetching admin data:', err);
@@ -2175,8 +2188,9 @@ export default function AdminPortal() {
     ['Active', 'Trading', 'Funding', 'Active Capital Raise', 'Diligence', 'Origination'].includes(p.status) && p.status !== 'Closed'
   ).length;
   const totalYieldDisbursed = yieldDisbursements.reduce((sum, y) => sum + Number(y.total_disbursed_bdt || 0), 0);
-  const totalFeeSpreadCaptured = projects.reduce((sum, p) => sum + (Number(p.amount_raised_bdt || 0) * 0.05), 0);
-  const totalPipelineSpreadTarget = projects.reduce((sum, p) => sum + (Number(p.target_raise_bdt || 0) * 0.05), 0);
+  const activeSpreadPct = Number(platformSettings?.deal_spread_pct || 5);
+  const totalFeeSpreadCaptured = projects.reduce((sum, p) => sum + (Number(p.amount_raised_bdt || 0) * (activeSpreadPct / 100)), 0);
+  const totalPipelineSpreadTarget = projects.reduce((sum, p) => sum + (Number(p.target_raise_bdt || 0) * (activeSpreadPct / 100)), 0);
 
   const pendingKycCount = kycSubmissions.filter(s => s.status === 'Pending').length;
   const pendingPaymentsCount = paymentSubmissions.filter(s => s.investment_bookings?.status === 'Proof_Submitted').length;
@@ -2250,6 +2264,7 @@ export default function AdminPortal() {
         user={user}
         signOut={signOut}
         currency={currency}
+        dealSpreadPct={activeSpreadPct}
         totalFeeSpreadCaptured={totalPipelineSpreadTarget}
         pendingCounts={{
           kycPayments: pendingKycCount + pendingPaymentsCount,
@@ -2539,12 +2554,22 @@ export default function AdminPortal() {
 
         {/* BOT MANAGEMENT & ACCESS CONTROL TAB */}
         {activeTab === 'bot-management' && (
-          <BotManagementTab currency={currency} addToast={addToast} logPlatformActivity={logPlatformActivity} />
+          <BotManagementTab 
+            currency={currency} 
+            addToast={addToast} 
+            logPlatformActivity={logPlatformActivity}
+            pinExpiryMinutes={Number(platformSettings?.pin_expiry_minutes || 15)}
+          />
         )}
 
         {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
-          <AdminSettingsTab addToast={addToast} />
+          <AdminSettingsTab 
+            currency={currency} 
+            addToast={addToast} 
+            logPlatformActivity={logPlatformActivity}
+            onSettingsUpdated={(newSettings) => setPlatformSettings(newSettings)}
+          />
         )}
 
       </main>

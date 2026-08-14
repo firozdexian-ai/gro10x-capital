@@ -8,7 +8,7 @@ import { supabase } from '../../../lib/supabase';
  * Handles Telegram Bots Ecosystem, User Access Directory, PIN Security Logs,
  * and Mini-App Command Matrix.
  */
-export default function BotManagementTab({ currency, addToast, logPlatformActivity }) {
+export default function BotManagementTab({ currency, addToast, logPlatformActivity, pinExpiryMinutes = 15 }) {
   const [botSubTab, setBotSubTab] = useState('bots'); // 'bots' | 'directory' | 'pins' | 'commands'
   const [botConfigs, setBotConfigs] = useState([]);
   const [authPins, setAuthPins] = useState([]);
@@ -199,7 +199,8 @@ export default function BotManagementTab({ currency, addToast, logPlatformActivi
     try {
       // 4-digit random PIN
       const generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins expiry
+      const expiryMins = Number(pinExpiryMinutes || 15);
+      const expiresAt = new Date(Date.now() + expiryMins * 60 * 1000).toISOString();
 
       const payload = {
         phone_number: pinForm.phone_number,
@@ -212,8 +213,8 @@ export default function BotManagementTab({ currency, addToast, logPlatformActivi
       const { error } = await supabase.from('telegram_auth_pins').insert([payload]);
       if (error) throw error;
 
-      addToast(`Temporary Access PIN (${generatedPin}) generated for ${pinForm.linked_name || pinForm.phone_number}! Active for 15 mins.`, 'success');
-      safeLogActivity('Security PIN Generated', `Generated 15-minute temporary access PIN for ${pinForm.linked_name || pinForm.phone_number} (${pinForm.user_role})`, 'warning');
+      addToast(`Temporary Access PIN (${generatedPin}) generated for ${pinForm.linked_name || pinForm.phone_number}! Active for ${expiryMins} mins.`, 'success');
+      safeLogActivity('Security PIN Generated', `Generated ${expiryMins}-minute temporary access PIN for ${pinForm.linked_name || pinForm.phone_number} (${pinForm.user_role})`, 'warning');
       setShowPinModal(false);
       setPinForm({ phone_number: '', user_role: 'investor', linked_name: '' });
       fetchBotData();
@@ -255,7 +256,7 @@ export default function BotManagementTab({ currency, addToast, logPlatformActivi
           <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D4AF37', margin: 0 }}>
             {authPins.filter(p => new Date(p.pin_expires_at) > new Date()).length}
           </h3>
-          <span style={{ fontSize: '0.7rem', color: '#D4AF37' }}>Temporary 15-min Login PINs</span>
+          <span style={{ fontSize: '0.7rem', color: '#D4AF37' }}>Temporary {Number(pinExpiryMinutes || 15)}-min Login PINs</span>
         </div>
 
         <div className="glass-card" style={{ padding: '1.25rem' }}>
@@ -517,7 +518,7 @@ export default function BotManagementTab({ currency, addToast, logPlatformActivi
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
                 <button type="submit" disabled={generatingPin} className="btn-gold" style={{ padding: '0.6rem 1.25rem' }}>
-                  {generatingPin ? 'Generating...' : 'Issue 15-Min PIN'}
+                  {generatingPin ? 'Generating...' : `Issue ${Number(pinExpiryMinutes || 15)}-Min PIN`}
                 </button>
               </div>
             </form>

@@ -1996,7 +1996,11 @@ export default function AdminPortal() {
     ...inquiryLeads.map(l => ({
       id: 'lead-' + l.id,
       title: 'New Prospective Lead',
-      message: `${l.name} inquired for ${l.investment_range || 'deal access'} via ${l.source_channel || 'Web'}.`,
+      message: `${l.name} inquired for ${l.investment_range || 'deal access'} via ${
+        l.source_channel?.startsWith('/') ? 'Platform Website' :
+        l.source_channel?.startsWith('http') ? new URL(l.source_channel).hostname.replace('www.', '') :
+        (l.source_channel || 'Web')
+      }.`,
       type: 'info',
       created_at: l.created_at
     })),

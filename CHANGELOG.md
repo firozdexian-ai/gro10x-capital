@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.4] — 2026-08-15
+**Admin Analytics Tab 10 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Sub-Tab Icon Navigation**: Added dedicated Lucide icons (`BarChart3`, `Users`, `TrendingUp`, `Award`) to all 4 Analytics sub-tab buttons.
+- **Elevated Panel Empty States**: Added `emptyPanel()` helper with compact icon + descriptive copy for all 7 analytically-contextual empty states: Yield Paid Out (`BarChart2`), POS Revenue (`Store`), Investor Category Mix (`PieChart`), Deal Pipeline Stage (`TrendingUp`), Fundraising Progress (`Target`), Promoter Commission Leaderboard (`Trophy`), and Lead Acquisition Channels (`Radio`).
+- **Table Empty-State Rows**: Added `<tbody>` empty-state rows with inline Lucide icons for the Investor Activity Snapshot table and All Promoters Performance table.
+- **Component Header**: Updated docstring from Tab 9 to Tab 10.
+
+---
+
 ## [v0.6.3] — 2026-08-15
 **Admin Legal & Compliance Tab 9 Comprehensive Overhaul**
 

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import { BarChart3, Users, TrendingUp, Award, BarChart2, Store, PieChart, Megaphone, Target, Trophy, Radio } from 'lucide-react';
 
 /**
- * AnalyticsTab Component (Tab 9)
+ * AnalyticsTab Component (Tab 10)
  * Handles Platform Overview, Investor Analytics, Deal Pipeline Analytics,
  * and Growth & Promoters Leaderboard.
  */
@@ -161,11 +162,19 @@ export default function AnalyticsTab({
     </div>
   );
 
+  // Compact elevated empty state for analytics panels
+  const emptyPanel = (IconComp, message, iconColor = '#334155') => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '1.75rem 1rem', textAlign: 'center' }}>
+      <IconComp size={26} style={{ color: iconColor, opacity: 0.45 }} />
+      <p style={{ color: '#475569', fontSize: '0.82rem', margin: 0 }}>{message}</p>
+    </div>
+  );
+
   const subTabs = [
-    { key: 'overview', label: 'Platform Overview' },
-    { key: 'investors', label: 'Investor Analytics' },
-    { key: 'deals', label: 'Deal Pipeline' },
-    { key: 'growth', label: 'Growth & Promoters' },
+    { key: 'overview', label: 'Platform Overview', icon: BarChart3 },
+    { key: 'investors', label: 'Investor Analytics', icon: Users },
+    { key: 'deals', label: 'Deal Pipeline', icon: TrendingUp },
+    { key: 'growth', label: 'Growth & Promoters', icon: Award },
   ];
 
   return (
@@ -202,11 +211,14 @@ export default function AnalyticsTab({
 
       {/* SUB-TAB SELECTOR */}
       <div className="tab-toggle-group" style={{ width: 'fit-content' }}>
-        {subTabs.map(t => (
-          <button key={t.key} onClick={() => setAnalyticsSubTab(t.key)} className={`tab-toggle-btn ${analyticsSubTab === t.key ? 'active' : ''}`}>
-            {t.label}
-          </button>
-        ))}
+        {subTabs.map(t => {
+          const TabIcon = t.icon;
+          return (
+            <button key={t.key} onClick={() => setAnalyticsSubTab(t.key)} className={`tab-toggle-btn ${analyticsSubTab === t.key ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <TabIcon size={15} /> {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ============================================================
@@ -245,7 +257,7 @@ export default function AnalyticsTab({
             <div className="glass-card" style={{ padding: '1.4rem' }}>
               {secTitle('Yield Paid Out — by Project', 'Total investor yield distributed per deal')}
               {yieldProjEntries.length === 0 ? (
-                <p style={{ color: '#334155', fontSize: '0.82rem', paddingTop: '0.5rem' }}>No yield disbursements recorded yet.</p>
+                emptyPanel(BarChart2, 'No yield disbursements recorded yet.', '#8b5cf6')
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {yieldProjEntries.map(([proj, amount], i) => progressRow(proj, amount, maxYieldProj, '#8b5cf6', fmtCompact(amount)))}
@@ -260,7 +272,7 @@ export default function AnalyticsTab({
             <div className="glass-card" style={{ padding: '1.4rem' }}>
               {secTitle('POS Gross Revenue — by Business', 'Gross sales from POS daily reports')}
               {posRevenueByBiz.length === 0 ? (
-                <p style={{ color: '#334155', fontSize: '0.82rem', paddingTop: '0.5rem' }}>No POS data recorded yet.</p>
+                emptyPanel(Store, 'No POS revenue data recorded yet.', '#10b981')
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {posRevenueByBiz.map((b, i) => progressRow(b.name, b.revenue, maxPosRevenue, '#10b981', fmtCompact(b.revenue)))}
@@ -310,7 +322,7 @@ export default function AnalyticsTab({
             <div className="glass-card" style={{ padding: '1.4rem' }}>
               {secTitle('Investor Category Mix', 'HNI · Angel · Corporate · Retail breakdown')}
               {categoryBreakdown.length === 0 ? (
-                <p style={{ color: '#334155', fontSize: '0.82rem' }}>No investor data.</p>
+                emptyPanel(PieChart, 'No investor category data yet.', '#D4AF37')
               ) : (
                 <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
                   <svg width="160" height="160" viewBox="0 0 160 160" style={{ flexShrink: 0 }}>
@@ -348,6 +360,14 @@ export default function AnalyticsTab({
                   </tr>
                 </thead>
                 <tbody>
+                  {(allInvestors || []).length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#475569' }}>
+                        <Users size={20} style={{ opacity: 0.35, display: 'block', margin: '0 auto 0.4rem' }} />
+                        No investors onboarded yet.
+                      </td>
+                    </tr>
+                  )}
                   {(allInvestors || []).slice(0, 10).map(inv => {
                     const invInvs = (activeInvestments || []).filter(i => i.investor_id === inv.id);
                     const committed = invInvs.reduce((a, i) => a + Number(i.amount_invested_bdt || 0), 0);
@@ -395,7 +415,7 @@ export default function AnalyticsTab({
             <div className="glass-card" style={{ padding: '1.4rem' }}>
               {secTitle('Deal Pipeline by Stage', 'Active projects per pipeline stage')}
               {dealPipeline.length === 0 ? (
-                <p style={{ color: '#334155', fontSize: '0.82rem' }}>No project data.</p>
+                emptyPanel(TrendingUp, 'No active project pipeline data.', '#D4AF37')
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   {dealPipeline.map((d, i) => {
@@ -432,7 +452,7 @@ export default function AnalyticsTab({
                   );
                 })}
                 {(projects || []).filter(p => ['Fundraising', 'Buildout', 'Live'].includes(p.status)).length === 0 && (
-                  <p style={{ color: '#334155', fontSize: '0.82rem' }}>No active fundraising campaigns.</p>
+                  emptyPanel(Target, 'No active fundraising campaigns yet.', '#D4AF37')
                 )}
               </div>
             </div>
@@ -501,7 +521,7 @@ export default function AnalyticsTab({
             <div className="glass-card" style={{ padding: '1.4rem' }}>
               {secTitle('Promoter Commission Leaderboard', 'Top 5 promoters by earnings')}
               {promoterLeaderboard.length === 0 ? (
-                <p style={{ color: '#334155', fontSize: '0.82rem' }}>No commission data yet.</p>
+                emptyPanel(Trophy, 'No promoter commission data yet.', '#D4AF37')
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {promoterLeaderboard.map((p, i) => {
@@ -530,7 +550,7 @@ export default function AnalyticsTab({
             <div className="glass-card" style={{ padding: '1.4rem' }}>
               {secTitle('Lead Acquisition Channels', 'Where investors discover GRO10X')}
               {leadSrcData.length === 0 ? (
-                <p style={{ color: '#334155', fontSize: '0.82rem' }}>No lead source data.</p>
+                emptyPanel(Radio, 'No lead source data recorded yet.', '#ec4899')
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {leadSrcData.map((src, i) => progressRow(src.label, src.count, maxSrcCount, src.color, `${src.count} leads`))}
@@ -569,6 +589,14 @@ export default function AnalyticsTab({
                   </tr>
                 </thead>
                 <tbody>
+                  {(allPromoters || []).length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#475569' }}>
+                        <Award size={20} style={{ opacity: 0.35, display: 'block', margin: '0 auto 0.4rem' }} />
+                        No growth promoters onboarded yet.
+                      </td>
+                    </tr>
+                  )}
                   {(allPromoters || []).map(p => {
                     const earned = (promoterCommissions || []).filter(c => c.promoter_id === p.id).reduce((acc, c) => acc + Number(c.commission_bdt || 0), 0);
                     const pending = (payoutRequests || []).filter(r => r.promoter_id === p.id && r.status === 'Pending').length;

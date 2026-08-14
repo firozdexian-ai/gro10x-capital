@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.5.6] — 2026-08-14
+**Admin Business Registry Tab 3 Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Status Filter Full Alignment**: Added missing statuses (`Under_Director_Review`, `Diligence_In_Progress`) to `STATUS_OPTIONS` with corresponding badge colors (`status-badge--warning`, `status-badge--purple`), ensuring all 8 lifecycle statuses are fully filterable.
+- **Summary KPI Strip**: Added at-a-glance 4-card metric strip displaying Total Intake count, Active Pending Review count, Average Capital Ask, and Average AI Health Score.
+- **Submission Date Column**: Added formatted "Submitted" date column (`MMM D, YYYY`) to the application table for triage prioritization.
+- **Empty State Action Suite**: Added actionable 1-click `Copy /apply Link` and `Open Application Form →` shortcuts to the empty state container.
+- **Search Extension**: Extended table filter to search across `brand_name`, `ref_code`, `lead_founder_name`, `company_legal_name`, and `industry_sector`.
+- **Live Activity Telemetry**: Integrated `logPlatformActivity` calls across all 4 cohort actions (KAM assignment, audit submission with score, rejection with reason, 1-click pipeline deal creation).
+- **Inspection Drawer Label Clean**: Shortened `KAM Audit & Onboard` sub-tab label to `Audit & Onboard` for clean responsive layout.
+
+---
+
 ## [v0.5.5] — 2026-08-14
 **Admin Deal Pipeline Tab 2 Comprehensive Overhaul**
 

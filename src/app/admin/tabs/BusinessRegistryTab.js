@@ -1,17 +1,55 @@
 'use client';
-import React from 'react';
-import { Search, Building2, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Search, Building2, ExternalLink, FileText, CheckCircle2, 
+  Clock, TrendingUp, Copy, Check, Sparkles, ArrowUpRight 
+} from 'lucide-react';
 import { formatCurrency } from '../../../lib/currency';
 
 /** Status filter definitions with human-friendly labels */
 const STATUS_OPTIONS = [
   { id: 'All', label: 'All Applications' },
   { id: 'New_Submission', label: 'New Submissions' },
+  { id: 'Under_Director_Review', label: 'Under Review' },
   { id: 'KAM_Assigned', label: 'KAM Assigned' },
+  { id: 'Diligence_In_Progress', label: 'Diligence In Progress' },
   { id: 'Diligence_Complete', label: 'Diligence Complete' },
   { id: 'Onboarded_To_Pipeline', label: 'Onboarded to Pipeline' },
   { id: 'Rejected', label: 'Rejected' },
 ];
+
+/** Status badge color & label resolver */
+export function getAppStatusConfig(status) {
+  switch (status) {
+    case 'Onboarded_To_Pipeline':
+      return { label: 'Onboarded to Pipeline', badge: 'status-badge--success' };
+    case 'Diligence_Complete':
+      return { label: 'Diligence Complete', badge: 'status-badge--info' };
+    case 'Diligence_In_Progress':
+      return { label: 'Diligence In Progress', badge: 'status-badge--purple' };
+    case 'KAM_Assigned':
+      return { label: 'KAM Assigned', badge: 'status-badge--gold' };
+    case 'Under_Director_Review':
+      return { label: 'Under Review', badge: 'status-badge--warning' };
+    case 'New_Submission':
+      return { label: 'New Submission', badge: 'status-badge--gold' };
+    case 'Rejected':
+      return { label: 'Rejected', badge: 'status-badge--danger' };
+    default:
+      return { label: (status || 'Unknown').replace(/_/g, ' '), badge: 'status-badge--gold' };
+  }
+}
+
+/** Formats dates cleanly */
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
 
 /**
  * BusinessRegistryTab — Upgraded Tab 3 Cohort Applications & Business Registry for GRO10X Admin.
@@ -42,6 +80,7 @@ export default function BusinessRegistryTab({
   setAppDrawerSubTab,
   setKamAuditForm,
 }) {
+  const [copiedLink, setCopiedLink] = useState(false);
 
   /** Compute counts per status pill */
   const getCount = (statusId) => {
@@ -49,7 +88,28 @@ export default function BusinessRegistryTab({
     return cohortApplications.filter(a => a.status === statusId).length;
   };
 
-  /** Filter application records */
+  /** Summary KPI Calculations */
+  const totalAppsCount = cohortApplications.length;
+  const pendingReviewCount = cohortApplications.filter(a => 
+    ['New_Submission', 'Under_Director_Review', 'KAM_Assigned', 'Diligence_In_Progress'].includes(a.status)
+  ).length;
+  const avgCapitalAsk = totalAppsCount > 0 
+    ? Math.round(cohortApplications.reduce((sum, a) => sum + (Number(a.requested_funding_bdt) || 0), 0) / totalAppsCount)
+    : 0;
+  const scoredApps = cohortApplications.filter(a => Number(a.ai_health_score) > 0);
+  const avgAiHealthScore = scoredApps.length > 0
+    ? Math.round(scoredApps.reduce((sum, a) => sum + Number(a.ai_health_score), 0) / scoredApps.length)
+    : 0;
+
+  /** Copy /apply URL to clipboard */
+  const handleCopyApplyLink = () => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/apply` : 'https://gro10x.com/apply';
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  /** Filter application records (includes sector and legal name search) */
   const filteredApps = cohortApplications
     .filter(a => appFilterStatus === 'All' || a.status === appFilterStatus)
     .filter(a => {
@@ -58,12 +118,71 @@ export default function BusinessRegistryTab({
       return (
         (a.brand_name || '').toLowerCase().includes(q) ||
         (a.ref_code || '').toLowerCase().includes(q) ||
-        (a.lead_founder_name || '').toLowerCase().includes(q)
+        (a.lead_founder_name || '').toLowerCase().includes(q) ||
+        (a.company_legal_name || '').toLowerCase().includes(q) ||
+        (a.industry_sector || '').toLowerCase().includes(q)
       );
     });
 
   return (
     <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+      {/* ── SUMMARY KPI STRIP ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        
+        {/* Card 1: Total Applications */}
+        <div className="glass-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.3)', display: 'grid', placeItems: 'center', color: '#D4AF37', flexShrink: 0 }}>
+            <Building2 size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Total Intake</span>
+            <h4 style={{ margin: '0.15rem 0 0 0', fontSize: '1.35rem', fontWeight: '800', color: '#f8fafc' }}>
+              {totalAppsCount} <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '500' }}>Businesses</span>
+            </h4>
+          </div>
+        </div>
+
+        {/* Card 2: Pending Review */}
+        <div className="glass-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', display: 'grid', placeItems: 'center', color: '#f59e0b', flexShrink: 0 }}>
+            <Clock size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Pending Review</span>
+            <h4 style={{ margin: '0.15rem 0 0 0', fontSize: '1.35rem', fontWeight: '800', color: '#f8fafc' }}>
+              {pendingReviewCount} <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: '500' }}>Active</span>
+            </h4>
+          </div>
+        </div>
+
+        {/* Card 3: Avg Capital Ask */}
+        <div className="glass-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', display: 'grid', placeItems: 'center', color: '#10b981', flexShrink: 0 }}>
+            <TrendingUp size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Avg. Capital Ask</span>
+            <h4 style={{ margin: '0.15rem 0 0 0', fontSize: '1.35rem', fontWeight: '800', color: '#10b981' }}>
+              {formatCurrency(avgCapitalAsk, currency)}
+            </h4>
+          </div>
+        </div>
+
+        {/* Card 4: Avg AI Health Score */}
+        <div className="glass-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', display: 'grid', placeItems: 'center', color: '#3b82f6', flexShrink: 0 }}>
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Avg. AI Health</span>
+            <h4 style={{ margin: '0.15rem 0 0 0', fontSize: '1.35rem', fontWeight: '800', color: '#f8fafc' }}>
+              {avgAiHealthScore > 0 ? `${avgAiHealthScore}/100` : '—'}
+            </h4>
+          </div>
+        </div>
+
+      </div>
 
       {/* ── TOP CONTROL BAR: SEARCH & STATUS FILTER PILLS ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -90,11 +209,11 @@ export default function BusinessRegistryTab({
         </div>
 
         {/* Search Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', padding: '0.45rem 0.85rem', borderRadius: '8px', width: '280px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', padding: '0.45rem 0.85rem', borderRadius: '8px', width: '320px' }}>
           <Search size={15} style={{ color: '#64748b' }} />
           <input
             type="text"
-            placeholder="Search brand, founder, ref code..."
+            placeholder="Search brand, founder, ref code, sector..."
             value={appSearchQuery}
             onChange={(e) => setAppSearchQuery(e.target.value)}
             style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', fontSize: '0.85rem', width: '100%' }}
@@ -106,12 +225,36 @@ export default function BusinessRegistryTab({
       {/* ── APPLICATIONS TABLE ── */}
       <div className="glass-card" style={{ overflow: 'hidden' }}>
         {filteredApps.length === 0 ? (
-          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8' }}>
-            <Building2 size={48} style={{ color: '#D4AF37', margin: '0 auto 1rem auto', opacity: 0.6 }} />
-            <h3 style={{ margin: '0 0 0.4rem 0', color: '#fff', fontSize: '1.15rem' }}>No Cohort Applications Found</h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
-              Founders submitting cohort applications via <strong>/apply</strong> will appear here in real time.
-            </p>
+          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+            <Building2 size={48} style={{ color: '#D4AF37', margin: '0 auto', opacity: 0.6 }} />
+            <div>
+              <h3 style={{ margin: '0 0 0.4rem 0', color: '#fff', fontSize: '1.15rem' }}>No Cohort Applications Found</h3>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, maxWidth: '480px' }}>
+                Founders submitting SME cohort intake applications via <strong>/apply</strong> will automatically appear here in real time.
+              </p>
+            </div>
+
+            {/* Actionable CTAs in Empty State */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={handleCopyApplyLink}
+                className="btn-outline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.82rem', borderRadius: '8px', color: '#cbd5e1' }}
+              >
+                {copiedLink ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
+                {copiedLink ? 'Link Copied!' : 'Copy /apply Link'}
+              </button>
+
+              <a
+                href="/apply"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-gold"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.82rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '700' }}
+              >
+                Open Application Form <ArrowUpRight size={14} />
+              </a>
+            </div>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', color: '#f8fafc', fontSize: '0.85rem' }}>
@@ -122,6 +265,7 @@ export default function BusinessRegistryTab({
                 <th style={{ padding: '0.85rem 1rem' }}>Lead Founder</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Capital Ask</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Status</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Submitted</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Assigned KAM</th>
                 <th style={{ padding: '0.85rem 1rem' }}>AI Health Score</th>
                 <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Action</th>
@@ -132,6 +276,7 @@ export default function BusinessRegistryTab({
                 const healthScore = app.ai_health_score || 0;
                 const scoreColor = healthScore >= 75 ? '#10b981' : healthScore >= 50 ? '#D4AF37' : '#ef4444';
                 const brandInitial = (app.brand_name || 'B')[0].toUpperCase();
+                const statusCfg = getAppStatusConfig(app.status);
 
                 return (
                   <tr key={app.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -172,14 +317,14 @@ export default function BusinessRegistryTab({
 
                     {/* Status Badge */}
                     <td style={{ padding: '0.85rem 1rem' }}>
-                      <span className={`status-badge ${
-                        app.status === 'Onboarded_To_Pipeline' ? 'status-badge--success'
-                        : app.status === 'Rejected' ? 'status-badge--danger'
-                        : app.status === 'Diligence_Complete' ? 'status-badge--info'
-                        : 'status-badge--gold'
-                      }`}>
-                        {app.status.replace(/_/g, ' ')}
+                      <span className={`status-badge ${statusCfg.badge}`}>
+                        {statusCfg.label}
                       </span>
+                    </td>
+
+                    {/* Submitted Date */}
+                    <td style={{ padding: '0.85rem 1rem', color: '#94a3b8', fontSize: '0.78rem' }}>
+                      {formatDate(app.created_at)}
                     </td>
 
                     {/* Assigned KAM */}

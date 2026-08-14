@@ -1783,7 +1783,6 @@ export default function AdminPortal() {
 
   // Assign KAM to Cohort Application
   const handleAssignKamToApp = async (appId, kamId) => {
-
     try {
       const { error } = await supabase
         .from('business_cohort_applications')
@@ -1794,7 +1793,16 @@ export default function AdminPortal() {
         .eq('id', appId);
 
       if (error) throw error;
+      const targetKam = allKams.find(k => k.id === kamId);
+      const targetApp = cohortApplications.find(a => a.id === appId);
+      const appName = targetApp?.brand_name || 'Cohort Application';
+      
       addToast('KAM assigned to cohort application', 'success');
+      logPlatformActivity(
+        'KAM Assigned to Application',
+        `${targetKam ? targetKam.full_name : 'Unassigned'} assigned to ${appName}`,
+        'info'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to assign KAM', 'error');
@@ -1826,7 +1834,15 @@ export default function AdminPortal() {
         .eq('id', appId);
 
       if (error) throw error;
+      const targetApp = cohortApplications.find(a => a.id === appId);
+      const appName = targetApp?.brand_name || 'Cohort Application';
+
       addToast(`KAM audit saved! Computed AI Health Score: ${computedScore}/100`, 'success');
+      logPlatformActivity(
+        'KAM Audit Completed',
+        `Site audit for ${appName} saved with AI Health Score ${computedScore}/100`,
+        'success'
+      );
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to save KAM audit', 'error');
@@ -1849,7 +1865,15 @@ export default function AdminPortal() {
         .eq('id', appId);
 
       if (error) throw error;
+      const targetApp = cohortApplications.find(a => a.id === appId);
+      const appName = targetApp?.brand_name || 'Cohort Application';
+
       addToast('Cohort application rejected', 'success');
+      logPlatformActivity(
+        'Cohort Application Rejected',
+        `${appName} marked as Rejected: "${rejectionReasonInput}"`,
+        'warning'
+      );
       setRejectingAppId(null);
       setRejectionReasonInput('');
       fetchAdminData();
@@ -1938,6 +1962,11 @@ export default function AdminPortal() {
         .eq('id', app.id);
 
       addToast(`🚀 Onboarded "${app.brand_name}" to Deal Pipeline!`, 'success');
+      logPlatformActivity(
+        'Business Onboarded to Pipeline',
+        `"${app.brand_name}" provisioned into Deal Pipeline at Origination stage`,
+        'success'
+      );
       setConvertingAppId(null);
       setSelectedApplication(null);
       fetchAdminData();
@@ -2373,7 +2402,7 @@ export default function AdminPortal() {
                     textTransform: 'capitalize'
                   }}
                 >
-                  {subTab === 'brand' ? 'Brand Identity' : subTab === 'team' ? 'Team Roster' : subTab === 'audit' ? 'KAM Audit & Onboard' : subTab}
+                  {subTab === 'brand' ? 'Brand Identity' : subTab === 'team' ? 'Team Roster' : subTab === 'audit' ? 'Audit & Onboard' : subTab}
                 </button>
               ))}
             </div>

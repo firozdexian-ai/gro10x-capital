@@ -11,7 +11,20 @@ import { useAuth } from '../../components/AuthProvider';
 export default function FinancialModelPage() {
   const { role, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // ALL useState hooks must be declared at the top — before any conditional returns
   const [currency, setCurrency] = useState('BDT');
+
+  // DCF Model Inputs
+  const [initialMonthlySales, setInitialMonthlySales] = useState(3000000); // BDT 30 Lakhs
+  const [monthlyGrowthRate, setMonthlyGrowthRate] = useState(3); // 3% MoM
+  const [netMarginPct, setNetMarginPct] = useState(18); // 18% Net Margin
+  const [discountRate, setDiscountRate] = useState(14); // 14% Discount Rate
+  const [exitMultiple, setExitMultiple] = useState(4.5); // 4.5x EBITDA
+
+  // Cap Table Inputs
+  const [preMoneyValuation, setPreMoneyValuation] = useState(50000000); // BDT 5 Crore
+  const [investmentAmount, setInvestmentAmount] = useState(10000000); // BDT 1 Crore
 
   useEffect(() => {
     if (!authLoading && role !== 'admin') {
@@ -26,17 +39,6 @@ export default function FinancialModelPage() {
       </div>
     );
   }
-
-  // DCF Model Inputs
-  const [initialMonthlySales, setInitialMonthlySales] = useState(3000000); // BDT 30 Lakhs
-  const [monthlyGrowthRate, setMonthlyGrowthRate] = useState(3); // 3% MoM
-  const [netMarginPct, setNetMarginPct] = useState(18); // 18% Net Margin
-  const [discountRate, setDiscountRate] = useState(14); // 14% Discount Rate
-  const [exitMultiple, setExitMultiple] = useState(4.5); // 4.5x EBITDA
-
-  // Cap Table Inputs
-  const [preMoneyValuation, setPreMoneyValuation] = useState(50000000); // BDT 5 Crore
-  const [investmentAmount, setInvestmentAmount] = useState(10000000); // BDT 1 Crore
 
   // Calculate 12-Month Projected Sales & Cash Flows
   let projectedsales = [];

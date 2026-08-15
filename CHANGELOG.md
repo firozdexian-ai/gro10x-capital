@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.3] — 2026-08-15
+**Investor Portal Tab 1: My Portfolio & Secondary Market Critical Fixes & Overhaul**
+
+### Upgrades & Fixes
+- **Critical Bug Fix #1 (Secondary Market)**: Added `id`, `yield_option`, and `created_at` to the `investments` query `.select()` statement, resolving a silent failure on secondary market listings caused by undefined `investment_id` violating foreign key constraints.
+- **Critical Bug Fix #2 (Auth Safety)**: Destructured `authLoading` directly from `useAuth()` hook to prevent potential unhandled `ReferenceError` during initial portal load.
+- **Live 4-Card Portfolio KPI Strip**: Replaced hardcoded formula multiplier (`totalInvested * 0.016`) and static target yield (`20.00%`) with live data: **Total Capital Invested**, **Total Yield Earned**, **Latest Dividend** (from `yieldHistory`), and **Portfolio Distribution** (asset-backed holdings count).
+- **Tab Header & Live Positions Counter**: Added standard GRO10X tab-level header with live count pill displaying active portfolio allocations.
+- **Redesigned Premium Asset Holdings Cards**: Enriched investment cards with brand name, project title, yield option badges, status-matched left border styling, allocation inception dates, and direct secondary market action triggers.
+- **Enhanced Payout History Chart Header**: Added logged month counter and improved empty state with informative auditing reconciliation copy.
+
+---
+
 ## [v0.7.2] — 2026-08-15
 **Staff Sub-Portal: `/pos-sync` (Live POS Telemetry & Daily Sales Reconciliation Terminal) Rebuild**
 

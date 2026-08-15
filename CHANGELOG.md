@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.8] — 2026-08-15
+**KAM Dashboard Tab 1 (Monthly Audits) Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Audit History Panel**: Connected live query to `business_audits` to fetch and render the last 5 audit runs for the selected business, displaying month, date, solvency metrics, and color-coded score pills.
+- **Dynamic Solvency & Health Score Bands**: Added dynamic color bands (Awaiting Entry `#94a3b8`, Critical `#ef4444`, Moderate `#f59e0b`, Good `#3b82f6`, Optimal `#10b981`), score progress bar, and contextual solvency analysis.
+- **Grouped Balance Sheet with Live Subtotals**: Divided form into `CURRENT ASSETS` and `CURRENT LIABILITIES` with live subtotal badges and dynamic `NET WORKING CAPITAL` indicator.
+- **Per-Asset Photo Upload Tracking**: Added isolated upload status tracking (`uploading`, `verified`, `error`) per inspection item with inline spinners and green verified badges.
+- **Empty State & Reset Flow**: Added elevated empty state for zero-business scenarios and "Submit Another Audit →" button to seamlessly log multiple audits.
+- **Global Suppression of Floating Bot**: Suppressed LeadBot "Talk to Advisor" floating trigger on internal staff routes (`/kam-dashboard`, `/pos-sync`, `/fraud-detection`, `/buildout-tracker`, `/team-miniapp`).
+
+---
+
 ## [v0.6.7] — 2026-08-15
 **KAM & Managing Partner Portal Foundation & Security Overhaul**
 

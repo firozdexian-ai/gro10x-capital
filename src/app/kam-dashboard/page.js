@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { 
   Building2, Users, ClipboardCheck, ArrowUpRight, CheckCircle2, ShieldCheck, 
   TrendingUp, BarChart2, DollarSign, Camera, FileText, ChevronRight, Globe, Loader2,
-  PieChart, PhoneCall, AlertCircle, Upload, UserCheck, Shield, Zap, Activity
+  PieChart, PhoneCall, AlertCircle, Upload, UserCheck, Shield, Zap, Activity,
+  TrendingDown, Calendar, RefreshCw
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
@@ -31,9 +32,11 @@ export default function KamDashboard() {
   const [managedProjects, setManagedProjects] = useState([]);
   const [disbursementHistory, setDisbursementHistory] = useState([]);
 
-  // Business Selection
+  // Business Selection & Audit State
   const [businesses, setBusinesses] = useState([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState('');
+  const [auditHistory, setAuditHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   
   // Unilever-style Audit Form State
   const [cashInHand, setCashInHand] = useState('');
@@ -47,8 +50,8 @@ export default function KamDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calculatedHealthScore, setCalculatedHealthScore] = useState(0);
 
-  // Field Photo Upload
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  // Field Photo Upload per-asset status: { [assetName]: 'uploading' | 'verified' | 'error' }
+  const [uploadedAssets, setUploadedAssets] = useState({});
 
   // Role Guard: Redirect non-KAM / non-Admin users
   useEffect(() => {
@@ -68,6 +71,13 @@ export default function KamDashboard() {
       setLoading(false);
     }
   }, [user, role, authLoading]);
+
+  // Fetch recent audit history whenever selected business changes
+  useEffect(() => {
+    if (selectedBusinessId) {
+      fetchAuditHistory(selectedBusinessId);
+    }
+  }, [selectedBusinessId]);
 
   const fetchKamData = async () => {
     try {
@@ -113,9 +123,10 @@ export default function KamDashboard() {
         .select('id, brand_name, ai_health_score')
         .order('created_at', { ascending: false });
 
-      setBusinesses(bizData || []);
-      if (bizData && bizData.length > 0 && !selectedBusinessId) {
-        setSelectedBusinessId(bizData[0].id);
+      const bizList = bizData || [];
+      setBusinesses(bizList);
+      if (bizList.length > 0 && !selectedBusinessId) {
+        setSelectedBusinessId(bizList[0].id);
       }
 
       // 3. Fetch Assigned Investors (Scoped to assigned_kam_id unless Admin)
@@ -174,22 +185,98 @@ export default function KamDashboard() {
     }
   };
 
+  const fetchAuditHistory = async (businessId) => {
+    if (!businessId) return;
+    try {
+      setLoadingHistory(true);
+      const { data, error } = await supabase
+        .from('business_audits')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error && error.code !== '42P01') {
+        console.warn('Audit history query notice:', error);
+      }
+      setAuditHistory(data || []);
+    } catch (err) {
+      console.error('Error fetching audit history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Real-time Balance Sheet Calculations
+  const totalAssets = (Number(cashInHand) || 0) + (Number(stockInvestment) || 0) + (Number(receivablesMarket) || 0) + (Number(receivablesCompany) || 0);
+  const totalLiabilities = (Number(payables) || 0) + (Number(payrollExpense) || 0);
+  const netWorkingCapital = totalAssets - totalLiabilities;
+  const hasInputs = totalAssets > 0 || totalLiabilities > 0;
+
   // Real-time Health Score Preview Calculation
   useEffect(() => {
-    const assets = (Number(cashInHand) || 0) + (Number(stockInvestment) || 0) + (Number(receivablesMarket) || 0) + (Number(receivablesCompany) || 0);
-    const liabilities = (Number(payables) || 0) + (Number(payrollExpense) || 0);
-    const ratio = assets / (liabilities || 1);
+    if (!hasInputs) {
+      setCalculatedHealthScore(0);
+      return;
+    }
+    const ratio = totalAssets / (totalLiabilities || 1);
     let score = Math.round(40 + (ratio * 10));
-    if (assets === 0 && liabilities === 0) score = 0;
     setCalculatedHealthScore(Math.min(100, Math.max(0, score)));
-  }, [cashInHand, stockInvestment, receivablesMarket, receivablesCompany, payables, payrollExpense]);
+  }, [totalAssets, totalLiabilities, hasInputs]);
+
+  // Health Score Visual Band Helper
+  const getHealthScoreInfo = (score, hasData) => {
+    if (!hasData) {
+      return {
+        color: '#94a3b8',
+        bg: 'rgba(148,163,184,0.1)',
+        border: 'rgba(148,163,184,0.25)',
+        label: 'Awaiting Entry',
+        subtext: 'Fill in the balance sheet to preview live AI score'
+      };
+    }
+    if (score <= 40) {
+      return {
+        color: '#ef4444',
+        bg: 'rgba(239,68,68,0.12)',
+        border: 'rgba(239,68,68,0.3)',
+        label: 'Critical Solvency',
+        subtext: 'Liabilities exceed liquid working capital coverage'
+      };
+    }
+    if (score <= 65) {
+      return {
+        color: '#f59e0b',
+        bg: 'rgba(245,158,11,0.12)',
+        border: 'rgba(245,158,11,0.3)',
+        label: 'Moderate Health',
+        subtext: 'Adequate reserves, closely monitor pending payables'
+      };
+    }
+    if (score <= 80) {
+      return {
+        color: '#3b82f6',
+        bg: 'rgba(59,130,246,0.12)',
+        border: 'rgba(59,130,246,0.3)',
+        label: 'Good Standing',
+        subtext: 'Positive cash coverage & healthy receivables ratio'
+      };
+    }
+    return {
+      color: '#10b981',
+      bg: 'rgba(16,185,129,0.12)',
+      border: 'rgba(16,185,129,0.3)',
+      label: 'Optimal Grid',
+      subtext: 'Strong solvency position & optimal liquidity'
+    };
+  };
 
   const handlePhotoUpload = async (e, assetName) => {
     const file = e.target.files?.[0];
     if (!file || !selectedBusinessId) return;
 
     try {
-      setUploadingPhoto(true);
+      setUploadedAssets(prev => ({ ...prev, [assetName]: 'uploading' }));
       const fd = new FormData();
       fd.append('file', file);
       fd.append('business_id', selectedBusinessId);
@@ -201,14 +288,16 @@ export default function KamDashboard() {
       });
 
       if (res.ok) {
+        setUploadedAssets(prev => ({ ...prev, [assetName]: 'verified' }));
         addToast(`✅ ${assetName} photo verified & uploaded!`, 'success');
       } else {
-        addToast(`${assetName} photo uploaded & logged to audit.`, 'info');
+        const data = await res.json().catch(() => ({}));
+        setUploadedAssets(prev => ({ ...prev, [assetName]: 'error' }));
+        addToast(data.error || `Failed to verify photo for ${assetName}`, 'error');
       }
     } catch (err) {
-      addToast('Photo logged to field inspection audit', 'info');
-    } finally {
-      setUploadingPhoto(false);
+      setUploadedAssets(prev => ({ ...prev, [assetName]: 'error' }));
+      addToast(err.message || 'Photo upload encountered an issue', 'error');
     }
   };
 
@@ -220,18 +309,19 @@ export default function KamDashboard() {
       setIsSubmitting(true);
       const auditMonth = new Date().toISOString().substring(0, 7);
 
+      const rate = CURRENCY_RATES[currency]?.rate || 1;
       const { error: auditErr } = await supabase
         .from('business_audits')
         .insert([{
           kam_id: kamProfile.id,
           business_id: selectedBusinessId,
           audit_month: auditMonth,
-          cash_in_hand_bdt: Number(cashInHand) / CURRENCY_RATES[currency].rate,
-          stock_valuation_bdt: Number(stockInvestment) / CURRENCY_RATES[currency].rate,
-          receivables_market_bdt: Number(receivablesMarket) / CURRENCY_RATES[currency].rate,
-          receivables_company_bdt: Number(receivablesCompany) / CURRENCY_RATES[currency].rate,
-          payables_bdt: Number(payables) / CURRENCY_RATES[currency].rate,
-          payroll_expense_bdt: Number(payrollExpense) / CURRENCY_RATES[currency].rate,
+          cash_in_hand_bdt: Number(cashInHand) / rate,
+          stock_valuation_bdt: Number(stockInvestment) / rate,
+          receivables_market_bdt: Number(receivablesMarket) / rate,
+          receivables_company_bdt: Number(receivablesCompany) / rate,
+          payables_bdt: Number(payables) / rate,
+          payroll_expense_bdt: Number(payrollExpense) / rate,
           calculated_health_score: calculatedHealthScore
         }]);
 
@@ -258,8 +348,8 @@ export default function KamDashboard() {
       setPayrollExpense('');
 
       addToast('🎉 Audit verified and submitted successfully!', 'success');
-      setTimeout(() => setAuditSubmitted(false), 3000);
       fetchKamData();
+      fetchAuditHistory(selectedBusinessId);
 
     } catch (err) {
       console.error('Failed to submit audit:', err);
@@ -273,6 +363,8 @@ export default function KamDashboard() {
   const avgHealthScore = businesses.length > 0
     ? Math.round(businesses.reduce((acc, b) => acc + Number(b.ai_health_score || 85), 0) / businesses.length)
     : 88;
+
+  const healthInfo = getHealthScoreInfo(calculatedHealthScore, hasInputs);
 
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>
@@ -470,102 +562,411 @@ export default function KamDashboard() {
             {/* ── TAB 1: MONTHLY AUDITS ── */}
             {activeTab === 'audits' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem' }}>
+                
+                {/* LEFT COLUMN: BALANCE SHEET AUDIT FORM */}
                 <div className="glass-card" style={{ borderColor: 'rgba(59,130,246,0.4)', padding: '2rem', height: 'fit-content' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: '800', margin: 0 }}>Monthly Financial Balance Sheet</h2>
+                  
+                  {/* HEADER & OUTLET SELECTOR */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <h2 style={{ fontSize: '1.25rem', fontWeight: '900', margin: 0, color: '#fff' }}>
+                        Monthly Financial Balance Sheet
+                      </h2>
+                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                        Unilever-standard physical asset & liquidity solvency verification
+                      </p>
+                    </div>
                     
                     {businesses.length > 0 && (
                       <select 
                         value={selectedBusinessId} 
                         onChange={(e) => setSelectedBusinessId(e.target.value)}
-                        style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', outline: 'none' }}
+                        style={{ 
+                          background: 'rgba(15,23,42,0.95)', 
+                          border: '1px solid rgba(59,130,246,0.4)', 
+                          color: '#60a5fa', 
+                          padding: '0.5rem 1rem', 
+                          borderRadius: '8px', 
+                          fontSize: '0.85rem', 
+                          fontWeight: '700', 
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
                       >
                         {businesses.map(b => (
-                          <option key={b.id} value={b.id}>{b.brand_name} (Score: {b.ai_health_score || 85})</option>
+                          <option key={b.id} value={b.id}>
+                            {b.brand_name} (AI Health: {b.ai_health_score || 85}/100)
+                          </option>
                         ))}
                       </select>
                     )}
                   </div>
 
-                  {auditSubmitted ? (
-                    <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
-                      <CheckCircle2 size={48} style={{ color: '#10b981', margin: '0 auto 1rem auto' }} />
-                      <h3 style={{ color: '#10b981', fontSize: '1.25rem', marginBottom: '0.5rem' }}>Audit Verified & Logged</h3>
-                      <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Business AI Health Score has been updated transparently for investors.</p>
+                  {businesses.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3.5rem 2rem', color: '#64748b' }}>
+                      <Building2 size={40} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
+                      <h3 style={{ margin: 0, color: '#94a3b8', fontSize: '1.05rem', fontWeight: '800' }}>No active outlets registered</h3>
+                      <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem' }}>
+                        Businesses created in the Admin Business Registry will appear here for monthly physical audits.
+                      </p>
+                    </div>
+                  ) : auditSubmitted ? (
+                    <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', padding: '2.5rem 2rem', borderRadius: '12px', textAlign: 'center' }}>
+                      <CheckCircle2 size={52} style={{ color: '#10b981', margin: '0 auto 1rem auto' }} />
+                      <h3 style={{ color: '#10b981', fontSize: '1.3rem', marginBottom: '0.4rem', fontWeight: '900' }}>Audit Verified & Logged</h3>
+                      <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: '0 0 1.5rem 0' }}>
+                        Business AI Health Score has been updated transparently for investors and stored in the permanent audit ledger.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setAuditSubmitted(false)}
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: '#fff',
+                          padding: '0.65rem 1.35rem',
+                          borderRadius: '8px',
+                          fontWeight: '800',
+                          fontSize: '0.85rem',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Submit Another Audit →
+                      </button>
                     </div>
                   ) : (
-                    <form onSubmit={handleAuditSubmit} style={{ display: 'grid', gap: '1.25rem' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                        <div>
-                          <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Physical Cash in Hand ({currency})</label>
-                          <input type="number" required value={cashInHand} onChange={(e) => setCashInHand(e.target.value)} className="form-input" placeholder="0" />
+                    <form onSubmit={handleAuditSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
+                      
+                      {/* SECTION 1: CURRENT ASSETS */}
+                      <div style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            📈 Current Assets (Liquidity & Inventory)
+                          </span>
+                          <span style={{ fontSize: '0.78rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.2rem 0.55rem', borderRadius: '6px', fontWeight: '800' }}>
+                            Total: {formatCurrency(totalAssets, currency)}
+                          </span>
                         </div>
-                        <div>
-                          <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Total Stock / Inventory Valuation ({currency})</label>
-                          <input type="number" required value={stockInvestment} onChange={(e) => setStockInvestment(e.target.value)} className="form-input" placeholder="0" />
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                          <div>
+                            <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.78rem', marginBottom: '0.3rem', fontWeight: '700' }}>
+                              Physical Cash in Hand ({currency}) *
+                            </label>
+                            <input 
+                              type="number" 
+                              required 
+                              value={cashInHand} 
+                              onChange={(e) => setCashInHand(e.target.value)} 
+                              className="form-input" 
+                              placeholder="0" 
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.78rem', marginBottom: '0.3rem', fontWeight: '700' }}>
+                              Stock / Inventory Valuation ({currency}) *
+                            </label>
+                            <input 
+                              type="number" 
+                              required 
+                              value={stockInvestment} 
+                              onChange={(e) => setStockInvestment(e.target.value)} 
+                              className="form-input" 
+                              placeholder="0" 
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                          <div>
+                            <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.78rem', marginBottom: '0.3rem', fontWeight: '700' }}>
+                              Receivables from Market ({currency})
+                            </label>
+                            <input 
+                              type="number" 
+                              value={receivablesMarket} 
+                              onChange={(e) => setReceivablesMarket(e.target.value)} 
+                              className="form-input" 
+                              placeholder="0" 
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.78rem', marginBottom: '0.3rem', fontWeight: '700' }}>
+                              Receivables from Apps / FoodPanda ({currency})
+                            </label>
+                            <input 
+                              type="number" 
+                              value={receivablesCompany} 
+                              onChange={(e) => setReceivablesCompany(e.target.value)} 
+                              className="form-input" 
+                              placeholder="0" 
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                        <div>
-                          <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Receivables from Market ({currency})</label>
-                          <input type="number" required value={receivablesMarket} onChange={(e) => setReceivablesMarket(e.target.value)} className="form-input" placeholder="0" />
+                      {/* SECTION 2: CURRENT LIABILITIES */}
+                      <div style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', padding: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            📉 Current Liabilities & Obligations
+                          </span>
+                          <span style={{ fontSize: '0.78rem', background: 'rgba(239,68,68,0.15)', color: '#ef4444', padding: '0.2rem 0.55rem', borderRadius: '6px', fontWeight: '800' }}>
+                            Total: {formatCurrency(totalLiabilities, currency)}
+                          </span>
                         </div>
-                        <div>
-                          <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Receivables from FoodPanda / App ({currency})</label>
-                          <input type="number" required value={receivablesCompany} onChange={(e) => setReceivablesCompany(e.target.value)} className="form-input" placeholder="0" />
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                          <div>
+                            <label style={{ display: 'block', color: '#ef4444', fontSize: '0.78rem', marginBottom: '0.3rem', fontWeight: '700' }}>
+                              Pending Payables (Suppliers, Rent) ({currency}) *
+                            </label>
+                            <input 
+                              type="number" 
+                              required 
+                              value={payables} 
+                              onChange={(e) => setPayables(e.target.value)} 
+                              className="form-input" 
+                              placeholder="0" 
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', color: '#ef4444', fontSize: '0.78rem', marginBottom: '0.3rem', fontWeight: '700' }}>
+                              Monthly Payroll & Staff ({currency}) *
+                            </label>
+                            <input 
+                              type="number" 
+                              required 
+                              value={payrollExpense} 
+                              onChange={(e) => setPayrollExpense(e.target.value)} 
+                              className="form-input" 
+                              placeholder="0" 
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                      {/* SECTION 3: NET WORKING CAPITAL SUMMARY */}
+                      <div style={{ 
+                        background: 'rgba(15,23,42,0.9)', 
+                        border: '1px solid rgba(255,255,255,0.08)', 
+                        borderRadius: '10px', 
+                        padding: '1rem 1.25rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
                         <div>
-                          <label style={{ display: 'block', color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Pending Payables (Suppliers, Rent)</label>
-                          <input type="number" required value={payables} onChange={(e) => setPayables(e.target.value)} className="form-input" placeholder="0" />
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>
+                            Net Working Capital
+                          </span>
+                          <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>
+                            Current Assets minus Current Liabilities
+                          </p>
                         </div>
-                        <div>
-                          <label style={{ display: 'block', color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.3rem' }}>Monthly Payroll & Staff Expense</label>
-                          <input type="number" required value={payrollExpense} onChange={(e) => setPayrollExpense(e.target.value)} className="form-input" placeholder="0" />
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ 
+                            fontSize: '1.25rem', 
+                            fontWeight: '900', 
+                            color: netWorkingCapital >= 0 ? '#10b981' : '#ef4444' 
+                          }}>
+                            {formatCurrency(netWorkingCapital, currency)}
+                          </span>
+                          <div style={{ fontSize: '0.7rem', color: netWorkingCapital >= 0 ? '#10b981' : '#ef4444', fontWeight: '700' }}>
+                            {netWorkingCapital >= 0 ? '▲ Positive Solvency' : '▼ Capital Deficit'}
+                          </div>
                         </div>
                       </div>
 
-                      <button type="submit" disabled={isSubmitting} style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', padding: '0.85rem', borderRadius: '10px', fontSize: '0.95rem', fontWeight: '700', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <button 
+                        type="submit" 
+                        disabled={isSubmitting || !cashInHand || !stockInvestment || !payables || !payrollExpense} 
+                        style={{ 
+                          background: (isSubmitting || !cashInHand || !stockInvestment || !payables || !payrollExpense)
+                            ? 'rgba(59,130,246,0.3)'
+                            : 'linear-gradient(135deg, #3b82f6, #1d4ed8)', 
+                          color: '#fff', 
+                          padding: '0.95rem', 
+                          borderRadius: '10px', 
+                          fontSize: '0.95rem', 
+                          fontWeight: '800', 
+                          border: 'none', 
+                          cursor: (isSubmitting || !cashInHand || !stockInvestment || !payables || !payrollExpense) ? 'not-allowed' : 'pointer', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: '0.5rem',
+                          boxShadow: '0 4px 20px rgba(59,130,246,0.25)',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
                         {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />} 
-                        Submit Verified Audit
+                        Submit Verified Balance Sheet Audit
                       </button>
                     </form>
                   )}
                 </div>
 
+                {/* RIGHT COLUMN: HEALTH SCORE, ASSET PHOTOS, AND AUDIT HISTORY */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  <div className="glass-card" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(7,10,20,0.8))', borderColor: 'rgba(16,185,129,0.3)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                      <div style={{ width: '48px', height: '48px', background: 'rgba(16,185,129,0.2)', borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#10b981' }}>
-                        <BarChart2 size={24} />
+                  
+                  {/* CARD 1: DYNAMIC AI HEALTH SCORE */}
+                  <div className="glass-card" style={{ 
+                    background: `linear-gradient(135deg, ${healthInfo.bg}, rgba(7,10,20,0.85))`, 
+                    borderColor: healthInfo.border,
+                    padding: '1.5rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <div style={{ width: '44px', height: '44px', background: healthInfo.bg, borderRadius: '10px', display: 'grid', placeItems: 'center', color: healthInfo.color, border: `1px solid ${healthInfo.border}` }}>
+                          <BarChart2 size={22} />
+                        </div>
+                        <div>
+                          <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: 0, fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Projected Health Score
+                          </p>
+                          <h3 style={{ fontSize: '1.75rem', color: healthInfo.color, margin: 0, fontWeight: '900' }}>
+                            {hasInputs ? `${calculatedHealthScore}/100` : '— / 100'}
+                          </h3>
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>Projected New Health Score</p>
-                        <h3 style={{ fontSize: '1.8rem', color: '#10b981', margin: 0, fontWeight: '800' }}>{calculatedHealthScore}/100</h3>
-                      </div>
+                      <span style={{ 
+                        fontSize: '0.72rem', 
+                        background: healthInfo.bg, 
+                        color: healthInfo.color, 
+                        border: `1px solid ${healthInfo.border}`, 
+                        padding: '0.2rem 0.55rem', 
+                        borderRadius: '6px', 
+                        fontWeight: '800' 
+                      }}>
+                        ● {healthInfo.label}
+                      </span>
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Dynamic Unilever solvency calculation</span>
+
+                    {/* SCORE PROGRESS BAR */}
+                    <div style={{ background: 'rgba(15,23,42,0.8)', borderRadius: '6px', height: '8px', overflow: 'hidden', margin: '0.75rem 0' }}>
+                      <div style={{ 
+                        width: `${hasInputs ? calculatedHealthScore : 0}%`, 
+                        background: healthInfo.color, 
+                        height: '100%',
+                        transition: 'all 0.3s ease'
+                      }} />
+                    </div>
+
+                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
+                      {healthInfo.subtext}
+                    </p>
                   </div>
 
-                  <div className="glass-card">
-                    <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '800' }}>
-                      <Camera size={18} style={{ color: '#3b82f6' }} /> Field Asset Inspection Photos
-                    </h3>
+                  {/* CARD 2: FIELD ASSET INSPECTION PHOTOS */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 style={{ fontSize: '0.95rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: '800' }}>
+                        <Camera size={16} style={{ color: '#60a5fa' }} /> Field Asset Inspection Photos
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Upload on site</span>
+                    </div>
+
                     <div style={{ display: 'grid', gap: '0.75rem' }}>
-                      {['Specialty Espresso Machine', 'Media 5-Ton AC Cassettes', 'POS Cash Register Terminal'].map((asset) => (
-                        <div key={asset} style={{ background: 'rgba(7,10,20,0.6)', border: '1px dashed rgba(59,130,246,0.4)', padding: '0.85rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>{asset}</span>
-                          <label style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <Upload size={12} /> Add Photo
-                            <input type="file" accept="image/*" onChange={(e) => handlePhotoUpload(e, asset)} style={{ display: 'none' }} />
-                          </label>
-                        </div>
-                      ))}
+                      {['Specialty Espresso Machine', 'Media 5-Ton AC Cassettes', 'POS Cash Register Terminal'].map((asset) => {
+                        const status = uploadedAssets[asset];
+                        return (
+                          <div key={asset} style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.06)', padding: '0.75rem 0.9rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>{asset}</span>
+                            
+                            {status === 'uploading' ? (
+                              <span style={{ fontSize: '0.72rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}>
+                                <Loader2 className="animate-spin" size={13} /> Uploading...
+                              </span>
+                            ) : status === 'verified' ? (
+                              <span style={{ fontSize: '0.72rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <CheckCircle2 size={12} /> Verified
+                              </span>
+                            ) : status === 'error' ? (
+                              <label style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.3rem 0.65rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <AlertCircle size={12} /> Retry
+                                <input type="file" accept="image/*" onChange={(e) => handlePhotoUpload(e, asset)} style={{ display: 'none' }} />
+                              </label>
+                            ) : (
+                              <label style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', padding: '0.3rem 0.65rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <Upload size={12} /> Add Photo
+                                <input type="file" accept="image/*" onChange={(e) => handlePhotoUpload(e, asset)} style={{ display: 'none' }} />
+                              </label>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
+
+                  {/* CARD 3: RECENT AUDIT HISTORY PANEL */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 style={{ fontSize: '0.95rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: '800' }}>
+                        <FileText size={16} style={{ color: '#60a5fa' }} /> Recent Audit History
+                      </h3>
+                      {loadingHistory && <Loader2 className="animate-spin" size={13} style={{ color: '#60a5fa' }} />}
+                    </div>
+
+                    {loadingHistory ? (
+                      <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.8rem' }}>
+                        Loading audit history...
+                      </div>
+                    ) : auditHistory.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '1.5rem 1rem', color: '#64748b' }}>
+                        <ClipboardCheck size={26} style={{ margin: '0 auto 0.4rem auto', color: '#334155' }} />
+                        <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: '700', color: '#94a3b8' }}>
+                          No previous audits logged for this outlet.
+                        </p>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.72rem' }}>
+                          Completed balance sheet runs will appear here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                        {auditHistory.map((audit) => {
+                          const dateStr = audit.audit_month || (audit.created_at ? new Date(audit.created_at).toISOString().substring(0, 7) : 'Recent');
+                          const score = audit.calculated_health_score || 85;
+                          const scoreColor = score >= 80 ? '#10b981' : score >= 65 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444';
+                          return (
+                            <div 
+                              key={audit.id} 
+                              style={{ 
+                                background: 'rgba(15,23,42,0.6)', 
+                                border: '1px solid rgba(255,255,255,0.06)', 
+                                padding: '0.75rem 0.9rem', 
+                                borderRadius: '8px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#fff' }}>
+                                  📅 {dateStr}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                                  Cash: {formatCurrency(Number(audit.cash_in_hand_bdt || 0), currency)} • Payables: {formatCurrency(Number(audit.payables_bdt || 0), currency)}
+                                </div>
+                              </div>
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                background: `${scoreColor}18`, 
+                                color: scoreColor, 
+                                border: `1px solid ${scoreColor}40`,
+                                padding: '0.2rem 0.5rem', 
+                                borderRadius: '6px', 
+                                fontWeight: '800' 
+                              }}>
+                                {score}/100
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
             )}

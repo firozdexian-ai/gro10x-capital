@@ -119,8 +119,15 @@ export default function LeadBot() {
 
   return (
     <>
-      {/* FLOATING BOT BUTTON — Hide on internal operational admin pages */}
-      {!isOpen && !pathname?.startsWith('/admin') && (
+      {/* FLOATING BOT BUTTON — Hide on internal operational staff pages */}
+      {!isOpen
+        && !pathname?.startsWith('/admin')
+        && !pathname?.startsWith('/kam-dashboard')
+        && !pathname?.startsWith('/team-miniapp')
+        && !pathname?.startsWith('/pos-sync')
+        && !pathname?.startsWith('/fraud-detection')
+        && !pathname?.startsWith('/buildout-tracker')
+        && (
         <button
           onClick={() => setIsOpen(true)}
           style={{

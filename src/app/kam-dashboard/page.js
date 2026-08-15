@@ -7,7 +7,8 @@ import {
   TrendingUp, BarChart2, DollarSign, Camera, FileText, ChevronRight, Globe, Loader2,
   PieChart, PhoneCall, AlertCircle, Upload, UserCheck, Shield, Zap, Activity,
   TrendingDown, Calendar, RefreshCw, Mail, MessageSquare, Phone, ExternalLink,
-  Award, Sparkles, Filter, Check, Clock, Layers, Target, Briefcase, MapPin
+  Award, Sparkles, Filter, Check, Clock, Layers, Target, Briefcase, MapPin,
+  FileSpreadsheet, HandCoins, CheckCircle, Clock3
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
@@ -39,8 +40,9 @@ export default function KamDashboard() {
   const [auditHistory, setAuditHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   
-  // Tab 2: Investor Portfolio Filter State
+  // Filter States
   const [investorFilter, setInvestorFilter] = useState('All'); // 'All' | 'Active' | 'VIP' | 'KYC Pending' | 'Invited'
+  const [cashFilter, setCashFilter] = useState('All'); // 'All' | 'Pending_Review' | 'Meeting_Scheduled' | 'Funds_Cleared' | 'Closed'
 
   // Unilever-style Audit Form State
   const [cashInHand, setCashInHand] = useState('');
@@ -153,11 +155,16 @@ export default function KamDashboard() {
       const assignedInvs = invData || [];
       setAssignedInvestors(assignedInvs);
 
-      // 4. Fetch Assigned Cash Tickets (Scoped by assigned investor IDs unless Admin)
+      // 4. Fetch Assigned Cash Tickets with Full Meeting & Investor Details
       const assignedInvestorIds = assignedInvs.map(i => i.id);
       let ticketQuery = supabase
         .from('cash_tickets')
-        .select('*, investors(alias_name, full_name), funding_projects(project_title)')
+        .select(`
+          id, ticket_amount_bdt, status, preferred_meeting_time, meeting_format,
+          confirmed_meeting_date, funds_transfer_ref, created_at,
+          investors(alias_name, full_name, requires_anonymity, phone, email, kyc_level),
+          funding_projects(project_title, businesses(brand_name))
+        `)
         .order('created_at', { ascending: false });
 
       if (role === 'kam') {
@@ -186,10 +193,15 @@ export default function KamDashboard() {
 
       setManagedProjects(projData || []);
 
-      // 6. Fetch Yield Disbursements History
+      // 6. Fetch Yield Disbursements History from `yield_disbursements`
       const { data: disbData } = await supabase
-        .from('disbursement_runs')
-        .select('*')
+        .from('yield_disbursements')
+        .select(`
+          id, month, year, disbursement_month, gross_sales_bdt, net_profit_bdt,
+          total_disbursed_bdt, status, payment_date, created_at,
+          funding_projects(project_title, businesses(brand_name)),
+          investor_yields(id, amount_bdt)
+        `)
         .order('created_at', { ascending: false });
 
       setDisbursementHistory(disbData || []);
@@ -254,6 +266,25 @@ export default function KamDashboard() {
   const totalCapitalCommitted = managedProjects.reduce((sum, p) => sum + Number(p.amount_raised_bdt || 0), 0);
   const activeProjectsCount = managedProjects.filter(p => ['Active', 'Trading', 'Live'].includes(p.status)).length;
 
+  // Tab 4 Yield Disbursement Aggregations
+  const totalYieldDistributed = disbursementHistory.reduce((sum, d) => sum + Number(d.total_disbursed_bdt || 0), 0);
+  const totalDisbBatches = disbursementHistory.length;
+  const avgYieldPerBatch = totalDisbBatches > 0 ? Math.round(totalYieldDistributed / totalDisbBatches) : 0;
+
+  // Tab 5 Cash Pipeline Aggregations & Filter
+  const activeCashPipeline = cashTickets.filter(t => !['Closed', 'Rejected'].includes(t.status)).reduce((sum, t) => sum + Number(t.ticket_amount_bdt || 0), 0);
+  const pendingCashTicketsCount = cashTickets.filter(t => t.status === 'Pending_Review').length;
+  const clearedCashTicketsCount = cashTickets.filter(t => t.status === 'Funds_Cleared').length;
+
+  const filteredCashTickets = cashTickets.filter(t => {
+    if (cashFilter === 'All') return true;
+    if (cashFilter === 'Pending_Review') return t.status === 'Pending_Review';
+    if (cashFilter === 'Meeting_Scheduled') return t.status === 'Meeting_Scheduled';
+    if (cashFilter === 'Funds_Cleared') return t.status === 'Funds_Cleared';
+    if (cashFilter === 'Closed') return t.status === 'Closed' || t.status === 'Rejected';
+    return true;
+  });
+
   const getProjectStatusStyle = (status) => {
     switch (status) {
       case 'Origination':
@@ -285,6 +316,36 @@ export default function KamDashboard() {
         return { color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.3)' };
       default:
         return { color: '#60a5fa', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)' };
+    }
+  };
+
+  const getYieldStatusStyle = (status) => {
+    switch (status) {
+      case 'Draft':
+        return { color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', label: '⏳ Draft Ledger' };
+      case 'Finalised':
+        return { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', label: '● Finalised Run' };
+      case 'Paid_Out':
+        return { color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', label: '✓ Paid Out' };
+      default:
+        return { color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', label: status || '✓ Cleared' };
+    }
+  };
+
+  const getCashTicketStatusStyle = (status) => {
+    switch (status) {
+      case 'Pending_Review':
+        return { color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', label: '⏳ Pending Review' };
+      case 'Meeting_Scheduled':
+        return { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', label: '📅 Consultation Set' };
+      case 'Funds_Cleared':
+        return { color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', label: '✓ Funds Cleared' };
+      case 'Closed':
+        return { color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.3)', label: '🔒 Closed Placement' };
+      case 'Rejected':
+        return { color: '#ef4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', label: '✕ Rejected' };
+      default:
+        return { color: '#f0b429', bg: 'rgba(240,180,41,0.15)', border: 'rgba(240,180,41,0.3)', label: status || 'Pending' };
     }
   };
 
@@ -462,7 +523,7 @@ export default function KamDashboard() {
           { key: 'audits', label: 'Monthly Audits', Icon: ClipboardCheck, count: null },
           { key: 'investors', label: 'Investor Portfolio', Icon: Users, count: assignedInvestors.length },
           { key: 'projects', label: 'CapEx Projects', Icon: Building2, count: managedProjects.length },
-          { key: 'yields', label: 'Yield History', Icon: TrendingUp, count: null },
+          { key: 'yields', label: 'Yield History', Icon: TrendingUp, count: disbursementHistory.length },
           { key: 'cash-pipeline', label: 'Cash Pipeline', Icon: DollarSign, count: cashTickets.length }
         ].map(({ key, label, Icon, count }) => {
           const isActive = activeTab === key;
@@ -1529,59 +1590,451 @@ export default function KamDashboard() {
 
             {/* ── TAB 4: YIELD DISBURSEMENT AUDITS ── */}
             {activeTab === 'yields' && (
-              <div className="glass-card">
-                <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.15rem', color: '#10b981', fontWeight: '800' }}>
-                  Yield Disbursement Audit History
-                </h3>
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                
+                {/* HEADER ROW */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '900', margin: 0, color: '#fff' }}>
+                      Yield Disbursement Audit History & Verified Payouts
+                    </h2>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                      Audit operating distributions, gross sales reconciliation, and syndicate dividend settlement
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3-CARD TAB-LEVEL YIELD KPI STRIP */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #f0b429' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Total Yield Distributed
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#f0b429', margin: 0 }}>
+                        {formatCurrency(totalYieldDistributed, currency)}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>● All-Time Payouts</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #3b82f6' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Verified Batches
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#60a5fa', margin: 0 }}>
+                        {totalDisbBatches}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Settlement Runs</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #10b981' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Avg Payout / Batch
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                        {formatCurrency(avgYieldPerBatch, currency)}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Mean Cashflow</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* YIELD DISBURSEMENTS LIST */}
                 {disbursementHistory.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                    <TrendingUp size={36} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
-                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.95rem' }}>No yield disbursement history recorded yet.</p>
+                  <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 2rem', color: '#64748b' }}>
+                    <TrendingUp size={40} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
+                    <h3 style={{ margin: 0, fontWeight: '800', fontSize: '1.05rem', color: '#94a3b8' }}>
+                      No yield disbursement history recorded yet
+                    </h3>
+                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem' }}>
+                      Monthly yield declarations finalised in the Admin Yield Engine will appear here with distribution audits.
+                    </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {disbursementHistory.map((d) => (
-                      <div key={d.id} style={{ background: '#0f172a', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{d.disbursement_month || 'Monthly Yield Run'}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Verified Date: {new Date(d.created_at).toLocaleDateString()}</div>
+                  <div style={{ display: 'grid', gap: '1.25rem' }}>
+                    {disbursementHistory.map((d) => {
+                      const statusStyle = getYieldStatusStyle(d.status);
+                      const period = d.disbursement_month || (d.month && d.year ? `${d.month} ${d.year}` : (d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Monthly Yield'));
+                      const payeeCount = (d.investor_yields || []).length;
+                      const projectName = d.funding_projects?.project_title || 'Operating SPV';
+                      const brandName = d.funding_projects?.businesses?.brand_name || 'GRO10X Hub';
+
+                      return (
+                        <div 
+                          key={d.id} 
+                          className="glass-card"
+                          style={{ 
+                            padding: '1.5rem', 
+                            borderLeft: `4px solid ${statusStyle.color}`,
+                            background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(7,10,20,0.85))'
+                          }}
+                        >
+                          {/* HEADER */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  {brandName}
+                                </span>
+                                <span style={{ background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.border}`, padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800' }}>
+                                  {statusStyle.label}
+                                </span>
+                              </div>
+                              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', fontWeight: '900' }}>
+                                {projectName} — <span style={{ color: '#f0b429' }}>{period}</span>
+                              </h3>
+                              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                Verified Run Date: {d.payment_date ? new Date(d.payment_date).toLocaleDateString() : (d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Recent')}
+                              </div>
+                            </div>
+
+                            {/* TOTAL DISTRIBUTED HIGHLIGHT */}
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>
+                                Total Distributed
+                              </div>
+                              <div style={{ fontSize: '1.45rem', fontWeight: '900', color: '#10b981' }}>
+                                {formatCurrency(Number(d.total_disbursed_bdt || 0), currency)}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#60a5fa', fontWeight: '700' }}>
+                                👥 {payeeCount} Investor Payout{payeeCount !== 1 ? 's' : ''} Processed
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* FINANCIAL AUDIT BREAKDOWN GRID */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', background: 'rgba(7,10,20,0.5)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Gross Outlet Sales</span>
+                              <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>
+                                {formatCurrency(Number(d.gross_sales_bdt || 0), currency)}
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Net Solvency Profit</span>
+                              <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#60a5fa' }}>
+                                {formatCurrency(Number(d.net_profit_bdt || 0), currency)}
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Syndicate Allocation</span>
+                              <div style={{ fontSize: '0.95rem', fontWeight: '900', color: '#f0b429' }}>
+                                {formatCurrency(Number(d.total_disbursed_bdt || 0), currency)}
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Settlement Ledger</span>
+                              <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <CheckCircle size={14} /> Reconciled
+                              </div>
+                            </div>
+                          </div>
+
                         </div>
-                        <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.3rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800' }}>
-                          {d.status || 'Cleared'}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
+
               </div>
             )}
 
             {/* ── TAB 5: CASH PIPELINE ── */}
             {activeTab === 'cash-pipeline' && (
-              <div className="glass-card" style={{ borderColor: 'rgba(212,175,55,0.3)' }}>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#D4AF37', marginBottom: '1.25rem' }}>
-                  Assigned Cash Concierge Tickets
-                </h2>
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                
+                {/* HEADER ROW */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '900', margin: 0, color: '#D4AF37' }}>
+                      Assigned Cash Concierge & OTC Block Pipeline
+                    </h2>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                      Private physical consultation desk, offline banking settlement, and escrow clearance
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3-CARD TAB-LEVEL CASH KPI STRIP */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #D4AF37' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Active Pipeline Value
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#D4AF37', margin: 0 }}>
+                        {formatCurrency(activeCashPipeline, currency)}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Assigned OTC</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #f59e0b' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Pending Consultations
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#f59e0b', margin: 0 }}>
+                        {pendingCashTicketsCount}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#f59e0b' }}>● Awaiting Review</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #10b981' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Cleared Capital
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                        {clearedCashTicketsCount}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>✓ Funds Settled</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* STATUS FILTER PILLS */}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'All', label: 'All Tickets', count: cashTickets.length },
+                    { key: 'Pending_Review', label: 'Pending Review', count: cashTickets.filter(t => t.status === 'Pending_Review').length },
+                    { key: 'Meeting_Scheduled', label: 'Meeting Scheduled', count: cashTickets.filter(t => t.status === 'Meeting_Scheduled').length },
+                    { key: 'Funds_Cleared', label: 'Funds Cleared', count: cashTickets.filter(t => t.status === 'Funds_Cleared').length },
+                    { key: 'Closed', label: 'Closed / Final', count: cashTickets.filter(t => ['Closed', 'Rejected'].includes(t.status)).length }
+                  ].map(tab => {
+                    const isSel = cashFilter === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => setCashFilter(tab.key)}
+                        style={{
+                          background: isSel ? 'rgba(212,175,55,0.2)' : 'rgba(15,23,42,0.6)',
+                          color: isSel ? '#D4AF37' : '#94a3b8',
+                          border: isSel ? '1px solid rgba(212,175,55,0.5)' : '1px solid rgba(255,255,255,0.06)',
+                          padding: '0.4rem 0.85rem',
+                          borderRadius: '20px',
+                          fontSize: '0.75rem',
+                          fontWeight: isSel ? '800' : '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span>{tab.label}</span>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          background: isSel ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+                          color: isSel ? '#000' : '#94a3b8',
+                          padding: '0.05rem 0.4rem',
+                          borderRadius: '10px',
+                          fontWeight: '800'
+                        }}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* CASH TICKETS LIST */}
                 {cashTickets.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                    <DollarSign size={36} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
-                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.95rem' }}>No cash concierge tickets assigned to your investors.</p>
+                  <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 2rem', color: '#64748b' }}>
+                    <DollarSign size={40} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
+                    <h3 style={{ margin: 0, fontWeight: '800', fontSize: '1.05rem', color: '#94a3b8' }}>
+                      No cash concierge tickets assigned to your investors
+                    </h3>
+                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem' }}>
+                      OTC block trading requests initiated by KYC Level 3 investors will automatically route here.
+                    </p>
+                  </div>
+                ) : filteredCashTickets.length === 0 ? (
+                  <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 2rem', color: '#64748b' }}>
+                    <Filter size={32} style={{ margin: '0 auto 0.5rem auto', color: '#334155' }} />
+                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem', color: '#94a3b8' }}>
+                      No tickets match the &quot;{cashFilter}&quot; filter.
+                    </p>
                   </div>
                 ) : (
-                  cashTickets.map(ticket => (
-                    <div key={ticket.id} style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{ticket.funding_projects?.project_title || 'Private OTC Placement'}</span>
-                        <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>{new Date(ticket.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <p style={{ fontSize: '1.4rem', fontWeight: '900', margin: '0 0 1rem 0', color: '#fff' }}>{formatCurrency(ticket.ticket_amount_bdt, currency)}</p>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', color: '#cbd5e1' }}>
-                        <div><strong>Client:</strong> {ticket.investors?.alias_name || ticket.investors?.full_name || 'HNI Client'}</div>
-                        <div><strong>Status:</strong> <span style={{ color: '#10b981', fontWeight: '700' }}>{ticket.status}</span></div>
-                      </div>
-                    </div>
-                  ))
+                  <div style={{ display: 'grid', gap: '1.25rem' }}>
+                    {filteredCashTickets.map((ticket) => {
+                      const statusStyle = getCashTicketStatusStyle(ticket.status);
+                      const investor = ticket.investors;
+                      const displayName = investor?.requires_anonymity ? investor?.alias_name : (investor?.alias_name || investor?.full_name || 'HNI Client');
+                      const kycLevel = investor?.kyc_level || 3;
+                      const projectTitle = ticket.funding_projects?.project_title || 'Private OTC Placement';
+                      const brandName = ticket.funding_projects?.businesses?.brand_name || 'GRO10X Hub';
+
+                      return (
+                        <div 
+                          key={ticket.id} 
+                          className="glass-card"
+                          style={{ 
+                            padding: '1.5rem', 
+                            borderLeft: `4px solid ${statusStyle.color}`,
+                            background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(7,10,20,0.85))'
+                          }}
+                        >
+                          {/* HEADER */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#D4AF37', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  {brandName}
+                                </span>
+                                <span style={{ background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.border}`, padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800' }}>
+                                  {statusStyle.label}
+                                </span>
+                              </div>
+                              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', fontWeight: '900' }}>
+                                {projectTitle}
+                              </h3>
+                              <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                                Requested: {new Date(ticket.created_at).toLocaleDateString()} • Ticket ID: #{ticket.id?.substring(0, 8)}
+                              </div>
+                            </div>
+
+                            {/* TICKET AMOUNT */}
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>
+                                OTC Block Order
+                              </div>
+                              <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#D4AF37' }}>
+                                {formatCurrency(ticket.ticket_amount_bdt, currency)}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: '700' }}>
+                                🔒 Escrow Physical Placement
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* CLIENT & MEETING DETAILS GRID */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', background: 'rgba(7,10,20,0.5)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)', margin: '0.85rem 0' }}>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Client Account</span>
+                              <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.1rem' }}>
+                                {displayName}
+                                <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.05rem 0.35rem', borderRadius: '4px', fontWeight: '800' }}>
+                                  L{kycLevel}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Preferred Meeting Time</span>
+                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#cbd5e1', marginTop: '0.1rem' }}>
+                                {ticket.preferred_meeting_time || 'Awaiting Confirmation'}
+                              </div>
+                            </div>
+
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Meeting Format</span>
+                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#60a5fa', marginTop: '0.1rem' }}>
+                                {ticket.meeting_format || 'In-Person (HQ Concierge)'}
+                              </div>
+                            </div>
+
+                            {ticket.confirmed_meeting_date && (
+                              <div>
+                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Confirmed Schedule</span>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#f0b429', marginTop: '0.1rem' }}>
+                                  {new Date(ticket.confirmed_meeting_date).toLocaleDateString()}
+                                </div>
+                              </div>
+                            )}
+
+                            {ticket.funds_transfer_ref && (
+                              <div>
+                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Funds Transfer Ref</span>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#10b981', marginTop: '0.1rem' }}>
+                                  {ticket.funds_transfer_ref}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ACTION BUTTONS */}
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            {investor?.phone && (
+                              <a 
+                                href={`tel:${investor.phone}`}
+                                style={{ 
+                                  background: 'rgba(59,130,246,0.15)', 
+                                  color: '#60a5fa', 
+                                  border: '1px solid rgba(59,130,246,0.3)', 
+                                  padding: '0.4rem 0.85rem', 
+                                  borderRadius: '6px', 
+                                  fontSize: '0.75rem', 
+                                  fontWeight: '800', 
+                                  textDecoration: 'none', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.35rem' 
+                                }}
+                              >
+                                <Phone size={13} /> Direct Call
+                              </a>
+                            )}
+                            {investor?.phone && (
+                              <a 
+                                href={`https://wa.me/${investor.phone.replace(/[^0-9]/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ 
+                                  background: 'rgba(16,185,129,0.15)', 
+                                  color: '#10b981', 
+                                  border: '1px solid rgba(16,185,129,0.3)', 
+                                  padding: '0.4rem 0.85rem', 
+                                  borderRadius: '6px', 
+                                  fontSize: '0.75rem', 
+                                  fontWeight: '800', 
+                                  textDecoration: 'none', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.35rem' 
+                                }}
+                              >
+                                <MessageSquare size={13} /> WhatsApp
+                              </a>
+                            )}
+                            {investor?.email && (
+                              <a 
+                                href={`mailto:${investor.email}`}
+                                style={{ 
+                                  background: 'rgba(255,255,255,0.05)', 
+                                  color: '#cbd5e1', 
+                                  border: '1px solid rgba(255,255,255,0.1)', 
+                                  padding: '0.4rem 0.85rem', 
+                                  borderRadius: '6px', 
+                                  fontSize: '0.75rem', 
+                                  fontWeight: '700', 
+                                  textDecoration: 'none', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.35rem' 
+                                }}
+                              >
+                                <Mail size={13} /> Email
+                              </a>
+                            )}
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
+
               </div>
             )}
 

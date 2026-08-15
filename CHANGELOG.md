@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.1] — 2026-08-15
+**KAM Dashboard Tabs 4 & 5 (Yield History & Cash Pipeline) Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Critical Table Name Bug Fix (Tab 4)**: Fixed query targeting non-existent `disbursement_runs` table, re-routing it to the actual production `yield_disbursements` table with joined `funding_projects` and child `investor_yields`.
+- **Tab 4 3-Card Yield KPI Strip**: Added top-level metrics row displaying Total Yield Distributed, Verified Batches count, and Average Payout per Batch.
+- **Tab 4 Financial Reconciliation Cards**: Upgraded yield cards to display Gross Outlet Sales, Net Solvency Profit, Total Syndicate Distribution, and processed investor payee counts with status badges (`Draft`, `Finalised`, `Paid Out`).
+- **Tab 5 Full Schema Query Upgrade**: Upgraded `cash_tickets` query to select preferred meeting time, meeting format, confirmed schedule date, funds transfer reference, client KYC accreditation tier, and anonymity flags.
+- **Tab 5 3-Card Cash KPI Strip**: Added dedicated OTC Concierge metrics displaying Active Pipeline Value, Pending Consultations, and Cleared Capital.
+- **Tab 5 Lifecycle Status Filter Bar**: Added interactive filter pills (`All Tickets`, `Pending Review`, `Meeting Scheduled`, `Funds Cleared`, `Closed / Final`) with live count badges.
+- **Tab 5 Comprehensive OTC Ticket Cards**: Redesigned tickets with color-coded status borders, appointment scheduling context, escrow clearance references, and instant contact action buttons (`Direct Call`, `WhatsApp`, `Email`).
+
+---
+
 ## [v0.7.0] — 2026-08-15
 **KAM Dashboard Tab 3 (CapEx Projects & Deal Room) Major Milestone Overhaul**
 

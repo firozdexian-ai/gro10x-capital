@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.2] — 2026-08-15
+**Staff Sub-Portal: `/pos-sync` (Live POS Telemetry & Daily Sales Reconciliation Terminal) Rebuild**
+
+### Upgrades & Fixes
+- **Auth Guard & Role Protection**: Added authentication barrier and role check restricting access to authorized `staff`, `kam`, and `admin` users (redirects unauthorized users to `/auth` or `/`).
+- **Live Database Connection**: Connected portal directly to Supabase, replacing hardcoded outlet mock data with dynamic business loading from the `businesses` table.
+- **Real Daily Sales Telemetry Terminal**: Replaced fake CSV upload simulation with a validated daily sales submission terminal that calculates gross sales (Dine-in + Delivery) and net profit (Gross − Expenses) and writes directly to `pos_daily_sales` (`sync_source: 'Staff_Submit'`).
+- **Live 4-Card KPI Telemetry Strip**: Replaced static cards with live metrics computing Total Gross Revenue, Net Solvency Profit, Average Net Margin %, and Logged Entry Counts directly from database records for the selected outlet.
+- **Historical POS Ingested Submissions Register**: Added an interactive data table with live date search/filters, net margin badges, sync source tags, and formatted currency conversions.
+
+---
+
 ## [v0.7.1] — 2026-08-15
 **KAM Dashboard Tabs 4 & 5 (Yield History & Cash Pipeline) Comprehensive Overhaul**
 

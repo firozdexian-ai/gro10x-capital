@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.7] — 2026-08-15
+**KAM & Managing Partner Portal Foundation & Security Overhaul**
+
+### Upgrades & Fixes
+- **Role Guard Security**: Added client-side role authorization to `/kam-dashboard` ensuring non-KAM/non-Admin authenticated users are safely redirected.
+- **Data Scoping Bug Fix**: Scoped `investors` query by `.eq('assigned_kam_id', kamProfile.id)` and `cash_tickets` query by assigned investor IDs, preventing platform-wide data leakage.
+- **Platform Toast Integration**: Removed isolated local toast state and wired standard platform `useToast()` hook.
+- **KAM Profile & Identity Card**: Added styled header card featuring KAM identity, verified partner badge, direct contact info, and global currency selector.
+- **4-Card KPI Summary Strip**: Added top-level metrics strip covering Assigned Investors, Active Cash Tickets, Managed Outlets, and Average Portfolio Health score.
+- **Standardized Tab Navigation**: Standardized all 5 sub-tab buttons with active glow indicators, Lucide icons, and live entity counts.
+
+---
+
 ## [v0.6.6] — 2026-08-15
 **Admin Settings & Platform Governance Tab 12 Comprehensive Overhaul**
 

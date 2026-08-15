@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.5] — 2026-08-15
+**Investor Portal Tab 3: Legal & Regulatory Document Vault Elevation**
+
+### Upgrades & Fixes
+- **Tab Header & Secured Document Pill**: Added standard GRO10X header with live secured document counter (`● X Documents Secured`).
+- **Type-Coloured Document Cards**: Enhanced document rows with distinct left border indicators, colored icons, and category badges for SPV Share Certificates (Gold), Subscription Agreements (Blue), and Tax/Compliance Statements (Emerald).
+- **Gold Action Triggers**: Upgraded PDF download triggers to prominent gold gradient action buttons with shadow elevation.
+- **Rich Contextual Empty State**: Replaced basic text with a structured illustration, explanatory copy regarding SPV minting, and an `Explore Live Rounds →` deal room CTA.
+
+---
+
 ## [v0.7.4] — 2026-08-15
 **Investor Portal Tab 2: Progressive KYC Verification Elevation & Stepper**
 

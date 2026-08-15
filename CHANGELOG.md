@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.6.9] — 2026-08-15
+**KAM Dashboard Tab 2 (Investor Portfolio) Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Critical Allocation Bug Fix**: Fixed field mapping from `amount_bdt` to `amount_invested_bdt`, resolving the silent ৳0 total allocation calculation across all investor cards and portfolio metrics.
+- **Explicit Schema Query**: Upgraded Supabase `investors` select query to include `category`, `kyc_level`, `kyc_verified`, `onboarding_status`, `preferred_channel`, `requires_anonymity`, and nested investments with project titles and stages.
+- **Tab-Level 3-Card Portfolio KPI Strip**: Added dedicated metrics row above investor cards displaying Total Portfolio AUM, KYC Verified Accounts (`X / Y`), and Average Accreditation Tier (`Tier Z / 3`).
+- **Lifecycle Status Filter Bar**: Added interactive filter pills (`All Accounts`, `Active`, `VIP / Family Office`, `KYC Pending`, `Invited`) with real-time count badges.
+- **Expanded Relationship Cards**: Redesigned investor cards with color-coded status borders, KYC accreditation badges, direct contact links (Phone/Email/Telegram status), active project holding breakdowns, and instant action buttons (`Direct Call`, `WhatsApp`, `Email`).
+
+---
+
 ## [v0.6.8] — 2026-08-15
 **KAM Dashboard Tab 1 (Monthly Audits) Comprehensive Overhaul**
 

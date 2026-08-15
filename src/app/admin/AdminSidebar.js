@@ -59,7 +59,7 @@ export default function AdminSidebar({
             background: '#10b981', boxShadow: '0 0 10px #10b981'
           }} />
           <span style={{ fontWeight: '800', fontSize: '0.82rem', letterSpacing: '0.04em', color: '#cbd5e1', textTransform: 'uppercase' }}>
-            Operations Hub <span style={{ color: '#D4AF37' }}>v0.6.9</span>
+            Operations Hub <span style={{ color: '#D4AF37' }}>v0.7.0</span>
           </span>
         </div>
         <button

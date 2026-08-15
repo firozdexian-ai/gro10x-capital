@@ -7,7 +7,7 @@ import {
   TrendingUp, BarChart2, DollarSign, Camera, FileText, ChevronRight, Globe, Loader2,
   PieChart, PhoneCall, AlertCircle, Upload, UserCheck, Shield, Zap, Activity,
   TrendingDown, Calendar, RefreshCw, Mail, MessageSquare, Phone, ExternalLink,
-  Award, Sparkles, Filter, Check, Clock
+  Award, Sparkles, Filter, Check, Clock, Layers, Target, Briefcase, MapPin
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
@@ -172,10 +172,16 @@ export default function KamDashboard() {
       const { data: ticketData } = await ticketQuery;
       setCashTickets(ticketData || []);
 
-      // 5. Fetch Managed Projects (Platform-wide overview)
+      // 5. Fetch Managed Projects with Schema-Accurate Columns and Joined Investments
       const { data: projData } = await supabase
         .from('funding_projects')
-        .select('*, businesses(brand_name)')
+        .select(`
+          id, project_title, funding_type, target_raise_bdt, amount_raised_bdt,
+          spv_name, yield_model, min_otc_investment_bdt, status, project_description,
+          cover_image_url, created_at,
+          businesses(brand_name),
+          investments(id, amount_invested_bdt, status)
+        `)
         .order('created_at', { ascending: false });
 
       setManagedProjects(projData || []);
@@ -242,6 +248,45 @@ export default function KamDashboard() {
     if (investorFilter === 'Invited') return inv.onboarding_status === 'Invited';
     return true;
   });
+
+  // Tab 3 CapEx Projects Aggregations
+  const totalCapexPipeline = managedProjects.reduce((sum, p) => sum + Number(p.target_raise_bdt || 0), 0);
+  const totalCapitalCommitted = managedProjects.reduce((sum, p) => sum + Number(p.amount_raised_bdt || 0), 0);
+  const activeProjectsCount = managedProjects.filter(p => ['Active', 'Trading', 'Live'].includes(p.status)).length;
+
+  const getProjectStatusStyle = (status) => {
+    switch (status) {
+      case 'Origination':
+        return { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.25)', label: '📐 Origination' };
+      case 'Structuring':
+        return { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', label: '🔧 Structuring' };
+      case 'Active':
+        return { color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', label: '● Active Raise' };
+      case 'Trading':
+        return { color: '#f0b429', bg: 'rgba(240,180,41,0.12)', border: 'rgba(240,180,41,0.3)', label: '⚡ Live Trading' };
+      case 'Completed':
+        return { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)', label: '✓ Completed' };
+      case 'Paused':
+        return { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', label: '⏸ Paused' };
+      default:
+        return { color: '#60a5fa', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)', label: status || '● Active Raise' };
+    }
+  };
+
+  const getFundingTypeStyle = (type) => {
+    switch (type) {
+      case 'Franchise':
+        return { color: '#60a5fa', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)' };
+      case 'Distribution':
+        return { color: '#c084fc', bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.3)' };
+      case 'Equity':
+        return { color: '#f0b429', bg: 'rgba(240,180,41,0.15)', border: 'rgba(240,180,41,0.3)' };
+      case 'Short-Term Debt':
+        return { color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.3)' };
+      default:
+        return { color: '#60a5fa', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)' };
+    }
+  };
 
   // Real-time Health Score Preview Calculation
   useEffect(() => {
@@ -1305,41 +1350,180 @@ export default function KamDashboard() {
 
             {/* ── TAB 3: CAPEX PROJECTS OVERVIEW ── */}
             {activeTab === 'projects' && (
-              <div style={{ display: 'grid', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                
+                {/* HEADER ROW */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '900', margin: 0, color: '#fff' }}>
+                      Active CapEx Pipeline & SPV Deal Room
+                    </h2>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                      Track fundraise milestones, SPV legal structuring, and syndicated capital deployment
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3-CARD TAB-LEVEL CAPEX KPI STRIP */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #3b82f6' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Total CapEx Pipeline
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#60a5fa', margin: 0 }}>
+                        {formatCurrency(totalCapexPipeline, currency)}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Target Volume</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #f0b429' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Total Capital Committed
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#f0b429', margin: 0 }}>
+                        {formatCurrency(totalCapitalCommitted, currency)}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>
+                        {totalCapexPipeline > 0 ? `${Math.round((totalCapitalCommitted / totalCapexPipeline) * 100)}% Funded` : '0%'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #10b981' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.35rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Active Targets
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                        {managedProjects.length}
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>● Live Portfolios</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* PROJECT CARDS LIST */}
                 {managedProjects.length === 0 ? (
-                  <div className="glass-card" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                    <Building2 size={36} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
-                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.95rem' }}>No CapEx projects currently active.</p>
+                  <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 2rem', color: '#64748b' }}>
+                    <Building2 size={40} style={{ margin: '0 auto 0.75rem auto', color: '#334155' }} />
+                    <h3 style={{ margin: 0, fontWeight: '800', fontSize: '1.05rem', color: '#94a3b8' }}>
+                      No CapEx projects currently active
+                    </h3>
+                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem' }}>
+                      Deals originated in the Admin Pipeline will automatically appear here for managing partners.
+                    </p>
                   </div>
                 ) : (
-                  managedProjects.map((p) => {
-                    const target = Number(p.target_amount_bdt || 0);
-                    const raised = Number(p.raised_amount_bdt || 0);
-                    const pct = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
-                    return (
-                      <div key={p.id} className="glass-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div>
-                            <span style={{ fontSize: '0.75rem', color: '#60a5fa', fontWeight: '700' }}>{p.businesses?.brand_name || 'GRO10X SPV'}</span>
-                            <h3 style={{ margin: '0.2rem 0 0 0', fontSize: '1.15rem', color: '#fff', fontWeight: '800' }}>{p.project_title}</h3>
+                  <div style={{ display: 'grid', gap: '1.25rem' }}>
+                    {managedProjects.map((p) => {
+                      const target = Number(p.target_raise_bdt || 0);
+                      const raised = Number(p.amount_raised_bdt || 0);
+                      const pct = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+                      const statusStyle = getProjectStatusStyle(p.status);
+                      const fTypeStyle = getFundingTypeStyle(p.funding_type);
+                      const investorCount = (p.investments || []).length;
+
+                      return (
+                        <div 
+                          key={p.id} 
+                          className="glass-card"
+                          style={{ 
+                            padding: '1.5rem', 
+                            borderLeft: `4px solid ${statusStyle.color}`,
+                            background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(7,10,20,0.85))'
+                          }}
+                        >
+                          {/* CARD HEADER */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                                <span style={{ fontSize: '0.82rem', color: '#60a5fa', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  {p.businesses?.brand_name || 'GRO10X Hub'}
+                                </span>
+                                {p.funding_type && (
+                                  <span style={{ background: fTypeStyle.bg, color: fTypeStyle.color, border: `1px solid ${fTypeStyle.border}`, padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>
+                                    {p.funding_type}
+                                  </span>
+                                )}
+                                <span style={{ background: statusStyle.bg, color: statusStyle.color, border: `1px solid ${statusStyle.border}`, padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800' }}>
+                                  {statusStyle.label}
+                                </span>
+                              </div>
+                              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', fontWeight: '900', letterSpacing: '-0.01em' }}>
+                                {p.project_title}
+                              </h3>
+                              {p.project_description && (
+                                <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                                  {p.project_description}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* SPV & YIELD MODEL INFO */}
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.04em' }}>
+                                SPV Legal Structure
+                              </div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: '800', color: p.spv_name ? '#cbd5e1' : '#f59e0b' }}>
+                                {p.spv_name || '⚠ SPV Structuring In Progress'}
+                              </div>
+                              {p.yield_model && (
+                                <div style={{ fontSize: '0.72rem', color: '#f0b429', fontWeight: '700', marginTop: '0.15rem' }}>
+                                  Yield Model: {p.yield_model}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', padding: '0.3rem 0.75rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '800' }}>
-                            {p.kanban_stage || 'Active Target'}
-                          </span>
-                        </div>
 
-                        <div style={{ background: '#0f172a', borderRadius: '8px', height: '10px', overflow: 'hidden', marginBottom: '0.75rem' }}>
-                          <div style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #f0b429, #10b981)', height: '100%' }}></div>
-                        </div>
+                          {/* PROGRESS BAR */}
+                          <div style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', height: '12px', overflow: 'hidden', margin: '1rem 0 0.75rem 0' }}>
+                            <div style={{ 
+                              width: `${pct}%`, 
+                              background: 'linear-gradient(90deg, #f0b429, #10b981)', 
+                              height: '100%',
+                              transition: 'width 0.4s ease'
+                            }} />
+                          </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                          <span style={{ color: '#94a3b8' }}>Raised: <strong style={{ color: '#fff' }}>{formatCurrency(raised, currency)}</strong></span>
-                          <span style={{ color: '#94a3b8' }}>Target: <strong style={{ color: '#f0b429' }}>{formatCurrency(target, currency)} ({pct}%)</strong></span>
+                          {/* METRICS ROW */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', background: 'rgba(7,10,20,0.5)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Committed Capital</span>
+                              <div style={{ fontSize: '1rem', fontWeight: '900', color: '#fff' }}>
+                                {formatCurrency(raised, currency)}
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>CapEx Target Raise</span>
+                              <div style={{ fontSize: '1rem', fontWeight: '900', color: '#f0b429' }}>
+                                {formatCurrency(target, currency)} <span style={{ fontSize: '0.78rem', color: '#10b981' }}>({pct}%)</span>
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Min. OTC Ticket</span>
+                              <div style={{ fontSize: '1rem', fontWeight: '800', color: '#cbd5e1' }}>
+                                {formatCurrency(Number(p.min_otc_investment_bdt || 5000000), currency)}
+                              </div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Participating Investors</span>
+                              <div style={{ fontSize: '1rem', fontWeight: '900', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <Users size={14} /> {investorCount} Partner{investorCount !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </div>
+
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
+
               </div>
             )}
 

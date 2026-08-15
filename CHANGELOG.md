@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.0] — 2026-08-15
+**KAM Dashboard Tab 3 (CapEx Projects & Deal Room) Major Milestone Overhaul**
+
+### Upgrades & Fixes
+- **Triple Field-Name Bug Fix**: Fixed `target_amount_bdt` → `target_raise_bdt`, `raised_amount_bdt` → `amount_raised_bdt`, and `kanban_stage` → `status`. This resolves the persistent 0% progress bar and ৳0 raise metrics across all CapEx project cards.
+- **Joined Investments & Real-time Metrics**: Upgraded Supabase `funding_projects` query to join active `investments`, surfacing live committed investor partner counts and accurate syndicated capital metrics.
+- **Tab-Level 3-Card CapEx KPI Strip**: Added dedicated deal-room metrics row displaying Total CapEx Pipeline target volume, Total Capital Committed with funding percentage, and Active Target counts.
+- **Status Stage & Funding Type Color Coding**: Added standardized badges for project stages (`Origination`, `Structuring`, `Active Raise`, `Live Trading`, `Completed`, `Paused`) and funding structures (`Franchise`, `Distribution`, `Equity`, `Short-Term Debt`).
+- **Comprehensive Project Deal Cards**: Redesigned project cards with brand headers, descriptions, SPV legal entity indicators, yield models, dynamic gradient progress bars, and minimum OTC ticket threshold breakdowns.
+
+---
+
 ## [v0.6.9] — 2026-08-15
 **KAM Dashboard Tab 2 (Investor Portfolio) Comprehensive Overhaul**
 

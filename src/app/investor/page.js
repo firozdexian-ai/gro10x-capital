@@ -29,6 +29,34 @@ const dueDiligenceFAQs = [
   {
     q: "How are coffee roasting equipment and physical fit-outs owned?",
     a: "Physical assets (machinery, civil fit-outs, kitchen equipment) are held directly under the specific outlet SPV entity in which investors hold their yield/partnership agreements, ensuring clear asset-backed claim."
+  },
+  {
+    q: "What is the minimum investment required to participate in a GRO10X funding round?",
+    a: "Standard syndicate micro-allocations start from BDT 1,00,000 for retail syndicate investors up to multi-crore private tranches for Level 3 Accredited HNI partners."
+  },
+  {
+    q: "How and when are monthly yield distributions paid?",
+    a: "Monthly yields are calculated from daily POS telemetry data recorded in the system and reconciled by the assigned KAM after monthly physical asset audits. Disbursements are credited directly to investor bank accounts by the 10th of each calendar month."
+  },
+  {
+    q: "What is the secondary market exit mechanism and how liquid is it?",
+    a: "Level 2+ verified investors can list their SPV shares on the internal GRO10X Secondary P2P Orderbook within a ±10% anti-speculation fair-market-value corridor. Matching buyers can acquire active shares instantly without waiting for project maturity."
+  },
+  {
+    q: "What happens to my investment if a business outlet underperforms or closes?",
+    a: "All investments are legally asset-backed. In the event of persistent outlet underperformance, the SPV entity holds direct first-charge claim on physical equipment, fit-outs, and remaining escrow reserves for liquidation recovery."
+  },
+  {
+    q: "Are GRO10X investment distributions subject to tax in Bangladesh?",
+    a: "Yield disbursements are treated as partnership profit-share/dividends under Bangladeshi tax law. Investors receive formal annual tax statements from the Document Vault for standard income tax filings."
+  },
+  {
+    q: "What is the difference between Option 1 (Rev-Share) and Option 2 (Growth Yield)?",
+    a: "Option 1 provides steady monthly revenue-share yields calculated directly on top-line gross sales. Option 2 provides a blended base return plus an equity upside kicker tied to franchise expansion and secondary valuation growth."
+  },
+  {
+    q: "How does the Progressive KYC verification process work?",
+    a: "Level 1 is granted upon registration for browsing deals. Level 2 requires NID/Passport identity submission for Secondary Market trading rights. Level 3 requires Source of Funds declaration for high-ticket Private Cash Concierge deals."
   }
 ];
 
@@ -1241,72 +1269,254 @@ export default function InvestorPortal() {
           </div>
         )}
 
-        {/* 3. AI CONCIERGE */}
+        {/* 4. AI CONCIERGE TAB */}
         {activeTab === 'ai-concierge' && (
-          <div className="glass-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '1rem' }}>
-              <div style={{ width: '36px', height: '36px', background: 'rgba(212,175,55,0.15)', borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
-                <Sparkles size={20} />
-              </div>
+          <div style={{ maxWidth: '920px', margin: '0 auto', display: 'grid', gap: '1.75rem' }}>
+            
+            {/* TAB HEADER ROW */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.3rem', margin: 0 }}>GRO10X AI Investment Concierge</h3>
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>Trained on Master Agreement & Due Diligence FAQs</p>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
+                  GRO10X AI Investment Concierge
+                </h2>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Simulated due diligence assistant trained on Master Growth Agreements & SPV structures
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ 
+                  background: 'rgba(212,175,55,0.15)', 
+                  color: '#D4AF37', 
+                  border: '1px solid rgba(212,175,55,0.3)', 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '20px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '800' 
+                }}>
+                  ● Powered by GRO10X Intelligence
+                </span>
               </div>
             </div>
 
-            <div style={{ height: '320px', overflowY: 'auto', background: 'rgba(7,10,20,0.6)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {messages.map((m, idx) => (
-                <div key={idx} style={{ alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
-                  <div style={{ background: m.sender === 'user' ? '#D4AF37' : 'rgba(15,23,42,0.9)', color: m.sender === 'user' ? '#070a14' : '#f8fafc', padding: '0.85rem 1.15rem', borderRadius: '14px', fontSize: '0.95rem' }}>
-                    {m.text}
-                  </div>
+            {/* UPGRADE TO FULL AI INTELLIGENCE DESK BANNER */}
+            <div 
+              className="glass-card" 
+              style={{ 
+                padding: '1.25rem 1.5rem', 
+                background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(15,23,42,0.85))', 
+                borderColor: 'rgba(212,175,55,0.35)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '40px', height: '40px', background: 'rgba(212,175,55,0.2)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+                  <Sparkles size={22} />
                 </div>
-              ))}
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>
+                    Enterprise AI Intelligence Desk Available
+                  </h4>
+                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                    Access multi-turn deep financial modeling, live deal evaluation, and predictive portfolio forecasting.
+                  </p>
+                </div>
+              </div>
+
+              <a 
+                href="/ai-assistant" 
+                style={{ 
+                  background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', 
+                  color: '#070a14', 
+                  padding: '0.5rem 1.15rem', 
+                  borderRadius: '6px', 
+                  fontWeight: '800', 
+                  fontSize: '0.8rem', 
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 8px rgba(212,175,55,0.2)'
+                }}
+              >
+                Open Full AI Desk <ArrowUpRight size={14} />
+              </a>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <input 
-                type="text" 
-                placeholder="Ask any due diligence question..." 
-                value={inputQuery}
-                onChange={(e) => setInputQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAiSend()}
-                className="form-input"
-              />
-              <button onClick={() => handleAiSend()} className="btn-gold" style={{ padding: '0 1.5rem' }}>
-                <Send size={18} />
-              </button>
+            {/* CHAT CONTAINER */}
+            <div className="glass-card" style={{ padding: '1.5rem', display: 'grid', gap: '1.25rem' }}>
+              
+              {/* MESSAGES LOG */}
+              <div style={{ height: '320px', overflowY: 'auto', background: 'rgba(7,10,20,0.6)', padding: '1.25rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {messages.map((m, idx) => (
+                  <div key={idx} style={{ alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                    <div style={{ 
+                      background: m.sender === 'user' ? 'linear-gradient(135deg, #D4AF37, #B89025)' : 'rgba(15,23,42,0.95)', 
+                      color: m.sender === 'user' ? '#070a14' : '#f8fafc', 
+                      padding: '0.85rem 1.15rem', 
+                      borderRadius: '12px', 
+                      fontSize: '0.88rem',
+                      lineHeight: '1.5',
+                      fontWeight: m.sender === 'user' ? '700' : '400',
+                      border: m.sender === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* QUICK PROMPT CHIPS */}
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.04em' }}>
+                  Recommended Questions
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {[
+                    "What is my expected monthly yield?",
+                    "How does the SPV structure protect me?",
+                    "What happens if a business underperforms?",
+                    "How do I list shares on secondary market?"
+                  ].map((chipText, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setInputQuery(chipText)}
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#cbd5e1',
+                        padding: '0.3rem 0.65rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(212,175,55,0.4)';
+                        e.currentTarget.style.color = '#D4AF37';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                        e.currentTarget.style.color = '#cbd5e1';
+                      }}
+                    >
+                      {chipText}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* INPUT BAR */}
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <input 
+                  type="text" 
+                  placeholder="Ask any due diligence or structural investment question..." 
+                  value={inputQuery}
+                  onChange={(e) => setInputQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAiSend()}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem' }}
+                />
+                <button onClick={() => handleAiSend()} className="btn-gold" style={{ padding: '0 1.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
+                  <Send size={16} /> Send
+                </button>
+              </div>
+
             </div>
           </div>
         )}
 
-        {/* 4. DUE DILIGENCE FAQ */}
+        {/* 5. DUE DILIGENCE FAQ TAB */}
         {activeTab === 'faq' && (
-          <div className="glass-card" style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <span className="badge-gold" style={{ marginBottom: '0.5rem' }}>Investor Due Diligence</span>
-              <h2 style={{ fontSize: '2rem', fontWeight: '800' }}>Frequently Asked Questions</h2>
+          <div style={{ maxWidth: '920px', margin: '0 auto', display: 'grid', gap: '1.75rem' }}>
+            
+            {/* TAB HEADER ROW */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
+                  Investor Due Diligence FAQs
+                </h2>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Common structural, legal, and financial questions answered for prospective and active investors
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ 
+                  background: 'rgba(16,185,129,0.15)', 
+                  color: '#10b981', 
+                  border: '1px solid rgba(16,185,129,0.3)', 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '20px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '800' 
+                }}>
+                  ● {dueDiligenceFAQs.length} Questions Answered
+                </span>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {dueDiligenceFAQs.map((faq, idx) => (
-                <div key={idx} style={{ background: 'rgba(7,10,20,0.6)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '12px', overflow: 'hidden' }}>
-                  <button 
-                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                    style={{ width: '100%', padding: '1.25rem', background: 'transparent', border: 'none', color: '#f8fafc', fontWeight: '700', fontSize: '1.05rem', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            {/* ACCORDION LIST */}
+            <div style={{ display: 'grid', gap: '0.85rem' }}>
+              {dueDiligenceFAQs.map((faq, idx) => {
+                const isOpen = openFaq === idx;
+                return (
+                  <div 
+                    key={idx} 
+                    className="glass-card"
+                    style={{ 
+                      padding: 0,
+                      overflow: 'hidden',
+                      borderColor: isOpen ? 'rgba(212,175,55,0.4)' : 'rgba(255,255,255,0.08)',
+                      borderLeft: isOpen ? '4px solid #D4AF37' : '1px solid rgba(255,255,255,0.08)',
+                      transition: 'border-color 0.2s'
+                    }}
                   >
-                    <span>Q: {faq.q}</span>
-                    {openFaq === idx ? <ChevronUp size={20} style={{ color: '#D4AF37' }} /> : <ChevronDown size={20} style={{ color: '#94a3b8' }} />}
-                  </button>
+                    <button 
+                      onClick={() => setOpenFaq(isOpen ? null : idx)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '1.15rem 1.35rem', 
+                        background: 'transparent', 
+                        border: 'none', 
+                        color: isOpen ? '#D4AF37' : '#f8fafc', 
+                        fontWeight: '800', 
+                        fontSize: '0.92rem', 
+                        textAlign: 'left', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        gap: '1rem'
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <span style={{ color: '#64748b', fontSize: '0.78rem', fontWeight: '800' }}>#{idx + 1}</span>
+                        {faq.q}
+                      </span>
+                      {isOpen ? <ChevronUp size={18} style={{ color: '#D4AF37', flexShrink: 0 }} /> : <ChevronDown size={18} style={{ color: '#64748b', flexShrink: 0 }} />}
+                    </button>
 
-                  {openFaq === idx && (
-                    <div style={{ padding: '0 1.25rem 1.25rem 1.25rem', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.6', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {isOpen && (
+                      <div style={{ 
+                        padding: '1rem 1.35rem 1.25rem 1.35rem', 
+                        color: '#cbd5e1', 
+                        fontSize: '0.85rem', 
+                        lineHeight: '1.6', 
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        background: 'rgba(7,10,20,0.4)'
+                      }}>
+                        {faq.a}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+
           </div>
         )}
 

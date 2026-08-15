@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.6] — 2026-08-15
+**Investor Portal Tabs 4 & 5: AI Concierge & Due Diligence Knowledge Base Elevation**
+
+### Upgrades & Fixes
+- **AI Concierge Tab 4 Upgrade**: Added standard header with intelligence badge, an enterprise AI Desk upgrade banner routing to `/ai-assistant`, clickable quick-question prompt chips that auto-populate the input, and styled chat bubbles.
+- **Due Diligence FAQ Tab 5 Expansion (3 → 10)**: Expanded due diligence knowledge base from 3 to 10 comprehensive structural, legal, and financial Q&As covering minimum ticket sizes, monthly yield timing, P2P secondary liquidity, default liquidation seniority, Bangladesh tax obligations, and Option 1 vs Option 2 mechanics.
+- **Interactive FAQ Accordion Controls**: Implemented dynamic open/collapse accordion cards with numerical index identifiers, active gold borders, and illuminated answer panels.
+
+---
+
 ## [v0.7.5] — 2026-08-15
 **Investor Portal Tab 3: Legal & Regulatory Document Vault Elevation**
 

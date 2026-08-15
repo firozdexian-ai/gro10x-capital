@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.4] — 2026-08-15
+**Investor Portal Tab 2: Progressive KYC Verification Elevation & Stepper**
+
+### Upgrades & Fixes
+- **Visual 3-Step Progress Stepper**: Added an interactive 3-step horizontal progression bar showing investor verification status across L1 (Basic), L2 (Identity & NID), and L3 (Accredited HNI Tier).
+- **Tab Header & Verification Badge**: Added standard GRO10X header with live active verification level pill (`Level X / 3 Active`).
+- **Tier Benefit Pills**: Added granular benefit tags for each tier detailing platform privileges (e.g., Live Deals, P2P Secondary Trading, Cash Concierge, BDT 50L+ rounds).
+- **Glass-Card Form Panels**: Replaced raw form containers with polished glassmorphism upload forms with dual NID inputs (Front & Back) and Source of Funds declarations with gradient CTA buttons.
+
+---
+
 ## [v0.7.3] — 2026-08-15
 **Investor Portal Tab 1: My Portfolio & Secondary Market Critical Fixes & Overhaul**
 

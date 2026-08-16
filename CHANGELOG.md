@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.7] — 2026-08-16
+**Founder & Business Owner Portal (`/business`) Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **Auth Role & Admin/KAM Overseer Support**: Destructured `role` and `authLoading` from `useAuth()`. Added an outlet switcher dropdown allowing Admins and KAMs to seamlessly view and manage any registered brand without hitting Access Denied.
+- **Global Multi-Currency Switcher**: Added header currency dropdown (BDT, USD, GBP, AED) with real-time recalculation of funding amounts, cap table allocations, and POS telemetry.
+- **4-Card Top-Level Executive KPI Strip**: Implemented live calculated summary cards for Total Capital Raised (with Target and % Progress), Syndicate Investors (with Total Active Equity), 30-Day POS Revenue (with Net Profit & Margin), and Active Campaigns / SPVs.
+- **Funding Campaigns Elevation (Tab 1)**: Enhanced project cards with status badges, SPV legal entities, yield models, minimum OTC ticket sizes, raised vs target progress bars, and direct `View Public Deal Room ↗` links.
+- **Cap Table Search & Share Allocations (Tab 2)**: Added real-time search filtering, aggregate syndicate totals, investor tier classifications (Retail vs Accredited HNI), and exact calculated percentage share of syndicate capital.
+- **POS Telemetry & Solvency Engine (Tab 3)**: Added live computed solvency margin preview in the manual entry form, net profit <= gross sales validation, and a searchable 30-day sync ledger with margin pills and transaction counts.
+
+---
+
 ## [v0.7.6] — 2026-08-15
 **Investor Portal Tabs 4 & 5: AI Concierge & Due Diligence Knowledge Base Elevation**
 

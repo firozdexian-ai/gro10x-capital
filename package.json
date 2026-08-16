@@ -1,6 +1,6 @@
 {
   "name": "gro10x-app",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "private": true,
   "scripts": {
     "dev": "next dev",

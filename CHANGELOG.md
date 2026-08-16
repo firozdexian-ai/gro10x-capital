@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.8] — 2026-08-17
+**Promoter & Capital Partner Portal (`/promoter`) Comprehensive Overhaul**
+
+### Upgrades & Fixes
+- **5 Critical Data & Auth Bugs Fixed**:
+  - Fixed column mismatch in `promoter_commissions` by querying `amount_bdt` instead of non-existent `commission_amount_bdt`, resolving the ৳0 commission ledger bug.
+  - Added strict `.eq('promoter_id', activePromoter.id)` scoping across all 4 data queries (leads, targets, payouts, commissions) preventing cross-promoter data leakage.
+  - Removed erroneous fallback query to non-existent `team` table eliminating console 42P01 errors.
+  - Added `authLoading` session guard to prevent transient loading screen flashes.
+  - Replaced inline local toast with unified global `useToast()` system.
+- **Admin & KAM Multi-Promoter Overseer Mode**: Destructured `role` from `useAuth()`. Added a promoter switcher in the header allowing Admins and KAMs to inspect and manage any promoter's CRM pipeline, targets, earnings, and payouts.
+- **Global Multi-Currency Engine**: Added currency dropdown (BDT, USD, GBP, AED) in the header with live recalculation across all statistics, commissions, and withdrawal requests.
+- **4-Card Top-Level Executive KPI Strip**: Implemented live calculated summary cards for CRM Prospects Logged (with unlock status), Total Commission Earned (with Base 0.75% and Target 0.25% breakdown), Campaign Target Pledges, and Available Payout Balance.
+- **Enhanced 50-Investor Gamified Banner**: Added progress bar with remaining leads countdown, status badge, and copyable deal referral link upon milestone unlock.
+- **Elevated 4-Tab Stakeholder Experience**:
+  - **Tab 1 (CRM & Prospects)**: Full prospect logging form (Name, Phone, Email, Category, Interest) + Searchable leads queue with inline status management (`New Lead`, `Contacted`, `Meeting Booked`, `Converted`, `Not Interested`).
+  - **Tab 2 (Campaign Targets)**: Project pledge form linked to active funding rounds with status tracking (`Active` vs `Target_Hit`).
+  - **Tab 3 (Earnings & Commission Ledger)**: Milestone tier cards + granular per-investment commission breakdown table with commission type pills (`Base_0.75` vs `Target_0.25`).
+  - **Tab 4 (Payout Requests)**: Withdrawal request form with disbursement channels (`bKash`, `Nagad`, `Bank Wire`), balance limit validation, Telegram push notifications, and detailed payout history ledger.
+
+---
+
 ## [v0.7.7] — 2026-08-16
 **Founder & Business Owner Portal (`/business`) Comprehensive Overhaul**
 

@@ -228,7 +228,30 @@ function AuthContent() {
           setIsFirstLogin(true);
           setSuccessMsg('Temporary PIN accepted. Please configure your permanent 4-digit PIN.');
         } else {
-          router.push('/admin');
+          // Role-Aware Routing for standard login
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+
+          let userRole = roleData?.role;
+
+          // If not yet in user_roles, query team table fallback
+          if (!userRole) {
+            const { data: teamUser } = await supabase
+              .from('team')
+              .select('team_type')
+              .eq('email', targetEmail)
+              .maybeSingle();
+            if (teamUser) userRole = teamUser.team_type;
+          }
+
+          if (userRole === 'promoter') router.push('/promoter');
+          else if (userRole === 'kam') router.push('/kam-dashboard');
+          else if (userRole === 'founder') router.push('/business');
+          else if (userRole === 'investor') router.push('/investor');
+          else router.push('/admin');
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -262,21 +285,20 @@ function AuthContent() {
     const cp = confirmPin.join('');
 
     if (np.length !== 4 || cp.length !== 4) {
-      setErrorMsg('PINs must be exactly 4 digits.');
+      setErrorMsg('Please enter complete 4-digit PINs.');
       setLoading(false);
       return;
     }
 
     if (np !== cp) {
-      setErrorMsg('New PIN and Confirm PIN do not match.');
+      setErrorMsg('PINs do not match. Please verify.');
       setLoading(false);
       return;
     }
 
     try {
-      const authPassword = np ? `${np}00` : '';
       const { error: updateErr } = await supabase.auth.updateUser({
-        password: authPassword,
+        password: `${np}00`,
         data: { first_login: false }
       });
       if (updateErr) throw updateErr;
@@ -303,6 +325,7 @@ function AuthContent() {
         const userRole = verifiedUserInfo?.role;
         if (userRole === 'promoter') router.push('/promoter');
         else if (userRole === 'kam') router.push('/kam-dashboard');
+        else if (userRole === 'founder') router.push('/business');
         else if (userRole === 'investor') router.push('/investor-onboard');
         else router.push('/admin');
       }, 1200);

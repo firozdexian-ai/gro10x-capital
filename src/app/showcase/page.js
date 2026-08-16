@@ -26,6 +26,16 @@ function BusinessShowcaseContent() {
     fetchActiveDeals();
     if (refCode && typeof window !== 'undefined') {
       sessionStorage.setItem('gro10x_ref_code', refCode);
+      localStorage.setItem('gro10x_ref_code', refCode);
+
+      // Log referral visit attribution asynchronously
+      supabase.from('inquiry_leads').insert([{
+        full_name: 'Showcase Visitor',
+        inquiry_type: 'Investment Diligence',
+        notes: `Promoter referral visit for code: ${refCode}`,
+        lead_status: 'Referral_Visit',
+        referral_code: refCode
+      }]).then(() => {}).catch(() => {});
     }
   }, [refCode]);
 

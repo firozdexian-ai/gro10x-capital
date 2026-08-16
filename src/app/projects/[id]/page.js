@@ -74,11 +74,41 @@ function ProjectDetail() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const openLeadBot = () => {
+  const openLeadBot = async () => {
     if (typeof window === 'undefined') return;
+
+    // 1. Dispatch custom event for client LeadBot drawer
     window.dispatchEvent(new CustomEvent('open-lead-bot', {
       detail: { projectId, projectTitle: project?.project_title, refCode }
     }));
+
+    // 2. Log lead record into inquiry_leads
+    try {
+      await supabase.from('inquiry_leads').insert([{
+        full_name: 'Deal Room Prospect',
+        inquiry_type: 'Deal Express Interest',
+        notes: `Express interest triggered for: ${project?.project_title || projectId}`,
+        lead_status: 'New',
+        referral_code: refCode || null
+      }]);
+    } catch (lErr) {
+      console.warn('Lead logging skipped:', lErr);
+    }
+
+    // 3. Dispatch Telegram alert to Admin
+    try {
+      await fetch('/api/telegram-notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '🔥 New Deal Room Interest Clicked',
+          message: `An investor clicked 'Express Interest' for: <b>${project?.project_title}</b> (${project?.businesses?.brand_name || 'Syndicate Deal'})\n\nRef Code: <code>${refCode || 'Direct'}</code>`,
+          actionUrl: `${window.location.origin}/admin`
+        })
+      });
+    } catch (tErr) {
+      console.warn('Admin deal interest alert skipped:', tErr);
+    }
   };
 
   // ── LOADING ────────────────────────────────────────────────────────────────

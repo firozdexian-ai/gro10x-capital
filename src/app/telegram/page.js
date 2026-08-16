@@ -115,8 +115,14 @@ export default function TelegramEcosystemPage() {
                 <Bot size={20} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#fff' }}>GRO10X Bot Official</div>
-                <div style={{ fontSize: '0.7rem', color: '#0088cc' }}>bot • online</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#fff' }}>
+                  {activeTab === 'kam' && 'GRO10X Managing Partner Bot'}
+                  {activeTab === 'promoter' && 'GRO10X Growth Promoter Bot'}
+                  {activeTab === 'investor' && 'GRO10X Private Investor Bot'}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#0088cc' }}>
+                  {activeTab === 'investor' ? '@gro10xcapbot • online' : '@gro10xmanbot • online'}
+                </div>
               </div>
             </div>
 
@@ -134,11 +140,31 @@ export default function TelegramEcosystemPage() {
               ))}
             </div>
 
-            {/* QUICK COMMAND ACTION CHIPS */}
+            {/* QUICK COMMAND ACTION CHIPS (ROLE-ADAPTIVE) */}
             <div style={{ background: '#17212b', padding: '0.5rem', display: 'flex', gap: '0.4rem', overflowX: 'auto', borderTop: '1px solid #0e1621' }}>
-              <button onClick={() => handleSendMessage('/audit ORO Roasters')} style={chipStyle}>/audit</button>
-              <button onClick={() => handleSendMessage('/lead Engr. Shafiq')} style={chipStyle}>/lead</button>
-              <button onClick={() => handleSendMessage('/deals')} style={chipStyle}>/deals</button>
+              {activeTab === 'kam' && (
+                <>
+                  <button onClick={() => handleSendMessage('/portfolio')} style={chipStyle}>/portfolio</button>
+                  <button onClick={() => handleSendMessage('/tickets')} style={chipStyle}>/tickets</button>
+                  <button onClick={() => handleSendMessage('/audit ORO Roasters')} style={chipStyle}>/audit</button>
+                </>
+              )}
+              {activeTab === 'promoter' && (
+                <>
+                  <button onClick={() => handleSendMessage('/mycode')} style={chipStyle}>/mycode</button>
+                  <button onClick={() => handleSendMessage('/tier')} style={chipStyle}>/tier</button>
+                  <button onClick={() => handleSendMessage('/earnings')} style={chipStyle}>/earnings</button>
+                  <button onClick={() => handleSendMessage('/payout')} style={chipStyle}>/payout</button>
+                </>
+              )}
+              {activeTab === 'investor' && (
+                <>
+                  <button onClick={() => handleSendMessage('/portfolio')} style={chipStyle}>/portfolio</button>
+                  <button onClick={() => handleSendMessage('/yields')} style={chipStyle}>/yields</button>
+                  <button onClick={() => handleSendMessage('/kyc')} style={chipStyle}>/kyc</button>
+                  <button onClick={() => handleSendMessage('/documents')} style={chipStyle}>/documents</button>
+                </>
+              )}
             </div>
 
             {/* CHAT INPUT BAR */}

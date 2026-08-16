@@ -81,8 +81,10 @@ export default function PayoutsPage() {
     }
   };
 
-  // Live Commission Logic
-  const totalRequested = payouts.reduce((acc, curr) => acc + Number(curr.amount_bdt), 0);
+  // Live Commission Logic (Excludes rejected payouts from consumption)
+  const totalRequested = payouts
+    .filter(p => p.status !== 'Rejected')
+    .reduce((acc, curr) => acc + Number(curr.amount_bdt), 0);
   const availableBalance = Math.max(0, totalCommissionsBdt - totalRequested);
 
   const handleRequestPayout = async (e) => {
@@ -109,6 +111,21 @@ export default function PayoutsPage() {
         }]);
 
       if (error) throw error;
+
+      // Dispatch Telegram Push Alert to Admin
+      try {
+        await fetch('/api/telegram-notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '💸 New Commission Payout Request',
+            message: `Promoter: <b>${promoterProfile.full_name || 'Promoter'}</b>\nAmount: ৳${amountInBdt.toLocaleString()} BDT\nMethod: ${payoutMethod}\nAccount: <code>${accountNumber}</code>`,
+            actionUrl: `${window.location.origin}/admin`
+          })
+        });
+      } catch (tErr) {
+        console.warn('Admin payout alert skipped:', tErr);
+      }
 
       setRequestSuccess(true);
       addToast("Payout request submitted successfully", "success");

@@ -1,16 +1,23 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../components/AuthProvider';
+import { supabase } from '../../lib/supabase';
 import { 
   Building2, Layers, DollarSign, Percent, ShieldCheck, Clock, CheckCircle2, 
-  ArrowUpRight, Globe, PlusCircle, FileText, ChevronRight, PieChart, Landmark, Truck
+  ArrowUpRight, Globe, PlusCircle, FileText, ChevronRight, PieChart, Landmark, Truck, Loader2
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 
 export default function FundingRoundsPage() {
+  const router = useRouter();
+  const { user, role, loading: authLoading } = useAuth();
   const [currency, setCurrency] = useState('BDT');
   const [selectedType, setSelectedType] = useState('Franchise');
 
   // Form states
+  const [businessesList, setBusinessesList] = useState([]);
+  const [selectedBusinessId, setSelectedBusinessId] = useState('');
   const [businessName, setBusinessName] = useState('ORO Roasters');
   const [roundTitle, setRoundTitle] = useState('Dhanmondi Branch Expansion');
   const [targetRaise, setTargetRaise] = useState(15000000);
@@ -18,6 +25,7 @@ export default function FundingRoundsPage() {
   const [tenorMonths, setTenorMonths] = useState(12);
   const [collateralDetails, setCollateralDetails] = useState('7-Month Advance Rent & Espresso Machinery Lien');
   const [minTicket, setMinTicket] = useState(500000);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [rounds, setRounds] = useState([
     {
@@ -60,23 +68,99 @@ export default function FundingRoundsPage() {
 
   const [successMsg, setSuccessMsg] = useState(false);
 
-  const handleCreateRound = (e) => {
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth');
+      } else if (role && role !== 'admin') {
+        router.push('/');
+      }
+    }
+  }, [user, role, authLoading, router]);
+
+  useEffect(() => {
+    async function loadBusinessesAndProjects() {
+      try {
+        const { data: bData } = await supabase
+          .from('businesses')
+          .select('id, brand_name')
+          .order('brand_name', { ascending: true });
+        if (bData && bData.length > 0) {
+          setBusinessesList(bData);
+          setSelectedBusinessId(bData[0].id);
+          setBusinessName(bData[0].brand_name);
+        }
+
+        const { data: pData } = await supabase
+          .from('funding_projects')
+          .select('*, businesses(brand_name)')
+          .order('created_at', { ascending: false });
+        if (pData && pData.length > 0) {
+          const formatted = pData.map(p => ({
+            id: p.id,
+            business: p.businesses?.brand_name || 'Partner Outlet',
+            title: p.project_title,
+            type: 'Franchise',
+            target: Number(p.target_raise_bdt || 0),
+            raised: Number(p.amount_raised_bdt || 0),
+            yield: p.yield_model || '18% IRR',
+            tenor: '24 Months',
+            security: 'SPV Asset-Backed',
+            status: p.status || 'Active'
+          }));
+          setRounds(formatted);
+        }
+      } catch (err) {
+        console.warn('Failed to load businesses/projects:', err);
+      }
+    }
+    if (user) loadBusinessesAndProjects();
+  }, [user]);
+
+  const handleCreateRound = async (e) => {
     e.preventDefault();
-    const newRound = {
-      id: Date.now(),
-      business: businessName,
-      title: roundTitle,
-      type: selectedType,
-      target: Number(targetRaise),
-      raised: 0,
-      yield: projectedReturn,
-      tenor: `${tenorMonths} Months`,
-      security: collateralDetails,
-      status: 'Active'
-    };
-    setRounds([newRound, ...rounds]);
-    setSuccessMsg(true);
-    setTimeout(() => setSuccessMsg(false), 3000);
+    try {
+      setIsSubmitting(true);
+      const targetBdt = Number(targetRaise);
+
+      const { data: newProject, error } = await supabase
+        .from('funding_projects')
+        .insert([{
+          business_id: selectedBusinessId || null,
+          project_title: roundTitle,
+          target_raise_bdt: targetBdt,
+          amount_raised_bdt: 0,
+          status: 'Active',
+          yield_model: projectedReturn,
+          show_on_showcase: true
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Supabase insert failed, fallback to local state:', error);
+      }
+
+      const newRound = {
+        id: newProject?.id || Date.now(),
+        business: businessName,
+        title: roundTitle,
+        type: selectedType,
+        target: targetBdt,
+        raised: 0,
+        yield: projectedReturn,
+        tenor: `${tenorMonths} Months`,
+        security: collateralDetails,
+        status: 'Active'
+      };
+      setRounds([newRound, ...rounds]);
+      setSuccessMsg(true);
+      setTimeout(() => setSuccessMsg(false), 3000);
+    } catch (err) {
+      console.error('Error creating round:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getFundingIcon = (type) => {
@@ -192,10 +276,27 @@ export default function FundingRoundsPage() {
 
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Target Business</label>
-              <select value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="form-input">
-                <option>ORO Roasters</option>
-                <option>Segreto Hub</option>
-                <option>Kazi Farm Kitchen</option>
+              <select 
+                value={selectedBusinessId} 
+                onChange={(e) => {
+                  const bId = e.target.value;
+                  setSelectedBusinessId(bId);
+                  const b = businessesList.find(item => item.id === bId);
+                  if (b) setBusinessName(b.brand_name);
+                }} 
+                className="form-input"
+              >
+                {businessesList.length > 0 ? (
+                  businessesList.map(b => (
+                    <option key={b.id} value={b.id}>{b.brand_name}</option>
+                  ))
+                ) : (
+                  <>
+                    <option value="">ORO Roasters</option>
+                    <option value="">Segreto Hub</option>
+                    <option value="">Kazi Farm Kitchen</option>
+                  </>
+                )}
               </select>
             </div>
 

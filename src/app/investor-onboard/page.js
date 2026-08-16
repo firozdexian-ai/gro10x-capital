@@ -6,16 +6,21 @@ import { useAuth } from '../../components/AuthProvider';
 import { useRouter } from 'next/navigation';
 
 export default function InvestorOnboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [investor, setInvestor] = useState(null);
   const [kycLevel, setKycLevel] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) fetchProfile();
-    else setLoading(false);
-  }, [user]);
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth');
+      } else {
+        fetchProfile();
+      }
+    }
+  }, [user, authLoading, router]);
 
   const fetchProfile = async () => {
     try {
@@ -39,13 +44,17 @@ export default function InvestorOnboardPage() {
     }
   };
 
+  const isTelegramLinked = Boolean(investor?.telegram_chat_id);
+
   const steps = [
     {
-      done: true,
+      done: isTelegramLinked,
       icon: <MessageCircle size={20} />,
-      title: 'Telegram Account Linked',
-      desc: 'Your Telegram identity has been verified and linked to your portfolio.',
-      color: '#10b981'
+      title: isTelegramLinked ? 'Telegram Account Linked' : 'Link Telegram Account (Optional)',
+      desc: isTelegramLinked
+        ? 'Your Telegram identity has been verified and linked to your portfolio.'
+        : 'Connect via @gro10xcapbot to receive real-time yield payout alerts and trade updates.',
+      color: isTelegramLinked ? '#10b981' : '#f59e0b'
     },
     {
       done: true,

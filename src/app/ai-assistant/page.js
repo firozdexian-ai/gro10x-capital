@@ -200,21 +200,51 @@ export default function AiAssistantPortal() {
             {bookingSuccess ? (
               <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', padding: '1.75rem', borderRadius: '12px', textAlign: 'center' }}>
                 <CheckCircle2 size={36} style={{ color: '#10b981', marginBottom: '0.5rem' }} />
-                <h4 style={{ color: '#10b981', fontSize: '1.15rem' }}>VIP Tour Scheduled!</h4>
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem' }}>Confirmation sent via WhatsApp.</p>
+                <h4 style={{ color: '#10b981', fontSize: '1.15rem' }}>VIP Tour Request Logged!</h4>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: '0.25rem' }}>Our Private Advisory team has been notified and will contact you within 24 hours to confirm access.</p>
               </div>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); setBookingSuccess(true); setTimeout(() => { setBookingSuccess(false); setShowBookingModal(false); }, 1500); }} style={{ display: 'grid', gap: '1rem' }}>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const outlet = form.outlet?.value || 'ORO Roasters - Banani';
+                const date = form.tour_date?.value || 'Next Available';
+                const contact = form.contact?.value || 'Private Investor';
+
+                try {
+                  await fetch('/api/telegram-notify-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title: '🏢 VIP Outlet Tour Request',
+                      message: `An investor requested a VIP Outlet Tour via AI Concierge.\n\n📍 Outlet: <b>${outlet}</b>\n📅 Date: <b>${date}</b>\n👤 Contact/Name: <code>${contact}</code>`,
+                      actionUrl: `${window.location.origin}/admin`
+                    })
+                  });
+                } catch (tErr) {
+                  console.warn('VIP tour admin alert skipped:', tErr);
+                }
+
+                setBookingSuccess(true);
+                setTimeout(() => {
+                  setBookingSuccess(false);
+                  setShowBookingModal(false);
+                }, 2200);
+              }} style={{ display: 'grid', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Your Name / Phone Number</label>
+                  <input name="contact" type="text" placeholder="e.g. 017XXXXXXXX / Tanvir Ahmed" className="form-input" required />
+                </div>
                 <div>
                   <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Select Outlet</label>
-                  <select className="form-input">
-                    <option>ORO Roasters - Mirpur (Operational Baseline)</option>
-                    <option>ORO Roasters - Banani (Flagship Launch)</option>
+                  <select name="outlet" className="form-input">
+                    <option value="ORO Roasters - Mirpur (Operational Baseline)">ORO Roasters - Mirpur (Operational Baseline)</option>
+                    <option value="ORO Roasters - Banani (Flagship Launch)">ORO Roasters - Banani (Flagship Launch)</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Preferred Date</label>
-                  <input type="date" className="form-input" required />
+                  <input name="tour_date" type="date" className="form-input" required />
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                   <button type="submit" className="btn-gold" style={{ flex: 1, justifyContent: 'center' }}>Confirm Booking</button>

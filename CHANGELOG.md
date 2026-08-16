@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.8.4] — 2026-08-17
+**Public & Shared Platform Stakeholder Suite: Auth Redirection, Legal Engine Completion, Security Hardening & Attribution Automations**
+
+### Critical Architecture, Security & Bug Fixes
+- **Auth Role-Aware Post-Login Routing (`auth/page.js`)**: Resolved critical routing bug where standard login (`handleAuth`) hard-redirected all roles to `/admin`. Now intelligently queries `user_roles` (and `team` fallback) to route Promoters to `/promoter`, KAMs to `/kam-dashboard`, Founders to `/business`, and Investors to `/investor`.
+- **Promoter Payout Balance Calculation Bug (`payouts/page.js`)**: Corrected available commission balance calculation by excluding `status === 'Rejected'` payouts from consumption total, restoring balance when an admin rejects a payout request.
+- **Legal Contract Engine Completion (`legal-contracts/page.js`)**: Added complete contract body templates for the previously blank **Promoter Referral Commission Contract** and **Institutional Private Cash HNI NDA Agreement**. Added customizer form inputs for SPV Entity Name and Yield / Compensation structure.
+- **Fraud Detection Terminal Protection (`fraud-detection/page.js`)**: Added strict authentication and role guard restricting internal POS anomaly tooling to `admin` and `kam` roles only.
+- **Funding Rounds Configurator Hardening (`funding-rounds/page.js`)**: Added `admin` role guard, dynamically populated target business entity options from `public.businesses`, and wired round creation to persist directly into `public.funding_projects`.
+- **Investor Onboarding Flow Integrity (`investor-onboard/page.js`)**: Added unauthenticated redirect guard and dynamic Telegram account link status checking against `investor.telegram_chat_id`.
+
+### Proactive User & Platform Automations
+- **Promoter Payout Admin Telegram Alert (`payouts/page.js`)**: Automatically dispatches instant Telegram alert to Executive Admins when a promoter submits a commission payout request.
+- **Referral Visit Attribution Logging (`showcase/page.js`)**: Automatically captures referral visits from `?ref=CODE` into `localStorage` and logs a background lead record in `public.inquiry_leads`.
+- **Deal Room Express Interest Lead & Alert (`projects/[id]/page.js`)**: Automatically logs an inquiry lead record and sends an instant Telegram alert to platform admins when a prospective investor clicks "Express Interest" on a deal page.
+- **VIP Outlet Tour Dispatch (`ai-assistant/page.js`)**: Connected VIP Tour scheduling to real Telegram notification dispatching to Platform Admins, replacing mock confirmation with verified advisory workflow.
+- **Telegram Ecosystem Interactive Switcher (`telegram/page.js`)**: Role-adaptive quick command chips and bot handles reflecting actual `@gro10xmanbot` and `@gro10xcapbot` commands for KAMs, Promoters, and Investors.
+
+---
+
 ## [v0.8.3] — 2026-08-17
 **Founder & Business Owner Stakeholder Suite: Bot Infrastructure, Auth Integration, Portal Security & Anomaly Telemetry**
 

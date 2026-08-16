@@ -1,8 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../components/AuthProvider';
 import { 
   ShieldAlert, AlertTriangle, CheckCircle2, Search, FileText, 
-  TrendingDown, ArrowUpRight, ShieldCheck, Eye, RefreshCw, Globe, ChevronRight
+  TrendingDown, ArrowUpRight, ShieldCheck, Eye, RefreshCw, Globe, ChevronRight, Loader2
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 
@@ -13,15 +15,35 @@ const initialAnomalies = [
 ];
 
 export default function FraudDetectionPage() {
+  const router = useRouter();
+  const { user, role, loading: authLoading } = useAuth();
   const [currency, setCurrency] = useState('BDT');
   const [anomalies, setAnomalies] = useState(initialAnomalies);
   const [selectedFilter, setSelectedFilter] = useState('All');
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth');
+      } else if (role && !['admin', 'kam'].includes(role)) {
+        router.push('/');
+      }
+    }
+  }, [user, role, authLoading, router]);
 
   const handleResolve = (id) => {
     setAnomalies(anomalies.map(a => a.id === id ? { ...a, status: 'Verified & Approved', severity: 'Resolved' } : a));
   };
 
   const filteredAnomalies = selectedFilter === 'All' ? anomalies : anomalies.filter(a => a.outlet.includes(selectedFilter));
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#ef4444' }}>
+        <Loader2 className="spin" size={40} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>

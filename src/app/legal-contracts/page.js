@@ -96,7 +96,7 @@ export default function LegalContractsPortal() {
         {/* CUSTOMIZER FORM (HIDDEN ON PRINT) */}
         <div className="glass-card no-print" style={{ marginBottom: '2.5rem', padding: '1.5rem' }}>
           <h4 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#D4AF37' }}>Customize Legal Document Parameters</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>Investor / Party Name</label>
               <input type="text" value={investorName} onChange={(e) => setInvestorName(e.target.value)} className="form-input" />
@@ -110,8 +110,21 @@ export default function LegalContractsPortal() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Investment Capital ({currency})</label>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Capital / Deal Value ({currency})</label>
               <input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="form-input" />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>SPV Legal Entity Name</label>
+              <input type="text" value={spvName} onChange={(e) => setSpvName(e.target.value)} className="form-input" />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>Yield / Compensation Structure</label>
+              <select value={yieldOption} onChange={(e) => setYieldOption(e.target.value)} className="form-input">
+                <option>Option 1: The Fast-Paced (10% Gross / 22% Cap)</option>
+                <option>Option 2: The Multiplier (12% Gross / 1.5x Cap)</option>
+                <option>Option 3: The Partnership (35% Net Profit / 5% Floor)</option>
+                <option>Promoter Affiliate (0.50% Gross Volume)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -173,6 +186,42 @@ export default function LegalContractsPortal() {
                   <li><strong>GRO10X Capital Success Fee:</strong> 2.5% on total raised capital ({formatCurrency(amount, currency)}).</li>
                   <li><strong>Operational Boundary:</strong> Zero payroll, staff HR, or real estate lease liability for GRO10X.</li>
                   <li><strong>25% Net Margin Mandate:</strong> Enforced digital cost controls and POS monitoring.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {docType === 'promoter-contract' && (
+            <div style={{ lineHeight: 1.8, fontSize: '1.05rem' }}>
+              <p style={{ marginBottom: '1.5rem' }}>
+                This Growth Promoter & Deal Facilitator Agreement is entered into between <strong>GRO10X Capital Ltd.</strong> and <strong>{investorName}</strong> (the &quot;Promoter&quot;) for the introduction of qualified capital partners.
+              </p>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>Promoter Compensation & Terms:</h4>
+                <ul style={{ paddingLeft: '1.25rem', margin: 0, fontSize: '0.95rem', color: '#334155' }}>
+                  <li><strong>Commission Structure:</strong> 0.50% base cash referral fee on all verified investor subscription inflows ({formatCurrency(amount, currency)} volume basis).</li>
+                  <li><strong>Tier Escalation:</strong> Automated progression from Starter (0.50%) to Partner (0.75%) and Senior Syndicate Lead (1.00%) upon reaching AUM milestones.</li>
+                  <li><strong>Disbursement Terms:</strong> Payout requests processed via bKash, Nagad, or Bank Wire within 48 business hours of investor capital clearance.</li>
+                  <li><strong>Confidentiality:</strong> Non-disclosure of proprietary SME financials and SPV deal room documentation.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {docType === 'nda' && (
+            <div style={{ lineHeight: 1.8, fontSize: '1.05rem' }}>
+              <p style={{ marginBottom: '1.5rem' }}>
+                This Institutional Non-Disclosure Agreement is executed between <strong>GRO10X Capital Ltd.</strong>, managing entity of <strong>{spvName}</strong>, and <strong>{investorName}</strong> (the &quot;Prospective Syndicate Partner&quot;).
+              </p>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>Confidentiality Provisions & Terms:</h4>
+                <ul style={{ paddingLeft: '1.25rem', margin: 0, fontSize: '0.95rem', color: '#334155' }}>
+                  <li><strong>Proprietary Telemetry:</strong> All POS daily sales, COGS benchmarks, and margin metrics for <strong>{hubName}</strong> are strictly confidential.</li>
+                  <li><strong>Anonymity Guarantee:</strong> GRO10X protects investor identity and tax residency across all public deal rooms.</li>
+                  <li><strong>Term:</strong> 24 months from date of execution or until public prospectus listing.</li>
+                  <li><strong>Jurisdiction:</strong> Governed by the laws of Bangladesh under Dhaka Commercial Arbitration guidelines.</li>
                 </ul>
               </div>
             </div>

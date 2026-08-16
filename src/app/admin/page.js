@@ -774,6 +774,24 @@ export default function AdminPortal() {
           .eq('id', investorId);
       }
 
+      // Dispatch Telegram push notification to Investor
+      try {
+        await fetch('/api/telegram-notify-investor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            investorId: investorId,
+            title: approve ? `🎉 KYC Level ${targetLevel} Approved!` : `⚠️ KYC Level ${targetLevel} Update Required`,
+            message: approve
+              ? `Your identity verification Level ${targetLevel} has been officially approved. You can now access higher allocation tiers and secondary market features.`
+              : `Your Level ${targetLevel} submission requires revision. Please re-upload valid documents in the Investor Portal.`,
+            actionUrl: `${window.location.origin}/investor`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to notify investor of KYC review:', e);
+      }
+
       addToast(`KYC submission ${status.toLowerCase()}.`, 'success');
       logPlatformActivity(`KYC ${status}`, `Investor KYC Level ${targetLevel} verification was ${status.toLowerCase()}.`, approve ? 'success' : 'warning');
       fetchAdminData();
@@ -815,6 +833,24 @@ export default function AdminPortal() {
           .from('investment_bookings')
           .update({ status: 'Rejected' })
           .eq('id', bookingId);
+      }
+
+      // Dispatch Telegram push notification to Investor
+      try {
+        await fetch('/api/telegram-notify-investor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            investorId: investorId,
+            title: approve ? '✅ Payment Proof Verified & Approved' : '⚠️ Payment Proof Needs Revision',
+            message: approve
+              ? `Your investment payment for booking #${bookingId.slice(0, 8)} has been confirmed. Your SPV allocation is now Active and generating yields.`
+              : `Your payment proof for booking #${bookingId.slice(0, 8)} could not be verified. Please check your transaction details or contact your relationship manager.`,
+            actionUrl: `${window.location.origin}/investor`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to notify investor of payment review:', e);
       }
 
       addToast(`Payment proof ${approve ? 'approved' : 'rejected'}.`, 'success');
@@ -1232,6 +1268,30 @@ export default function AdminPortal() {
         .eq('id', ticketId);
 
       if (error) throw error;
+
+      // Dispatch Telegram push notification to Investor for Cash Concierge
+      try {
+        const ticket = cashTickets.find(t => t.id === ticketId) || selectedCashTicket;
+        if (ticket && ticket.investor_id) {
+          await fetch('/api/telegram-notify-investor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              investorId: ticket.investor_id,
+              title: `💼 Cash Concierge: ${newStatus.replace('_', ' ')}`,
+              message: newStatus === 'Meeting_Scheduled'
+                ? `A meeting has been scheduled for your OTC Block Trade request (Ticket #${ticketId.slice(0, 8)}). Your Managing Partner will reach out to you.`
+                : newStatus === 'Funds_Cleared'
+                ? `Funds have been cleared for your OTC Block Trade (Ticket #${ticketId.slice(0, 8)}). Your SPV allocation has been recorded.`
+                : `Your OTC Concierge Ticket #${ticketId.slice(0, 8)} status is now ${newStatus.replace('_', ' ')}.`,
+              actionUrl: `${window.location.origin}/cash-concierge`
+            })
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to notify investor of cash status update:', e);
+      }
+
       addToast(`Cash ticket status updated to ${newStatus.replace('_', ' ')}.`, 'success');
       logPlatformActivity(
         'OTC Ticket Status Updated',

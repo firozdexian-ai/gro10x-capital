@@ -112,6 +112,22 @@ export default function SecondaryMarketplace() {
         fmv_at_listing_bdt: calculatedFmv,
         status: 'Active'
       });
+
+      // Notify Admin of new secondary listing
+      try {
+        await fetch('/api/telegram-notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '📈 New Secondary Market Listing',
+            message: `Investor listed share on Secondary Market.\nOriginal: ৳${Number(holding.amount_invested_bdt).toLocaleString()} BDT\nAsk Price: ৳${Number(sellPriceInput).toLocaleString()} BDT\nFMV: ৳${Number(calculatedFmv).toLocaleString()} BDT`,
+            actionUrl: `${window.location.origin}/secondary-market`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to dispatch admin notification:', e);
+      }
+
       addToast('Share listed on Secondary Market!', 'success');
       setShowSellModal(false);
       fetchOrderbook();
@@ -167,11 +183,11 @@ export default function SecondaryMarketplace() {
         .from('investment_bookings')
         .insert([{
           investor_id: invData.id,
-          project_id: selectedListing.investments.funding_project_id,
+          project_id: selectedListing.investments?.funding_project_id,
           amount_bdt: selectedListing.seller_price_bdt,
           yield_option: 1, // Defaulting to Option 1 for secondary for now
           booking_type: 'Secondary',
-          status: 'Pending_Payment' // Correct status
+          status: 'Pending_Proof' // Correct status conforming to DB constraint
         }])
         .select()
         .single();
@@ -183,6 +199,21 @@ export default function SecondaryMarketplace() {
         .from('secondary_orders')
         .update({ status: 'Pending_Clearance', buyer_booking_id: newBooking.id })
         .eq('id', selectedListing.id);
+
+      // Notify Admin of secondary acquisition intent
+      try {
+        await fetch('/api/telegram-notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '🤝 Secondary Share Acquisition Matched',
+            message: `Buyer created booking intent for Listing #${selectedListing.id.slice(0, 8)}.\nAmount: ৳${Number(selectedListing.seller_price_bdt).toLocaleString()} BDT\nStatus: Pending Payment Proof`,
+            actionUrl: `${window.location.origin}/admin`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to dispatch admin notification:', e);
+      }
         
       setBuySuccess(true);
       addToast('Secondary Booking Intent created! Please submit payment proof in your Portfolio.', 'success');

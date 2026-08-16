@@ -62,7 +62,6 @@ const dueDiligenceFAQs = [
 
 export default function InvestorPortal() {
   const { user, loading: authLoading } = useAuth();
-  const [currency, setCurrency] = useState('BDT');
   const [activeTab, setActiveTab] = useState('portfolio');
   const [openFaq, setOpenFaq] = useState(null);
   
@@ -161,7 +160,6 @@ export default function InvestorPortal() {
           id,
           amount_invested_bdt,
           status,
-          yield_option,
           created_at,
           funding_projects(
             project_title,
@@ -325,6 +323,21 @@ export default function InvestorPortal() {
 
       if (updateErr) throw updateErr;
 
+      // Dispatch Telegram push notification to Admin
+      try {
+        await fetch('/api/telegram-notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '💳 New Payment Proof Uploaded',
+            message: `Investor submitted payment verification.\nBooking: #${uploadBookingId.slice(0, 8)}\nTxID: ${transactionId}\nMethod: ${paymentMethod}`,
+            actionUrl: `${window.location.origin}/admin`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to notify admin of payment proof:', e);
+      }
+
       addToast('Payment proof submitted successfully! Awaiting Admin verification.', 'success');
       setUploadBookingId(null);
       setTransactionId('');
@@ -386,6 +399,21 @@ export default function InvestorPortal() {
         }]);
 
       if (error) throw error;
+
+      // Dispatch Telegram push notification to Admin
+      try {
+        await fetch('/api/telegram-notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: `🛡️ New Level ${level} KYC Submission`,
+            message: `Investor submitted Level ${level} KYC documents for verification.\nInvestor ID: #${investorDbId.slice(0, 8)}`,
+            actionUrl: `${window.location.origin}/admin`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to notify admin of KYC submission:', e);
+      }
 
       addToast(`Level ${level} Verification Submitted. Awaiting Admin Clearance.`, 'success');
       setActiveKycForm(null);

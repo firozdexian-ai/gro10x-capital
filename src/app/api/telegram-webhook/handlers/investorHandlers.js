@@ -71,27 +71,50 @@ export async function handleInvestorContact(botToken, chatId, contact, appUrl) {
   let phoneClean = phoneRaw.replace(/[\s\-\+\(\)]/g, '');
   if (phoneClean.startsWith('880')) phoneClean = '0' + phoneClean.slice(3);
 
+  const last10 = phoneClean.slice(-10);
+  const phoneVariants = Array.from(new Set([
+    phoneRaw,
+    phoneClean,
+    `+880${phoneClean.replace(/^0/, '')}`,
+    `880${phoneClean.replace(/^0/, '')}`,
+    `0${phoneClean.replace(/^0/, '')}`
+  ].filter(Boolean)));
+
   // 1. Find investor by phone (investors table)
-  const { data: allInvestors } = await supabase
+  let invQuery = supabase
     .from('investors')
     .select('id, full_name, alias_name, phone, email, telegram_chat_id');
 
-  let investor = (allInvestors || []).find(i => {
+  if (last10.length >= 8) {
+    invQuery = invQuery.or(`phone.in.(${phoneVariants.join(',')}),phone.ilike.%${last10}`);
+  } else {
+    invQuery = invQuery.in('phone', phoneVariants);
+  }
+
+  const { data: matchedInvestors } = await invQuery.limit(10);
+  let investor = (matchedInvestors || []).find(i => {
     let p = (i.phone || '').replace(/[\s\-\+\(\)]/g, '');
     if (p.startsWith('880')) p = '0' + p.slice(3);
-    return p === phoneClean;
+    return p === phoneClean || phoneVariants.includes(i.phone);
   });
 
   // 2. Fallback: Check investor_pre_profiles
   if (!investor) {
-    const { data: allPre } = await supabase
+    let preQuery = supabase
       .from('investor_pre_profiles')
-      .select('*');
+      .select('id, full_name, phone, email, telegram_chat_id, survey_status');
 
-    const pre = (allPre || []).find(p => {
+    if (last10.length >= 8) {
+      preQuery = preQuery.or(`phone.in.(${phoneVariants.join(',')}),phone.ilike.%${last10}`);
+    } else {
+      preQuery = preQuery.in('phone', phoneVariants);
+    }
+
+    const { data: matchedPre } = await preQuery.limit(10);
+    const pre = (matchedPre || []).find(p => {
       let ph = (p.phone || '').replace(/[\s\-\+\(\)]/g, '');
       if (ph.startsWith('880')) ph = '0' + ph.slice(3);
-      return ph === phoneClean;
+      return ph === phoneClean || phoneVariants.includes(p.phone);
     });
 
     if (pre) {

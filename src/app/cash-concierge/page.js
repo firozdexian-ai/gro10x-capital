@@ -135,9 +135,23 @@ export default function CashConciergePortal() {
       setTicketAmount('');
       setMeetingTime('');
       
-      // Send notification to Admin (or KAM if we had their user_id)
+      // Send notification to Admin & KAM
+      try {
+        await fetch('/api/telegram-notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '💼 New OTC Cash Concierge Ticket',
+            message: `Investor submitted Block Trade Ticket.\nAmount: ৳${Number(ticketAmount).toLocaleString()} BDT\nProject: ${data?.funding_projects?.project_title || 'CapEx Deal'}\nMeeting Time: ${meetingTime}\nAssigned KAM: ${data?.kams?.full_name || 'Unassigned'}`,
+            actionUrl: `${window.location.origin}/kam-dashboard`
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to notify team of cash ticket:', e);
+      }
+
       await supabase.from('notifications').insert([{
-        user_id: user.id, // For demo, we just notify the user it was received
+        user_id: user.id,
         title: 'Concierge Request Received',
         message: `Your OTC request for ${formatCurrency(ticketAmount, currency)} is under review. Your Managing Partner will contact you shortly.`,
         type: 'info'

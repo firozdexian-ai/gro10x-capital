@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.8.2] — 2026-08-17
+**Investor Stakeholder Suite: Secondary Market Fixes, Bot Performance & Lifecycle Push Automations**
+
+### Critical Bug Fixes & Schema Integrity
+- **Secondary Market Status Constraint Crash**: Fixed `src/app/secondary-market/page.js` inserting invalid `status: 'Pending_Payment'` into `investment_bookings` table. Updated to `'Pending_Proof'` conforming to Postgres DB `CHECK` constraints.
+- **Investor Portal Query Schema Error**: Removed non-existent `yield_option` column from `investments` query in `src/app/investor/page.js` (column resides on `investment_bookings`).
+- **Bot Phone Search Memory & Scaling Fix**: Replaced unbounded in-memory full table scans in `investorHandlers.js` (`handleInvestorContact`) with indexed Supabase `.or()` / `.in()` queries.
+- **Cleaned Orphaned State**: Removed declared but unused `currency` state in `src/app/investor/page.js`.
+
+### Proactive Investor & Executive Notification Automations
+- **New API Route (`/api/telegram-notify-investor`)**: Created dedicated API endpoint for dispatching targeted Telegram push alerts via `@gro10xcapbot` (`TELEGRAM_INVESTOR_BOT_TOKEN`).
+- **KYC Approval & Revision Push**: Connected Telegram push alerts to notify investors immediately when their KYC Level 2/3 submission is approved or requires revision.
+- **Payment Proof Verification Push**: Automated instant confirmation alerts when an executive approves a submitted investment payment proof.
+- **OTC Cash Concierge Status Alerts**: Added investor Telegram push notifications when ticket status updates to `Meeting_Scheduled` or `Funds_Cleared`.
+- **Secondary Market Admin Alerts**: Connected executive Telegram alerts when an investor lists a new secondary share or creates a share acquisition intent.
+- **Investor Submission Alerts**: Added admin Telegram alerts when an investor submits payment proofs, KYC documents, or OTC block trade concierge requests.
+
+---
+
 ## [v0.8.1] — 2026-08-17
 **Promoter & Affiliate Partner Stakeholder Suite: MiniApp, Telegram Bot & Notification Automations Overhaul**
 

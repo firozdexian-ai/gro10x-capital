@@ -11,9 +11,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'initData string is required' }, { status: 400 });
     }
 
-    const botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN;
-    if (!botToken) {
-      return NextResponse.json({ error: 'TELEGRAM_TEAM_BOT_TOKEN is not configured' }, { status: 500 });
+    const tokens = [
+      process.env.TELEGRAM_TEAM_BOT_TOKEN,
+      process.env.TELEGRAM_INVESTOR_BOT_TOKEN,
+      process.env.TELEGRAM_CLIENT_BOT_TOKEN
+    ].filter(Boolean);
+
+    if (tokens.length === 0) {
+      return NextResponse.json({ error: 'No Telegram bot tokens configured' }, { status: 500 });
     }
 
     // 1. Parse query params from initData
@@ -30,12 +35,19 @@ export async function POST(request) {
     const sortedKeys = Array.from(params.entries()).sort(([a], [b]) => a.localeCompare(b));
     const dataCheckString = sortedKeys.map(([k, v]) => `${k}=${v}`).join('\n');
 
-    // 3. Calculate HMAC-SHA256 signature
-    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-    const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+    // 3. Calculate HMAC-SHA256 signature across configured bot tokens
+    let isValid = false;
+    for (const token of tokens) {
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(token).digest();
+      const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+      if (calculatedHash === hash) {
+        isValid = true;
+        break;
+      }
+    }
 
     // 4. Compare hashes
-    if (calculatedHash !== hash) {
+    if (!isValid) {
       return NextResponse.json({ error: 'Invalid initData signature' }, { status: 401 });
     }
 
@@ -43,7 +55,7 @@ export async function POST(request) {
     const authDate = parseInt(params.get('auth_date') || '0', 10);
     const now = Math.floor(Date.now() / 1000);
     if (authDate > 0 && now - authDate > 86400) {
-      return NextResponse.json({ error: 'Telegram session expired, please restart @gro10xmanbot' }, { status: 401 });
+      return NextResponse.json({ error: 'Telegram session expired, please restart the bot' }, { status: 401 });
     }
 
     // 6. Extract user payload
@@ -56,42 +68,86 @@ export async function POST(request) {
     const chatIdStr = String(tgUser.id);
 
     // 7. Look up linked team user in Supabase
-    const { data: teamMember, error: teamErr } = await supabase
+    const { data: teamMember } = await supabase
       .from('team')
       .select('*')
       .eq('telegram_chat_id', chatIdStr)
       .maybeSingle();
 
-    if (teamErr) throw teamErr;
-
-    if (!teamMember) {
+    if (teamMember) {
+      const userRole = mapTeamTypeToRole(teamMember.team_type);
       return NextResponse.json({
-        error: 'not_linked',
-        message: 'Your Telegram account is not registered in public.team. Please start @gro10xmanbot and share your registered phone number first.',
-        tgUser: {
-          id: tgUser.id,
-          first_name: tgUser.first_name,
-          username: tgUser.username
+        success: true,
+        user: {
+          id: teamMember.id,
+          full_name: teamMember.full_name,
+          email: teamMember.email,
+          phone: teamMember.phone,
+          team_type: teamMember.team_type,
+          role: userRole,
+          referral_code: teamMember.referral_code || null,
+          promoter_tier: teamMember.promoter_tier || 'Associate',
+          telegram_chat_id: teamMember.telegram_chat_id
         }
-      }, { status: 403 });
+      });
     }
 
-    const userRole = mapTeamTypeToRole(teamMember.team_type);
+    // 8. Cascade lookup: Check public.investors
+    const { data: investorMember } = await supabase
+      .from('investors')
+      .select('*')
+      .eq('telegram_chat_id', chatIdStr)
+      .maybeSingle();
+
+    if (investorMember) {
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: investorMember.id,
+          full_name: investorMember.full_name || investorMember.alias_name,
+          email: investorMember.email,
+          phone: investorMember.phone,
+          team_type: 'investor',
+          role: 'investor',
+          category: investorMember.category,
+          kyc_verified: investorMember.kyc_verified,
+          telegram_chat_id: investorMember.telegram_chat_id
+        }
+      });
+    }
+
+    // 9. Cascade lookup: Check public.founders
+    const { data: founderMember } = await supabase
+      .from('founders')
+      .select('*, businesses(brand_name)')
+      .eq('telegram_chat_id', chatIdStr)
+      .maybeSingle();
+
+    if (founderMember) {
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: founderMember.id,
+          full_name: founderMember.full_name,
+          email: founderMember.email,
+          phone: founderMember.phone,
+          team_type: 'founder',
+          role: 'founder',
+          brand_name: founderMember.businesses?.[0]?.brand_name || null,
+          telegram_chat_id: founderMember.telegram_chat_id
+        }
+      });
+    }
 
     return NextResponse.json({
-      success: true,
-      user: {
-        id: teamMember.id,
-        full_name: teamMember.full_name,
-        email: teamMember.email,
-        phone: teamMember.phone,
-        team_type: teamMember.team_type,
-        role: userRole,
-        referral_code: teamMember.referral_code || null,
-        promoter_tier: teamMember.promoter_tier || 'Associate',
-        telegram_chat_id: teamMember.telegram_chat_id
+      error: 'not_linked',
+      message: 'Your Telegram account is not yet registered. Please start your respective bot and share your registered phone number first.',
+      tgUser: {
+        id: tgUser.id,
+        first_name: tgUser.first_name,
+        username: tgUser.username
       }
-    });
+    }, { status: 403 });
 
   } catch (err) {
     console.error('MiniApp Auth Validation error:', err);

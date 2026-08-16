@@ -458,11 +458,20 @@ CREATE TABLE IF NOT EXISTS public.inquiry_leads (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     name TEXT NOT NULL,
     phone TEXT NOT NULL,
+    email TEXT,
+    full_name TEXT,
     investment_range TEXT,
     meeting_preference TEXT,
     source_page TEXT,
+    source_channel TEXT,
+    deal_title TEXT,
+    ticket_amount NUMERIC,
+    yield_option TEXT,
+    notes TEXT,
     referral_code TEXT,
-    status TEXT DEFAULT 'New' CHECK (status IN ('New', 'Contacted', 'Meeting Booked', 'Converted', 'Not Interested'))
+    inquiry_type TEXT,
+    lead_status TEXT DEFAULT 'New',
+    status TEXT DEFAULT 'New' CHECK (status IN ('New', 'Contacted', 'Meeting Booked', 'Converted', 'Not Interested', 'Referral_Visit'))
 );
 
 -- 4. Platform Settings Table (Telegram Chat ID & System Config)
@@ -473,13 +482,113 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable RLS
+-- 5. Unified Team Table (Internal Management, KAMs, Promoters, Directors)
+CREATE TABLE IF NOT EXISTS public.team (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    user_id UUID REFERENCES auth.users(id),
+    full_name TEXT NOT NULL,
+    alias_name TEXT,
+    team_type TEXT NOT NULL CHECK (team_type IN ('admin', 'manager', 'kam', 'promoter')),
+    phone TEXT,
+    email TEXT,
+    telegram_chat_id TEXT,
+    referral_code TEXT UNIQUE,
+    tier TEXT DEFAULT 'Starter',
+    promoter_tier TEXT DEFAULT 'Starter',
+    can_promote_deals BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true
+);
+
+-- 6. Telegram Auth PINs Table (Temporary PINs for Web Login / Onboarding)
+CREATE TABLE IF NOT EXISTS public.telegram_auth_pins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    chat_id TEXT NOT NULL,
+    pin TEXT NOT NULL,
+    role TEXT,
+    user_identifier TEXT,
+    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (now() + INTERVAL '10 minutes'),
+    used BOOLEAN DEFAULT false
+);
+
+-- 7. SME Business Cohort Applications (Fundraising Form /apply)
+CREATE TABLE IF NOT EXISTS public.business_cohort_applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    reference_code TEXT UNIQUE NOT NULL,
+    brand_name TEXT NOT NULL,
+    legal_entity TEXT,
+    industry_sector TEXT,
+    founding_year INTEGER,
+    operational_months INTEGER DEFAULT 0,
+    headquarters TEXT,
+    monthly_revenue_bdt NUMERIC,
+    monthly_net_profit_bdt NUMERIC,
+    use_of_funds TEXT,
+    funding_amount_requested_bdt NUMERIC,
+    pitch_deck_url TEXT,
+    financial_doc_url TEXT,
+    founder_phone TEXT,
+    status TEXT DEFAULT 'Submitted' CHECK (status IN ('Submitted', 'Under Review', 'Approved', 'Rejected'))
+);
+
+-- 8. Business Stakeholders Table (Founding Team for Cohort Applications)
+CREATE TABLE IF NOT EXISTS public.business_stakeholders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    application_id UUID REFERENCES public.business_cohort_applications(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    role TEXT,
+    phone TEXT,
+    email TEXT,
+    equity_stake_pct NUMERIC
+);
+
+-- 9. Investor Pre-Profiles Table (Promoter Lead Survey & Invites)
+CREATE TABLE IF NOT EXISTS public.investor_pre_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT,
+    category TEXT DEFAULT 'HNI',
+    referral_code TEXT,
+    invite_sent BOOLEAN DEFAULT false,
+    notes TEXT
+);
+
+-- Schema Column Synchronizations
+ALTER TABLE public.funding_projects ADD COLUMN IF NOT EXISTS show_on_showcase BOOLEAN DEFAULT false;
+ALTER TABLE public.funding_projects ADD COLUMN IF NOT EXISTS booked_amount_bdt NUMERIC DEFAULT 0;
+
+ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;
+ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS requires_anonymity BOOLEAN DEFAULT false;
+
+ALTER TABLE public.founders ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.founders ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.founders ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;
+
+-- Enable RLS on New Tables
 ALTER TABLE public.project_media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inquiry_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.telegram_auth_pins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.business_cohort_applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.business_stakeholders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investor_pre_profiles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 CREATE POLICY "Allow public read access to project_media" ON public.project_media FOR SELECT USING (true);
 CREATE POLICY "Allow public insert to inquiry_leads" ON public.inquiry_leads FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public read to platform_settings" ON public.platform_settings FOR SELECT USING (true);
+CREATE POLICY "Allow public read access to team" ON public.team FOR SELECT USING (true);
+CREATE POLICY "Allow public insert to business_cohort_applications" ON public.business_cohort_applications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public insert to business_stakeholders" ON public.business_stakeholders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read/write to telegram_auth_pins" ON public.telegram_auth_pins FOR ALL USING (true);
+CREATE POLICY "Allow public read/write to investor_pre_profiles" ON public.investor_pre_profiles FOR ALL USING (true);
 

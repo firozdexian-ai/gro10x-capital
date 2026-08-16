@@ -55,35 +55,11 @@ export default function LeadBot() {
       const ticketAmount = projectContext?.investmentAmount || null;
       const yieldOption = projectContext?.yieldOption || null;
 
-      // 1. Save to Supabase (mapping fields safely)
-      const { data, error } = await supabase
-        .from('inquiry_leads')
-        .insert({
-          name: name.trim(),
-          phone: phone.trim(),
-          investment_range: investmentRange,
-          source_channel: dealTitle ? `Deal Page (${dealTitle})` : sourcePage,
-          deal_title: dealTitle,
-          ticket_amount: ticketAmount,
-          yield_option: yieldOption,
-          notes: `Meeting Pref: ${meetingPref}${yieldOption ? ` | Yield Option: ${yieldOption}` : ''}`,
-          referral_code: refCode || null,
-          status: 'New'
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase lead insert error:', error);
-        // Fallback: Continue to notify Telegram even if DB schema has missing column
-      }
-
-      // 2. Trigger Telegram API Endpoint with rich deal context
+      // Save lead & dispatch Telegram notification via unified API endpoint
       const res = await fetch('/api/submit-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          leadId: data?.id || null,
           name: name.trim(),
           phone: phone.trim(),
           investmentRange,
@@ -92,6 +68,7 @@ export default function LeadBot() {
           ticketAmount,
           yieldOption,
           projectId: projectContext?.projectId || null,
+          referral_code: refCode || null,
           sourcePage: dealTitle ? `Deal: ${dealTitle}` : sourcePage
         })
       });

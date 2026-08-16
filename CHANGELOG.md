@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.8.5] — 2026-08-17
+**System Foundation Hardening: LeadBot Deduplication, Multi-Bot MiniApp Auth Expansion & PostgreSQL Schema Synchronization**
+
+### Critical Architecture & Schema Hardening
+- **LeadBot Submission Pipeline Unified (`LeadBot.js`)**: Eliminated duplicate database inserts by removing direct client-side Supabase writes in favor of the unified `/api/submit-lead` server-side pipeline. All lead metadata, ROI Calculator parameters, and promoter referral attribution now route cleanly through a single endpoint.
+- **MiniApp Authentication Multi-Bot Expansion (`miniapp-auth/validate/route.js`)**: Expanded Telegram WebApp validation to dynamically verify HMAC signatures across all three bot tokens (`TELEGRAM_TEAM_BOT_TOKEN`, `TELEGRAM_INVESTOR_BOT_TOKEN`, `TELEGRAM_CLIENT_BOT_TOKEN`). Added cascade fallback lookups for `public.investors` and `public.founders` so non-team users are authenticated with appropriate roles instead of receiving HTTP 403.
+- **PostgreSQL Database Schema Synchronization (`supabase_schema.sql` & `supabase_migration_v0.8.5.sql`)**: Formally declared missing tables in the schema repository:
+  - `public.team` (unified internal staff table for Admin, Manager, KAM, and Promoter roles).
+  - `public.telegram_auth_pins` (temporary 4-digit PIN storage for Telegram onboarding).
+  - `public.business_cohort_applications` & `public.business_stakeholders` (SME fundraising applications and founding team members).
+  - `public.investor_pre_profiles` (promoter investor survey leads).
+  - Synchronized missing columns for `funding_projects` (`show_on_showcase`, `booked_amount_bdt`), `inquiry_leads` (`full_name`, `notes`, `source_channel`, `deal_title`, `ticket_amount`, `yield_option`, `lead_status`, `inquiry_type`), `investors` (`full_name`, `phone`, `email`, `telegram_chat_id`, `requires_anonymity`), and `founders` (`phone`, `email`, `telegram_chat_id`).
+
+---
+
 ## [v0.8.4] — 2026-08-17
 **Public & Shared Platform Stakeholder Suite: Auth Redirection, Legal Engine Completion, Security Hardening & Attribution Automations**
 

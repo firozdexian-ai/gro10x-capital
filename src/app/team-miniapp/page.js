@@ -42,6 +42,7 @@ export default function TeamMiniAppPage() {
   const [paymentsList, setPaymentsList] = useState([]);
   const [projectsList, setProjectsList] = useState([]);
   const [commissionsList, setCommissionsList] = useState([]);
+  const [kamTicketsList, setKamTicketsList] = useState([]);
   const [toastMsg, setToastMsg] = useState(null);
 
   // Multi-Step Survey State (bKash-style step wizard)
@@ -162,6 +163,21 @@ export default function TeamMiniAppPage() {
       setPayoutsList(payouts || []);
       setProjectsList(projs || []);
       setCommissionsList(comms || []);
+
+      // KAM-specific: fetch cash concierge OTC tickets
+      if (userData?.team_type === 'kam') {
+        const { data: kamTickets } = await supabase
+          .from('cash_tickets')
+          .select(`
+            id, ticket_amount_bdt, status, preferred_meeting_time, created_at,
+            investors(alias_name, full_name, requires_anonymity),
+            funding_projects!target_project_id(project_title)
+          `)
+          .not('status', 'eq', 'Closed')
+          .order('created_at', { ascending: false })
+          .limit(20);
+        setKamTicketsList(kamTickets || []);
+      }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     }
@@ -413,6 +429,117 @@ export default function TeamMiniAppPage() {
               </div>
             )}
 
+
+            {/* ======= KAM HOME: Portfolio KPIs + Quick Actions + Recent Tickets ======= */}
+            {isKam && (
+              <div>
+                {/* KAM Identity Hero */}
+                <div style={{ background: 'linear-gradient(135deg, #1a2d4a, #0f172a)', border: '1px solid rgba(240,180,41,0.4)', borderRadius: '16px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: STYLES.gold, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.3rem' }}>
+                    📁 Managing Partner OS
+                  </div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '900', color: '#fff', marginBottom: '0.5rem' }}>
+                    {user?.full_name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: STYLES.textMuted }}>
+                    Key Account Manager · GRO10X Capital
+                  </div>
+                </div>
+
+                {/* KAM 2x2 KPI Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Active Projects</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.gold }}>{kpis.activeProjects}</div>
+                    <div style={{ fontSize: '0.65rem', color: STYLES.gold, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <Briefcase size={12} /> CapEx Pipeline
+                    </div>
+                  </div>
+                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>OTC Tickets</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.blue }}>{kamTicketsList.length}</div>
+                    <div style={{ fontSize: '0.65rem', color: STYLES.blue, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <CreditCard size={12} /> Active Pipeline
+                    </div>
+                  </div>
+                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Pending Review</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.amber }}>
+                      {kamTicketsList.filter(t => t.status === 'Pending_Review').length}
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: STYLES.amber, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <Clock size={12} /> Awaiting Action
+                    </div>
+                  </div>
+                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Total AUM</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.emerald }}>
+                      ৳{(kpis.totalAum / 10000000).toFixed(1)} Cr
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: STYLES.emerald, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <TrendingUp size={12} /> Platform CapEx
+                    </div>
+                  </div>
+                </div>
+
+                {/* KAM Quick Actions */}
+                <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem', marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff', marginBottom: '0.85rem' }}>⚡ Quick Actions</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+                    <button onClick={() => setActiveTab('portfolio')} style={actionCircleStyle}>
+                      <div style={{ ...circleIconStyle, background: 'rgba(240, 180, 41, 0.2)', color: STYLES.gold }}><Briefcase size={18} /></div>
+                      <div style={circleLabelStyle}>Portfolio</div>
+                    </button>
+                    <button onClick={() => setActiveTab('tickets')} style={actionCircleStyle}>
+                      <div style={{ ...circleIconStyle, background: 'rgba(59, 130, 246, 0.2)', color: STYLES.blue }}><CreditCard size={18} /></div>
+                      <div style={circleLabelStyle}>Tickets</div>
+                    </button>
+                    <button onClick={() => setShowSurveyModal(true)} style={actionCircleStyle}>
+                      <div style={{ ...circleIconStyle, background: 'rgba(16, 185, 129, 0.2)', color: STYLES.emerald }}><PlusCircle size={18} /></div>
+                      <div style={circleLabelStyle}>New Lead</div>
+                    </button>
+                    <button onClick={handleRequestPinInChat} style={actionCircleStyle}>
+                      <div style={{ ...circleIconStyle, background: 'rgba(168, 85, 247, 0.2)', color: STYLES.purple }}><ShieldCheck size={18} /></div>
+                      <div style={circleLabelStyle}>Web PIN</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recent OTC Tickets Preview */}
+                <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#fff', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>🎫 Recent OTC Tickets</span>
+                    <span style={{ fontSize: '0.7rem', color: STYLES.gold, cursor: 'pointer' }} onClick={() => setActiveTab('tickets')}>View All →</span>
+                  </div>
+                  {kamTicketsList.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: STYLES.textMuted, fontSize: '0.8rem', padding: '1rem 0' }}>No active OTC tickets</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {kamTicketsList.slice(0, 3).map((t) => {
+                        const investor = t.investors;
+                        const name = investor?.requires_anonymity ? (investor?.alias_name || '🔒 Anonymous') : (investor?.alias_name || investor?.full_name || 'Investor');
+                        const statusColor = t.status === 'Pending_Review' ? STYLES.amber : t.status === 'Meeting_Scheduled' ? STYLES.blue : t.status === 'Funds_Cleared' ? STYLES.emerald : STYLES.textMuted;
+                        return (
+                          <div key={t.id} style={{ background: '#0f172a', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff' }}>{name}</div>
+                              <div style={{ fontSize: '0.7rem', color: STYLES.textMuted }}>৳{Number(t.ticket_amount_bdt || 0).toLocaleString()} · {t.funding_projects?.project_title || 'CapEx'}</div>
+                            </div>
+                            <span style={{ background: `${statusColor}22`, color: statusColor, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                              {t.status?.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ======= ADMIN / PROMOTER HOME KPIs + QUICK ACTIONS ======= */}
+            {!isKam && (
+              <div>
             {/* 2x2 KPI GRID CARDS */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
               <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
@@ -513,6 +640,8 @@ export default function TeamMiniAppPage() {
                 ))}
               </div>
             </div>
+            </div>
+            )}
           </div>
         )}
 
@@ -555,9 +684,107 @@ export default function TeamMiniAppPage() {
         )}
 
         {/* ---------------------------------------------------- */}
+        {/* TAB: KAM PORTFOLIO (KAM ONLY) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === 'portfolio' && isKam && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>📁 CapEx Portfolio ({projectsList.length})</h3>
+            </div>
+            {projectsList.length === 0 ? (
+              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <Briefcase size={36} color={STYLES.textMuted} style={{ margin: '0 auto 0.5rem auto', display: 'block' }} />
+                <div style={{ color: STYLES.textMuted, fontSize: '0.85rem' }}>No projects in portfolio yet</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {projectsList.map((p) => {
+                  const target = Number(p.target_raise_bdt || 0);
+                  const raised = Number(p.amount_raised_bdt || 0);
+                  const pct = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+                  return (
+                    <div key={p.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{p.businesses?.brand_name || 'GRO10X SPV'}</div>
+                          <div style={{ fontSize: '0.75rem', color: STYLES.gold, fontWeight: '600' }}>{p.project_title}</div>
+                        </div>
+                        <span style={{ background: 'rgba(240,180,41,0.15)', color: STYLES.gold, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
+                          {p.status || 'Origination'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.4rem' }}>
+                        ৳{raised.toLocaleString()} / ৳{target.toLocaleString()} raised
+                      </div>
+                      <div style={{ background: '#0f172a', borderRadius: '6px', height: '6px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 80 ? STYLES.emerald : pct >= 40 ? STYLES.gold : STYLES.blue, borderRadius: '6px', transition: 'width 0.3s' }} />
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: STYLES.textMuted, marginTop: '0.3rem' }}>{pct}% funded · {p.funding_type}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB: KAM OTC CASH TICKETS (KAM ONLY) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === 'tickets' && isKam && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🎫 Cash Concierge Tickets ({kamTicketsList.length})</h3>
+            </div>
+            {kamTicketsList.length === 0 ? (
+              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <CreditCard size={36} color={STYLES.textMuted} style={{ margin: '0 auto 0.5rem auto', display: 'block' }} />
+                <div style={{ color: STYLES.textMuted, fontSize: '0.85rem' }}>No active OTC tickets</div>
+                <div style={{ color: STYLES.textMuted, fontSize: '0.75rem', marginTop: '0.3rem' }}>All consultations are complete</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {kamTicketsList.map((t) => {
+                  const investor = t.investors;
+                  const name = investor?.requires_anonymity
+                    ? (investor?.alias_name || '🔒 Anonymous OTC')
+                    : (investor?.alias_name || investor?.full_name || 'Investor');
+                  const statusColor = t.status === 'Pending_Review' ? STYLES.amber : t.status === 'Meeting_Scheduled' ? STYLES.blue : t.status === 'Funds_Cleared' ? STYLES.emerald : STYLES.textMuted;
+                  return (
+                    <div key={t.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#fff' }}>{name}</div>
+                          <div style={{ fontSize: '0.7rem', color: STYLES.gold }}>#{t.id.slice(0, 8)}</div>
+                        </div>
+                        <span style={{ background: `${statusColor}22`, color: statusColor, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                          {t.status?.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: '700', color: STYLES.gold, marginBottom: '0.3rem' }}>
+                        ৳{Number(t.ticket_amount_bdt || 0).toLocaleString()} BDT
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: STYLES.textMuted }}>
+                        → {t.funding_projects?.project_title || 'CapEx Target'}
+                      </div>
+                      {t.preferred_meeting_time && (
+                        <div style={{ fontSize: '0.72rem', color: STYLES.blue, marginTop: '0.3rem' }}>
+                          📅 Preferred: {t.preferred_meeting_time}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
         {/* TAB: PAYOUTS APPROVAL QUEUE */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'payouts' && (
+
           <div>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>💳 Commission Payout Queue ({payoutsList.length})</h3>
             
@@ -780,48 +1007,79 @@ export default function TeamMiniAppPage() {
         </div>
       )}
 
-      {/* BOTTOM FIXED NAVIGATION BAR (BKASH STYLE WITH BADGES) */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
-        <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
-          <Home size={18} />
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
-        </button>
+      {/* BOTTOM FIXED NAVIGATION BAR */}
+      {isKam ? (
+        /* KAM 4-TAB NAV: Home / Portfolio / Tickets / Me */
+        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
+          <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
+            <Home size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
+          </button>
 
-        <button onClick={() => setActiveTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
-          {kpis.unworkedLeads > 0 && (
-            <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.emerald, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
-              {kpis.unworkedLeads}
-            </span>
-          )}
-          <Briefcase size={18} />
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Leads</span>
-        </button>
+          <button onClick={() => setActiveTab('portfolio')} style={navTabStyle(activeTab === 'portfolio')}>
+            <Briefcase size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Portfolio</span>
+          </button>
 
-        <button onClick={() => setActiveTab('payouts')} style={{ ...navTabStyle(activeTab === 'payouts'), position: 'relative' }}>
-          {alerts.payoutPending > 0 && (
-            <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.gold, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
-              {alerts.payoutPending}
-            </span>
-          )}
-          <DollarSign size={18} />
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Payouts</span>
-        </button>
+          <button onClick={() => setActiveTab('tickets')} style={{ ...navTabStyle(activeTab === 'tickets'), position: 'relative' }}>
+            {kamTicketsList.filter(t => t.status === 'Pending_Review').length > 0 && (
+              <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.amber, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+                {kamTicketsList.filter(t => t.status === 'Pending_Review').length}
+              </span>
+            )}
+            <CreditCard size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Tickets</span>
+          </button>
 
-        <button onClick={() => setActiveTab('kyc')} style={{ ...navTabStyle(activeTab === 'kyc'), position: 'relative' }}>
-          {alerts.kycPending > 0 && (
-            <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.amber, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
-              {alerts.kycPending}
-            </span>
-          )}
-          <ShieldCheck size={18} />
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>KYC</span>
-        </button>
+          <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
+            <UserCheck size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
+          </button>
+        </nav>
+      ) : (
+        /* ADMIN / PROMOTER 5-TAB NAV: Home / Leads / Payouts / KYC / Me */
+        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
+          <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
+            <Home size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
+          </button>
 
-        <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
-          <UserCheck size={18} />
-          <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
-        </button>
-      </nav>
+          <button onClick={() => setActiveTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
+            {kpis.unworkedLeads > 0 && (
+              <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.emerald, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+                {kpis.unworkedLeads}
+              </span>
+            )}
+            <Briefcase size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Leads</span>
+          </button>
+
+          <button onClick={() => setActiveTab('payouts')} style={{ ...navTabStyle(activeTab === 'payouts'), position: 'relative' }}>
+            {alerts.payoutPending > 0 && (
+              <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.gold, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+                {alerts.payoutPending}
+              </span>
+            )}
+            <DollarSign size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Payouts</span>
+          </button>
+
+          <button onClick={() => setActiveTab('kyc')} style={{ ...navTabStyle(activeTab === 'kyc'), position: 'relative' }}>
+            {alerts.kycPending > 0 && (
+              <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.amber, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+                {alerts.kycPending}
+              </span>
+            )}
+            <ShieldCheck size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>KYC</span>
+          </button>
+
+          <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
+            <UserCheck size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
+          </button>
+        </nav>
+      )}
 
     </div>
   );

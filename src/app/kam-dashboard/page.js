@@ -140,10 +140,10 @@ export default function KamDashboard() {
         .from('investors')
         .select(`
           id, alias_name, full_name, phone, email, requires_anonymity,
-          investor_category, kyc_verified, kyc_level, onboarding_status,
+          category, kyc_verified, kyc_level, onboarding_status,
           preferred_channel, telegram_chat_id, created_at,
           investments(id, amount_invested_bdt, status, yield_option,
-            funding_projects(project_title, kanban_stage))
+            funding_projects(project_title, status))
         `)
         .order('created_at', { ascending: false });
 
@@ -160,10 +160,9 @@ export default function KamDashboard() {
       let ticketQuery = supabase
         .from('cash_tickets')
         .select(`
-          id, ticket_amount_bdt, status, preferred_meeting_time, meeting_format,
-          confirmed_meeting_date, funds_transfer_ref, created_at,
+          id, ticket_amount_bdt, status, preferred_meeting_time, created_at,
           investors(alias_name, full_name, requires_anonymity, phone, email, kyc_level),
-          funding_projects(project_title, businesses(brand_name))
+          funding_projects!target_project_id(project_title, businesses(brand_name))
         `)
         .order('created_at', { ascending: false });
 
@@ -255,7 +254,7 @@ export default function KamDashboard() {
   const filteredInvestors = assignedInvestors.filter(inv => {
     if (investorFilter === 'All') return true;
     if (investorFilter === 'Active') return inv.onboarding_status === 'Active';
-    if (investorFilter === 'VIP') return inv.onboarding_status === 'VIP' || inv.investor_category === 'VIP' || inv.investor_category === 'Family Office';
+    if (investorFilter === 'VIP') return inv.onboarding_status === 'VIP' || inv.category === 'VIP' || inv.category === 'Family Office';
     if (investorFilter === 'KYC Pending') return ['KYC_L1', 'KYC_L2', 'Telegram_Verified', 'Invited'].includes(inv.onboarding_status) || !inv.kyc_verified;
     if (investorFilter === 'Invited') return inv.onboarding_status === 'Invited';
     return true;
@@ -1169,7 +1168,7 @@ export default function KamDashboard() {
                   {[
                     { key: 'All', label: 'All Accounts', count: assignedInvestors.length },
                     { key: 'Active', label: 'Active', count: assignedInvestors.filter(i => i.onboarding_status === 'Active').length },
-                    { key: 'VIP', label: 'VIP / Family Office', count: assignedInvestors.filter(i => i.onboarding_status === 'VIP' || i.investor_category === 'VIP' || i.investor_category === 'Family Office').length },
+                    { key: 'VIP', label: 'VIP / Family Office', count: assignedInvestors.filter(i => i.onboarding_status === 'VIP' || i.category === 'VIP' || i.category === 'Family Office').length },
                     { key: 'KYC Pending', label: 'KYC Pending', count: assignedInvestors.filter(i => ['KYC_L1', 'KYC_L2', 'Telegram_Verified', 'Invited'].includes(i.onboarding_status) || !i.kyc_verified).length },
                     { key: 'Invited', label: 'Invited', count: assignedInvestors.filter(i => i.onboarding_status === 'Invited').length }
                   ].map(tab => {
@@ -1259,7 +1258,7 @@ export default function KamDashboard() {
                                   </span>
                                 )}
                                 <span style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700' }}>
-                                  {inv.investor_category || 'HNI Client'}
+                                  {inv.category || 'HNI Client'}
                                 </span>
                                 <span style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}35`, padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800' }}>
                                   ● {inv.onboarding_status || 'Active'}

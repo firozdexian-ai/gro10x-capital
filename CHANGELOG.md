@@ -4,8 +4,34 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.8.0] — 2026-08-17
+**KAM / Managing Partner Stakeholder Suite: MiniApp, Bot & Web Dashboard Overhaul**
+
+### Bug Fixes
+- **`kamHandlers.js` — Wrong schema column names** (caused `/portfolio` to display ৳0/৳0 always):
+  - Fixed `target_amount_bdt` → `target_raise_bdt`, `raised_amount_bdt` → `amount_raised_bdt`, `kanban_stage` → `status`
+- **`kamHandlers.js` — FK ambiguity on `cash_tickets` join**: Fixed `funding_projects(...)` → `funding_projects!target_project_id(...)` to resolve the correct FK
+- **`kamHandlers.js` — Orphaned `teamUser` query**: Now used to scope `funding_projects` by `kam_id` and `cash_tickets` by `kam_id`
+- **`kamHandlers.js` — Wrong portal link on `/tickets`**: Was pointing to `/cash-concierge` (investor booking page), fixed to `/kam-dashboard`
+- **`kam-dashboard/page.js` — Wrong column `investor_category`**: Schema uses `category` — fixed in query, filter logic (×3), and badge render
+- **`kam-dashboard/page.js` — `kanban_stage` in investments join**: Fixed to `status` (correct column on `funding_projects`)
+- **`kam-dashboard/page.js` — FK ambiguity on `cash_tickets`**: Fixed join to `funding_projects!target_project_id(...)`
+- **`team-miniapp/page.js` — `isKam` was declared but completely orphaned**: KAM users were seeing the Admin KYC/payout approval queue — now KAMs see their own portfolio-focused interface
+
+### New Features
+- **KAM MiniApp Home**: Dedicated KAM identity hero card, 4-KPI grid (Active Projects, OTC Tickets, Pending Review, Total AUM), role-specific quick actions (Portfolio, Tickets, New Lead, Web PIN), and recent OTC tickets preview panel
+- **KAM Portfolio Tab** (`/team-miniapp`): CapEx project cards with raise progress bars, funding type, and stage status
+- **KAM Cash Tickets Tab** (`/team-miniapp`): Full OTC cash concierge ticket list with investor anonymity, ticket amount, project target, status badge, and preferred meeting time
+- **Conditional Bottom Nav**: KAM gets 4-tab nav (Home / Portfolio / Tickets / Me) instead of the Admin's 5-tab nav — Tickets badge shows pending review count
+- **`kamHandlers.js` — KAM-scoped portfolio**: Projects now filtered by `eq('kam_id', kamRecord.id)` using the `kams` table lookup chain
+- **`kamHandlers.js` — KAM-scoped tickets**: Cash tickets filtered by `eq('kam_id', kamRecord.id)` for KAM users
+- **`kamHandlers.js` — `formatBdt()` helper**: Formats portfolio amounts as ৳X.XX Cr or ৳X.XX L instead of raw numbers
+
+---
+
 ## [v0.7.9] — 2026-08-17
 **Admin & Director Stakeholder Suite: Telegram MiniApp, Bot Security & Automations Overhaul**
+
 
 ### Upgrades & Fixes
 - **Critical Security Upgrades**:

@@ -12,6 +12,8 @@ import {
   handleAlertsCommand, 
   handleLeadsCommand, 
   handlePayoutsCommand, 
+  handleApplicationsCommand,
+  handleKycCommand,
   handleBroadcastCommand 
 } from './handlers/adminHandlers';
 import { 
@@ -109,7 +111,7 @@ export async function POST(request) {
       return NextResponse.json({ ok: true });
     }
 
-    // ─── TEAM / MANAGEMENT BOT (existing logic) ────────────────────────────────
+    // ─── TEAM / MANAGEMENT BOT ───────────────────────────────────────────────
 
     // 1. HANDLE CALLBACK QUERIES (INLINE KEYBOARD BUTTON PRESSES)
     if (body.callback_query) {
@@ -124,6 +126,8 @@ export async function POST(request) {
         else if (callbackData === 'cmd_alerts') await handleAlertsCommand(botToken, chatId, appUrl);
         else if (callbackData === 'cmd_leads') await handleLeadsCommand(botToken, chatId, appUrl);
         else if (callbackData === 'cmd_payouts') await handlePayoutsCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_applications') await handleApplicationsCommand(botToken, chatId, appUrl);
+        else if (callbackData === 'cmd_kyc') await handleKycCommand(botToken, chatId, appUrl);
         else if (callbackData === 'cmd_portfolio') await handlePortfolioCommand(botToken, chatId, appUrl);
         else if (callbackData === 'cmd_tickets') await handleTicketsCommand(botToken, chatId, appUrl);
         else if (callbackData === 'cmd_mycode') await handleMyCodeCommand(botToken, chatId, appUrl);
@@ -134,8 +138,31 @@ export async function POST(request) {
         else if (callbackData === 'cmd_pin') await handlePinCommand(botToken, chatId, appUrl);
         else if (callbackData.startsWith('approve_payout:')) {
           const payoutId = callbackData.split(':')[1];
-          await supabase.from('payout_requests').update({ status: 'Cleared' }).eq('id', payoutId);
+          const { data: updatedPayout } = await supabase
+            .from('payout_requests')
+            .update({ status: 'Cleared' })
+            .eq('id', payoutId)
+            .select('*, promoters(full_name, phone, user_id)')
+            .single();
+
           await sendTelegramMessage(botToken, chatId, `✅ Commission Payout #${payoutId.slice(0, 6)} marked as Cleared!`);
+
+          // Notify promoter on Telegram if they have linked chat ID
+          if (updatedPayout && updatedPayout.promoter_id) {
+            const { data: teamP } = await supabase
+              .from('team')
+              .select('telegram_chat_id')
+              .eq('phone', updatedPayout.promoters?.phone)
+              .maybeSingle();
+
+            if (teamP && teamP.telegram_chat_id) {
+              await sendTelegramMessage(
+                botToken, 
+                teamP.telegram_chat_id, 
+                `🎉 <b>Commission Payout Disbursed!</b>\n\nYour withdrawal request for <b>৳${Number(updatedPayout.amount_bdt || 0).toLocaleString()}</b> via ${updatedPayout.disbursement_channel || 'bKash'} has been <b>Approved & Cleared</b> by Executive Admin.`
+              );
+            }
+          }
         } else if (callbackData.startsWith('reject_payout:')) {
           const payoutId = callbackData.split(':')[1];
           await supabase.from('payout_requests').update({ status: 'Rejected' }).eq('id', payoutId);
@@ -215,57 +242,69 @@ export async function POST(request) {
       return NextResponse.json({ ok: true });
     }
 
-    // H) /broadcast Command
+    // H) /applications Command (NEW)
+    if (text === '/applications' || text === '/cohorts') {
+      await handleApplicationsCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // I) /kyc Command (NEW)
+    if (text === '/kyc') {
+      await handleKycCommand(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // J) /broadcast Command
     if (text.startsWith('/broadcast')) {
       const msg = text.replace('/broadcast', '').trim();
       await handleBroadcastCommand(botToken, chatId, msg);
       return NextResponse.json({ ok: true });
     }
 
-    // I) /portfolio Command
+    // K) /portfolio Command
     if (text === '/portfolio') {
       await handlePortfolioCommand(botToken, chatId, appUrl);
       return NextResponse.json({ ok: true });
     }
 
-    // J) /tickets Command
+    // L) /tickets Command
     if (text === '/tickets') {
       await handleTicketsCommand(botToken, chatId, appUrl);
       return NextResponse.json({ ok: true });
     }
 
-    // K) /mycode Command
+    // M) /mycode Command
     if (text === '/mycode') {
       await handleMyCodeCommand(botToken, chatId, appUrl);
       return NextResponse.json({ ok: true });
     }
 
-    // L) /tier Command
+    // N) /tier Command
     if (text === '/tier') {
       await handleTierCommand(botToken, chatId);
       return NextResponse.json({ ok: true });
     }
 
-    // M) /earnings Command
+    // O) /earnings Command
     if (text === '/earnings') {
       await handleEarningsCommand(botToken, chatId);
       return NextResponse.json({ ok: true });
     }
 
-    // N) /survey Command
+    // P) /survey Command
     if (text === '/survey') {
       await handleSurveyCommand(botToken, chatId);
       return NextResponse.json({ ok: true });
     }
 
-    // O) /payout Command
+    // Q) /payout Command
     if (text === '/payout') {
       await handlePayoutCommand(botToken, chatId);
       return NextResponse.json({ ok: true });
     }
 
     // Fallback default response
-    const defaultText = `🤖 <b>GRO10X Management AI Colleague</b>\n\nType /start to verify identity or /pin for a quick web access code.\nAvailable commands: /kpis, /alerts, /leads, /payouts, /portfolio, /tickets, /mycode, /tier, /earnings, /survey`;
+    const defaultText = `🤖 <b>GRO10X Management AI Colleague</b>\n\nType /start to verify identity or /pin for a quick web access code.\nAvailable commands: /kpis, /alerts, /leads, /payouts, /applications, /kyc, /portfolio, /tickets, /mycode, /tier, /earnings, /survey, /broadcast`;
     await sendTelegramMessage(botToken, chatId, defaultText);
 
     return NextResponse.json({ ok: true });

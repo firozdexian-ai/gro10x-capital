@@ -107,28 +107,45 @@ export async function POST(request) {
 
     await supabase.from('business_stakeholders').insert(stakeholderInserts);
 
-    // Optional Telegram Alert Dispatch
+    // Direct Telegram Alert Dispatch to Admins
     try {
-      const { data: setObj } = await supabase
-        .from('platform_settings')
-        .select('setting_value')
-        .eq('setting_key', 'owner_telegram_chat_id')
-        .single();
+      const botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-      if (setObj && setObj.setting_value) {
-        const botToken = process.env.TELEGRAM_BOT_TOKEN;
-        if (botToken) {
-          const alertMsg = `🚀 *NEW GRO10X COHORT APPLICATION*\n\n*Ref:* \`${ref_code}\`\n*Brand:* ${brand_name}\n*Sector:* ${industry_sector} (${outlet_count} outlets)\n*Lead Founder:* ${lead_founder_name} (${lead_founder_phone})\n*Capital Ask:* ৳${Number(requested_funding_bdt).toLocaleString()} (${preferred_funding_type})\n\nView details in Admin Panel → Business Registry tab.`;
-          
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: setObj.setting_value,
-              text: alertMsg,
-              parse_mode: 'Markdown'
-            })
-          });
+      if (botToken) {
+        const { data: admins } = await supabase
+          .from('team')
+          .select('telegram_chat_id')
+          .in('team_type', ['admin', 'manager'])
+          .not('telegram_chat_id', 'is', null);
+
+        if (admins && admins.length > 0) {
+          const alertMsg = `🏢 <b>NEW COHORT BUSINESS APPLICATION</b>\n\n` +
+            `🏷️ <b>Ref:</b> <code>${ref_code}</code>\n` +
+            `🏢 <b>Brand:</b> ${brand_name} (${industry_sector})\n` +
+            `👤 <b>Lead Founder:</b> ${lead_founder_name}\n` +
+            `📞 <b>Phone:</b> <code>${lead_founder_phone}</code>\n` +
+            `💰 <b>Capital Ask:</b> ৳${Number(requested_funding_bdt).toLocaleString()} (${preferred_funding_type})\n` +
+            `📍 <b>Outlets:</b> ${outlet_count} Existing | ${expansion_outlet_count} Planned`;
+
+          const payloadText = `🚨 <b>GRO10X Platform Alert</b>\n\n${alertMsg}`;
+
+          for (const admin of admins) {
+            if (admin.telegram_chat_id) {
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: admin.telegram_chat_id,
+                  text: payloadText,
+                  parse_mode: 'HTML',
+                  reply_markup: {
+                    inline_keyboard: [[{ text: '📑 Review in Business Registry', url: `${appUrl}/admin` }]]
+                  }
+                })
+              }).catch(e => console.error('Admin cohort push error:', e));
+            }
+          }
         }
       }
     } catch (tErr) {

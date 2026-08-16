@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
+import { supabase } from '../../../../lib/supabase';
 
 export async function POST(request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    // If authorization bearer token is passed, verify user
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+      if (userErr || !user) {
+        return NextResponse.json({ error: 'Unauthorized admin access required.' }, { status: 401 });
+      }
+      // Check user role
+      const { data: roleRow } = await supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+      if (roleRow && roleRow.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden: Admin privilege required.' }, { status: 403 });
+      }
+    }
+
     const { bot_key = 'team' } = await request.json();
 
     let botToken = process.env.TELEGRAM_TEAM_BOT_TOKEN;

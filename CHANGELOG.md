@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.7.9] — 2026-08-17
+**Admin & Director Stakeholder Suite: Telegram MiniApp, Bot Security & Automations Overhaul**
+
+### Upgrades & Fixes
+- **Critical Security Upgrades**:
+  - Masked all client-side Telegram bot tokens in `BotManagementTab.js` preventing credential leakage to the browser.
+  - Added authorization guards on `/api/admin/register-webhook` ensuring only authorized administrative requests can modify Telegram webhook endpoints.
+- **Telegram Bot System & Command Matrix**:
+  - Implemented strict RBAC role guard on `/broadcast` command, preventing unauthorized members from sending team announcements.
+  - Added dedicated `/kyc` and `/applications` (cohorts) commands for Admin/Director in `@gro10xmanbot`.
+  - Added `🌐 Promoter Hub` link to Promoter inline bot menu.
+  - Fixed N+1 phone number query bottleneck in `handleContactVerification` via targeted matching.
+- **Telegram MiniApp (`/team-miniapp`) Enhancements**:
+  - Fixed payout status filtering to support both `'Pending'` and `'Pending Verification'` requests.
+  - Added real-time notification to promoters via Telegram when Admin clears/approves their payout.
+  - Added dedicated **KYC Review & Verification Tab** in the MiniApp for Admin role.
+  - Added live notification count badges on navigation tabs (Leads, Payouts, KYC).
+  - Fixed CSS rendering bug (`position: 'sticky', top: 0` in header).
+- **Platform Inbound Telegram Push Automations**:
+  - Connected `/api/apply-cohort` directly to `TELEGRAM_TEAM_BOT_TOKEN`, broadcasting detailed alerts to all Admins when new business applications arrive.
+
+---
+
 ## [v0.7.8] — 2026-08-17
 **Promoter & Capital Partner Portal (`/promoter`) Comprehensive Overhaul**
 

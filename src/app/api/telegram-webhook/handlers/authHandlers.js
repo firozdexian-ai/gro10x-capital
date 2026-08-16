@@ -128,7 +128,8 @@ export function getRoleMenuKeyboard(role, appUrl) {
         { text: '💳 Request Payout', callback_data: 'cmd_payout' }
       ],
       [
-        { text: '📋 Log Investor Survey', callback_data: 'cmd_survey' }
+        { text: '📋 Log Investor Survey', callback_data: 'cmd_survey' },
+        { text: '🌐 Promoter Hub', url: `${appUrl}/promoter` }
       ]
     ]
   };
@@ -151,27 +152,30 @@ export async function handleStartCommand(botToken, chatId) {
 export async function handleContactVerification(botToken, chatId, contact, appUrl) {
   const rawPhone = contact.phone_number;
   const cleanPhone = normalisePhone(rawPhone);
+  const last10Digits = cleanPhone.slice(-10);
 
   let matchedUser = null;
   let userRole = 'admin';
 
   // Efficient targeted query on public.team
-  const { data: teamMembers } = await supabase.from('team').select('*');
+  const { data: teamMembers } = await supabase
+    .from('team')
+    .select('*')
+    .or(`phone.eq.${rawPhone},phone.eq.${cleanPhone},phone.ilike.%${last10Digits}`);
+
   if (teamMembers && teamMembers.length > 0) {
-    const found = teamMembers.find(t => normalisePhone(t.phone) === cleanPhone);
-    if (found) {
-      matchedUser = {
-        name: found.full_name,
-        title: formatTeamType(found.team_type, found.designation),
-        email: found.email,
-        phone: found.phone,
-        id: found.id,
-        table: 'team',
-        teamType: found.team_type,
-        referralCode: found.referral_code || null
-      };
-      userRole = mapTeamTypeToRole(found.team_type);
-    }
+    const found = teamMembers[0];
+    matchedUser = {
+      name: found.full_name,
+      title: formatTeamType(found.team_type, found.designation),
+      email: found.email,
+      phone: found.phone,
+      id: found.id,
+      table: 'team',
+      teamType: found.team_type,
+      referralCode: found.referral_code || null
+    };
+    userRole = mapTeamTypeToRole(found.team_type);
   }
 
   if (matchedUser) {

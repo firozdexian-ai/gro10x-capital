@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Users, AlertCircle, PhoneCall, CheckCircle, ShieldCheck, 
   Send, Award, DollarSign, FileText, Share2, Copy, RefreshCw, ChevronRight,
-  LogOut, Home, Briefcase, PlusCircle, UserCheck, Layers, ArrowUpRight
+  LogOut, Home, Briefcase, PlusCircle, UserCheck, Layers, ArrowUpRight,
+  CheckCircle2, XCircle, CreditCard, Shield, Clock, Search
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -30,13 +31,15 @@ export default function TeamMiniAppPage() {
   const [tg, setTg] = useState(null);
 
   // App Navigation State
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'leads' | 'payouts' | 'survey' | 'portfolio' | 'me'
+  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'leads' | 'payouts' | 'kyc' | 'me'
   
   // Data States
   const [kpis, setKpis] = useState({ totalAum: 0, activeInvestors: 0, activeProjects: 0, unworkedLeads: 0 });
   const [alerts, setAlerts] = useState({ kycPending: 0, payPending: 0, payoutPending: 0 });
   const [leadsList, setLeadsList] = useState([]);
   const [payoutsList, setPayoutsList] = useState([]);
+  const [kycList, setKycList] = useState([]);
+  const [paymentsList, setPaymentsList] = useState([]);
   const [projectsList, setProjectsList] = useState([]);
   const [commissionsList, setCommissionsList] = useState([]);
   const [toastMsg, setToastMsg] = useState(null);
@@ -97,7 +100,7 @@ export default function TeamMiniAppPage() {
         }
       } else {
         // Fallback for browser preview / local dev testing
-        const { data: teamDev } = await supabase.from('team').select('*').limit(1).single();
+        const { data: teamDev } = await supabase.from('team').select('*').limit(1).maybeSingle();
         if (teamDev) {
           const devUser = {
             id: teamDev.id,
@@ -125,25 +128,37 @@ export default function TeamMiniAppPage() {
 
   const loadDashboardData = async (userData) => {
     try {
-      // Fetch KPIs & Alerts
-      const [{ data: invs }, { count: activeInvestors }, { count: activeProjects }, { data: leads }, { data: kyc }, { data: pay }, { data: payouts }, { data: projs }, { data: comms }] = await Promise.all([
-        supabase.from('investments').select('amount_bdt'),
+      // Fetch KPIs & Alerts with proper status inclusions
+      const [
+        { data: invs }, 
+        { count: activeInvestors }, 
+        { count: activeProjects }, 
+        { data: leads }, 
+        { data: kyc }, 
+        { data: pay }, 
+        { data: payouts }, 
+        { data: projs }, 
+        { data: comms }
+      ] = await Promise.all([
+        supabase.from('investments').select('amount_bdt, amount_invested_bdt'),
         supabase.from('investors').select('*', { count: 'exact', head: true }),
         supabase.from('funding_projects').select('*', { count: 'exact', head: true }),
-        supabase.from('inquiry_leads').select('*').order('created_at', { ascending: false }).limit(10),
-        supabase.from('kyc_submissions').select('*').eq('status', 'Pending'),
-        supabase.from('payment_submissions').select('*').eq('status', 'Pending'),
-        supabase.from('payout_requests').select('*, team(full_name)').order('created_at', { ascending: false }),
+        supabase.from('inquiry_leads').select('*').order('created_at', { ascending: false }).limit(15),
+        supabase.from('kyc_submissions').select('*').eq('status', 'Pending').order('created_at', { ascending: false }).limit(10),
+        supabase.from('payment_submissions').select('*').eq('status', 'Pending').order('created_at', { ascending: false }).limit(10),
+        supabase.from('payout_requests').select('*, team(full_name), promoters(full_name, phone)').in('status', ['Pending', 'Pending Verification']).order('created_at', { ascending: false }),
         supabase.from('funding_projects').select('*, businesses(brand_name)').order('created_at', { ascending: false }).limit(5),
         supabase.from('promoter_commissions').select('*').limit(10)
       ]);
 
-      const totalAum = (invs || []).reduce((sum, i) => sum + Number(i.amount_bdt || 0), 0);
+      const totalAum = (invs || []).reduce((sum, i) => sum + Number(i.amount_bdt || i.amount_invested_bdt || 0), 0);
       const unworked = (leads || []).filter(l => l.status === 'New').length;
 
       setKpis({ totalAum, activeInvestors: activeInvestors || 0, activeProjects: activeProjects || 0, unworkedLeads: unworked });
-      setAlerts({ kycPending: kyc?.length || 0, payPending: pay?.length || 0, payoutPending: (payouts || []).filter(p => p.status === 'Pending').length });
+      setAlerts({ kycPending: kyc?.length || 0, payPending: pay?.length || 0, payoutPending: payouts?.length || 0 });
       setLeadsList(leads || []);
+      setKycList(kyc || []);
+      setPaymentsList(pay || []);
       setPayoutsList(payouts || []);
       setProjectsList(projs || []);
       setCommissionsList(comms || []);
@@ -155,23 +170,63 @@ export default function TeamMiniAppPage() {
   // Actions
   const handleApprovePayout = async (payoutId) => {
     try {
-      await supabase.from('payout_requests').update({ status: 'Cleared' }).eq('id', payoutId);
-      setPayoutsList(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'Cleared' } : p));
+      const { data: updatedPayout, error } = await supabase
+        .from('payout_requests')
+        .update({ status: 'Cleared' })
+        .eq('id', payoutId)
+        .select('*, promoters(full_name, phone)')
+        .single();
+
+      if (error) throw error;
+
+      setPayoutsList(prev => prev.filter(p => p.id !== payoutId));
+      setAlerts(prev => ({ ...prev, payoutPending: Math.max(0, prev.payoutPending - 1) }));
       showToast('✅ Payout cleared successfully!');
       if (tg) tg.sendData(`payout_approved:${payoutId}`);
     } catch (err) {
+      console.error('Approve payout error:', err);
       showToast('❌ Failed to clear payout');
     }
   };
 
   const handleRejectPayout = async (payoutId) => {
     try {
-      await supabase.from('payout_requests').update({ status: 'Rejected' }).eq('id', payoutId);
-      setPayoutsList(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'Rejected' } : p));
+      const { error } = await supabase
+        .from('payout_requests')
+        .update({ status: 'Rejected' })
+        .eq('id', payoutId);
+
+      if (error) throw error;
+
+      setPayoutsList(prev => prev.filter(p => p.id !== payoutId));
+      setAlerts(prev => ({ ...prev, payoutPending: Math.max(0, prev.payoutPending - 1) }));
       showToast('❌ Payout rejected');
       if (tg) tg.sendData(`payout_rejected:${payoutId}`);
     } catch (err) {
+      console.error('Reject payout error:', err);
       showToast('Failed to reject payout');
+    }
+  };
+
+  const handleApproveKyc = async (kycId) => {
+    try {
+      await supabase.from('kyc_submissions').update({ status: 'Verified' }).eq('id', kycId);
+      setKycList(prev => prev.filter(k => k.id !== kycId));
+      setAlerts(prev => ({ ...prev, kycPending: Math.max(0, prev.kycPending - 1) }));
+      showToast('✅ KYC verified successfully!');
+    } catch (err) {
+      showToast('❌ Failed to verify KYC');
+    }
+  };
+
+  const handleVerifyPayment = async (payId) => {
+    try {
+      await supabase.from('payment_submissions').update({ status: 'Verified' }).eq('id', payId);
+      setPaymentsList(prev => prev.filter(p => p.id !== payId));
+      setAlerts(prev => ({ ...prev, payPending: Math.max(0, prev.payPending - 1) }));
+      showToast('✅ Deposit payment verified!');
+    } catch (err) {
+      showToast('❌ Failed to verify payment');
     }
   };
 
@@ -264,7 +319,7 @@ export default function TeamMiniAppPage() {
   const isAdmin = !isPromoter && !isKam;
 
   return (
-    <div style={{ minHeight: '100vh', background: STYLES.bg, paddingBottom: '5rem' }}>
+    <div style={{ minHeight: '100vh', background: STYLES.bg, paddingBottom: '5.5rem' }}>
       
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
@@ -273,22 +328,22 @@ export default function TeamMiniAppPage() {
         </div>
       )}
 
-      {/* HEADER BAR */}
-      <header style={{ background: 'rgba(26, 45, 74, 0.8)', backdropFilter: 'blur(10px)', padding: '1rem 1.25rem', borderBottom: STYLES.cardBorder, display: 'flex', justifyContent: 'space-between', alignItems: 'center', sticky: top, top: 0, zIndex: 10 }}>
+      {/* HEADER BAR (FIXED CSS STICKY) */}
+      <header style={{ background: 'rgba(26, 45, 74, 0.88)', backdropFilter: 'blur(12px)', padding: '1rem 1.25rem', borderBottom: STYLES.cardBorder, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #f0b429, #d97706)', borderRadius: '12px', display: 'grid', placeItems: 'center', color: '#000', fontWeight: '900', fontSize: '1.1rem' }}>
+          <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #f0b429, #d97706)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#000', fontWeight: '900', fontSize: '1.1rem' }}>
             G
           </div>
           <div>
-            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff', lineHeight: '1.2' }}>{user?.full_name}</div>
-            <div style={{ fontSize: '0.7rem', color: STYLES.gold, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#fff', lineHeight: '1.2' }}>{user?.full_name}</div>
+            <div style={{ fontSize: '0.68rem', color: STYLES.gold, display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}>
               <ShieldCheck size={12} /> {user?.team_type?.toUpperCase()} | GRO10X OS
             </div>
           </div>
         </div>
 
-        <button onClick={handleRequestPinInChat} style={{ background: 'rgba(240, 180, 41, 0.15)', border: '1px solid rgba(240, 180, 41, 0.3)', color: STYLES.gold, padding: '0.4rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
-          🔑 Get PIN
+        <button onClick={handleRequestPinInChat} style={{ background: 'rgba(240, 180, 41, 0.15)', border: '1px solid rgba(240, 180, 41, 0.3)', color: STYLES.gold, padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          🔑 PIN
         </button>
       </header>
 
@@ -421,11 +476,11 @@ export default function TeamMiniAppPage() {
                   <div style={circleLabelStyle}>Payouts</div>
                 </button>
 
-                <button onClick={() => setShowSurveyModal(true)} style={actionCircleStyle}>
+                <button onClick={() => setActiveTab('kyc')} style={actionCircleStyle}>
                   <div style={{ ...circleIconStyle, background: 'rgba(16, 185, 129, 0.2)', color: STYLES.emerald }}>
-                    <FileText size={18} />
+                    <ShieldCheck size={18} />
                   </div>
-                  <div style={circleLabelStyle}>Survey</div>
+                  <div style={circleLabelStyle}>KYC</div>
                 </button>
 
                 <button onClick={handleRequestPinInChat} style={actionCircleStyle}>
@@ -467,7 +522,7 @@ export default function TeamMiniAppPage() {
         {activeTab === 'leads' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🎯 Inquiry Lead CRM</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🎯 Inquiry Lead CRM ({leadsList.length})</h3>
               <button onClick={() => setShowSurveyModal(true)} style={{ background: STYLES.gold, color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <PlusCircle size={14} /> New Prospect
               </button>
@@ -504,36 +559,80 @@ export default function TeamMiniAppPage() {
         {/* ---------------------------------------------------- */}
         {activeTab === 'payouts' && (
           <div>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>💳 Commission Payout Queue</h3>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>💳 Commission Payout Queue ({payoutsList.length})</h3>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {payoutsList.map((p) => (
-                <div key={p.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{p.team?.full_name || 'Promoter'}</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: '900', color: STYLES.gold }}>৳{Number(p.amount_bdt || 0).toLocaleString()}</div>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.75rem' }}>
-                    Channel: {p.disbursement_channel || 'bKash'} ({p.account_details || 'N/A'})
-                  </div>
+            {payoutsList.length === 0 ? (
+              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <CheckCircle2 size={36} color={STYLES.emerald} style={{ margin: '0 auto 0.5rem auto' }} />
+                <div style={{ color: '#fff', fontWeight: '800', fontSize: '0.95rem' }}>All Payouts Cleared!</div>
+                <p style={{ color: STYLES.textMuted, fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>No pending commission withdrawal requests in queue.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {payoutsList.map((p) => (
+                  <div key={p.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>
+                        {p.promoters?.full_name || p.team?.full_name || 'Capital Promoter'}
+                      </div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '900', color: STYLES.gold }}>
+                        ৳{Number(p.amount_bdt || 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.75rem' }}>
+                      Channel: <strong style={{ color: '#cbd5e1' }}>{p.disbursement_channel || 'bKash'}</strong> ({p.account_details || 'N/A'})
+                    </div>
 
-                  {p.status === 'Pending' ? (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => handleApprovePayout(p.id)} style={{ flex: 1, background: STYLES.emerald, color: '#000', border: 'none', padding: '0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>
-                        ✅ Approve Payout
+                      <button onClick={() => handleApprovePayout(p.id)} style={{ flex: 1, background: STYLES.emerald, color: '#000', border: 'none', padding: '0.55rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>
+                        ✅ Approve & Disburse
                       </button>
-                      <button onClick={() => handleRejectPayout(p.id)} style={{ flex: 1, background: 'rgba(244, 63, 94, 0.2)', color: STYLES.rose, border: '1px solid rgba(244, 63, 94, 0.4)', padding: '0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
+                      <button onClick={() => handleRejectPayout(p.id)} style={{ flex: 1, background: 'rgba(244, 63, 94, 0.2)', color: STYLES.rose, border: '1px solid rgba(244, 63, 94, 0.4)', padding: '0.55rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
                         ❌ Reject
                       </button>
                     </div>
-                  ) : (
-                    <span style={{ display: 'inline-block', background: p.status === 'Cleared' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)', color: p.status === 'Cleared' ? STYLES.emerald : STYLES.rose, padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: '800' }}>
-                      Status: {p.status}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB: KYC REVIEW (ADMIN QUICK ACTION) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === 'kyc' && (
+          <div>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🛡️ KYC Submissions Queue ({kycList.length})</h3>
+            
+            {kycList.length === 0 ? (
+              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <CheckCircle2 size={36} color={STYLES.emerald} style={{ margin: '0 auto 0.5rem auto' }} />
+                <div style={{ color: '#fff', fontWeight: '800', fontSize: '0.95rem' }}>All KYC Submissions Cleared!</div>
+                <p style={{ color: STYLES.textMuted, fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>No pending identity verification submissions.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {kycList.map((k) => (
+                  <div key={k.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{k.full_name}</div>
+                      <span style={{ background: 'rgba(240, 180, 41, 0.15)', color: STYLES.gold, padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800' }}>
+                        Pending Review
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.65rem' }}>
+                      NID / Passport: <strong style={{ color: '#fff' }}>{k.nid_number || 'Attached'}</strong> • Date: {new Date(k.created_at).toLocaleDateString('en-GB')}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => handleApproveKyc(k.id)} style={{ flex: 1, background: STYLES.emerald, color: '#000', border: 'none', padding: '0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>
+                        ✓ Verify KYC
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -681,21 +780,41 @@ export default function TeamMiniAppPage() {
         </div>
       )}
 
-      {/* BOTTOM FIXED NAVIGATION BAR (BKASH STYLE) */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
+      {/* BOTTOM FIXED NAVIGATION BAR (BKASH STYLE WITH BADGES) */}
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
         <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
           <Home size={18} />
           <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
         </button>
 
-        <button onClick={() => setActiveTab('leads')} style={navTabStyle(activeTab === 'leads')}>
+        <button onClick={() => setActiveTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
+          {kpis.unworkedLeads > 0 && (
+            <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.emerald, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+              {kpis.unworkedLeads}
+            </span>
+          )}
           <Briefcase size={18} />
           <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Leads</span>
         </button>
 
-        <button onClick={() => setActiveTab('payouts')} style={navTabStyle(activeTab === 'payouts')}>
+        <button onClick={() => setActiveTab('payouts')} style={{ ...navTabStyle(activeTab === 'payouts'), position: 'relative' }}>
+          {alerts.payoutPending > 0 && (
+            <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.gold, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+              {alerts.payoutPending}
+            </span>
+          )}
           <DollarSign size={18} />
           <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Payouts</span>
+        </button>
+
+        <button onClick={() => setActiveTab('kyc')} style={{ ...navTabStyle(activeTab === 'kyc'), position: 'relative' }}>
+          {alerts.kycPending > 0 && (
+            <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.amber, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
+              {alerts.kycPending}
+            </span>
+          )}
+          <ShieldCheck size={18} />
+          <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>KYC</span>
         </button>
 
         <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
@@ -720,16 +839,16 @@ const actionCircleStyle = {
 };
 
 const circleIconStyle = {
-  width: '48px',
-  height: '48px',
+  width: '44px',
+  height: '44px',
   borderRadius: '50%',
   display: 'grid',
   placeItems: 'center',
-  marginBottom: '0.4rem'
+  marginBottom: '0.35rem'
 };
 
 const circleLabelStyle = {
-  fontSize: '0.7rem',
+  fontSize: '0.68rem',
   fontWeight: '700',
   color: '#fff'
 };

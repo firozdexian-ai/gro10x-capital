@@ -1480,6 +1480,12 @@ export default function AdminPortal() {
   // Payout Clear Handler
   const handleClearPayout = async (payoutId, promoterUserId) => {
     try {
+      const { data: clearedReq } = await supabase
+        .from('payout_requests')
+        .select('*, team(telegram_chat_id, phone), promoters(phone)')
+        .eq('id', payoutId)
+        .maybeSingle();
+
       const { error } = await supabase
         .from('payout_requests')
         .update({ status: 'Cleared', cleared_at: new Date().toISOString() })
@@ -1491,6 +1497,21 @@ export default function AdminPortal() {
         `Cleared promoter commission withdrawal request #${payoutId}`,
         'success'
       );
+
+      // Send Telegram alert to promoter
+      if (clearedReq) {
+        fetch('/api/telegram-notify-promoter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            promoterId: clearedReq.promoter_id,
+            phone: clearedReq.team?.phone || clearedReq.promoters?.phone,
+            title: '🎉 Commission Payout Disbursed!',
+            message: `Your commission withdrawal request for ৳${Number(clearedReq.amount_bdt || 0).toLocaleString()} via ${clearedReq.disbursement_channel || 'bKash'} has been Approved & Cleared.`
+          })
+        }).catch(err => console.error('Error notifying promoter:', err));
+      }
+
       fetchAdminData();
     } catch (err) {
       addToast('Error clearing payout.', 'error');
@@ -1500,6 +1521,12 @@ export default function AdminPortal() {
   // Reject Payout Request Handler
   const handleRejectPayout = async (payoutId) => {
     try {
+      const { data: rejectedReq } = await supabase
+        .from('payout_requests')
+        .select('*, team(telegram_chat_id, phone), promoters(phone)')
+        .eq('id', payoutId)
+        .maybeSingle();
+
       const { error } = await supabase
         .from('payout_requests')
         .update({ status: 'Rejected' })
@@ -1511,6 +1538,21 @@ export default function AdminPortal() {
         `Declined promoter commission payout request #${payoutId}`,
         'warning'
       );
+
+      // Send Telegram alert to promoter
+      if (rejectedReq) {
+        fetch('/api/telegram-notify-promoter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            promoterId: rejectedReq.promoter_id,
+            phone: rejectedReq.team?.phone || rejectedReq.promoters?.phone,
+            title: '⚠️ Commission Payout Declined',
+            message: `Your withdrawal request for ৳${Number(rejectedReq.amount_bdt || 0).toLocaleString()} via ${rejectedReq.disbursement_channel || 'bKash'} could not be processed at this time.`
+          })
+        }).catch(err => console.error('Error notifying promoter:', err));
+      }
+
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to reject payout', 'error');
@@ -1696,6 +1738,18 @@ export default function AdminPortal() {
         `Manually updated promoter ${promObj?.alias_name || '#' + promoterId} tier to ${newTier.replace('_', ' ')}`,
         'info'
       );
+
+      // Notify promoter via Telegram
+      fetch('/api/telegram-notify-promoter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promoterId,
+          title: '🏆 Partner Tier Updated!',
+          message: `Your growth partner tier has been updated to ${newTier.replace('_', ' ')}.`
+        })
+      }).catch(err => console.error('Error notifying promoter:', err));
+
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to update promoter tier', 'error');
@@ -1731,6 +1785,17 @@ export default function AdminPortal() {
 
           await supabase.from('team').update(updates).eq('id', p.id);
           upgradedCount++;
+
+          // Notify promoter of automatic upgrade
+          fetch('/api/telegram-notify-promoter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              promoterId: p.id,
+              title: '🏆 Milestone Achieved — Tier Upgraded!',
+              message: `Congratulations! Based on your verified leads and raised capital, your partner tier has been upgraded to ${targetTier.replace('_', ' ')}!`
+            })
+          }).catch(err => console.error('Error notifying promoter:', err));
         }
       }
 

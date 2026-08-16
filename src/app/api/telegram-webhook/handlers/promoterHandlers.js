@@ -15,10 +15,10 @@ export async function handleMyCodeCommand(botToken, chatId, appUrl) {
       return;
     }
 
-    const refCode = promoter.referral_code || `GRO-${promoter.full_name.slice(0, 3).toUpperCase()}-${promoter.id.slice(0, 4)}`;
-    const shareUrl = `${appUrl}/apply?ref=${refCode}`;
+    const refCode = promoter.referral_code || `GRO-${promoter.full_name?.slice(0, 3).toUpperCase() || 'PRO'}-${promoter.id.slice(0, 4)}`;
+    const shareUrl = `${appUrl}/showcase?ref=${refCode}`;
 
-    const text = `🎯 <b>Your GRO10X Growth Referral Toolkit</b>\n\n👤 <b>Promoter:</b> ${promoter.full_name}\n🔑 <b>Referral Code:</b> <code>${refCode}</code>\n\n🔗 <b>Shareable Investor Application Link:</b>\n<code>${shareUrl}</code>\n\n<i>Share this link with prospective investors to earn up to 1.0% commission per completed CapEx allocation.</i>`;
+    const text = `🎯 <b>Your GRO10X Growth Referral Toolkit</b>\n\n👤 <b>Promoter:</b> ${promoter.full_name}\n🔑 <b>Referral Code:</b> <code>${refCode}</code>\n\n🔗 <b>Shareable Deal Showcase Link:</b>\n<code>${shareUrl}</code>\n\n<i>Share this link with prospective investors to earn up to 1.0% commission per completed CapEx allocation.</i>`;
 
     const keyboard = {
       inline_keyboard: [
@@ -27,7 +27,8 @@ export async function handleMyCodeCommand(botToken, chatId, appUrl) {
           { text: '💸 Earnings', callback_data: 'cmd_earnings' }
         ],
         [
-          { text: '📋 Log Investor Survey', callback_data: 'cmd_survey' }
+          { text: '📋 Log Investor Survey', callback_data: 'cmd_survey' },
+          { text: '🌐 Promoter Hub', url: `${appUrl}/promoter` }
         ]
       ]
     };
@@ -53,7 +54,7 @@ export async function handleTierCommand(botToken, chatId) {
       return;
     }
 
-    const tier = promoter.promoter_tier || 'Associate';
+    const tier = promoter.promoter_tier || promoter.tier || 'Associate';
 
     const text = `🏆 <b>Your Promoter Gamified Milestone Status</b>\n\n👤 <b>Name:</b> ${promoter.full_name}\n⭐ <b>Current Tier:</b> <b>${tier}</b>\n\n🎯 <b>Platform Tier Map:</b>\n🌱 Trainee (0–49 Inquiries)\n⭐ Junior Associate (50+ Inquiries)\n🥈 Associate — Current Base Level (0.75% Base)\n🥇 Senior Associate (৳50L Raised — 0.75% + 0.15% Bonus)\n💎 Elite Partner (৳2Cr Raised — 0.75% + 0.25% Max Bonus)\n\n<i>Keep submitting verified surveys to unlock your next commission tier!</i>`;
 
@@ -78,19 +79,21 @@ export async function handleEarningsCommand(botToken, chatId) {
       return;
     }
 
+    // Try finding commissions by promoter.id or by linked promoters table id
     const { data: comms } = await supabase
       .from('promoter_commissions')
       .select('*')
       .eq('promoter_id', promoter.id);
 
-    const totalEarned = (comms || []).reduce((sum, c) => sum + Number(c.commission_amount_bdt || 0), 0);
+    const totalEarned = (comms || []).reduce((sum, c) => sum + Number(c.amount_bdt || c.commission_amount_bdt || 0), 0);
 
     const text = `💸 <b>Commission & Earnings Summary</b>\n\n👤 <b>Promoter:</b> ${promoter.full_name}\n💰 <b>Total Earned:</b> ৳${totalEarned.toLocaleString()} BDT\n📊 <b>Calculated Deals:</b> ${(comms || []).length}\n\n<i>Base Rate: 0.75% | Bonus Rate: 0.25%</i>`;
 
     const keyboard = {
       inline_keyboard: [
         [
-          { text: '💳 Request Payout', callback_data: 'cmd_payout' }
+          { text: '💳 Request Payout', callback_data: 'cmd_payout' },
+          { text: '🌐 Promoter Hub', url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/promoter` }
         ]
       ]
     };
@@ -121,13 +124,13 @@ export async function handlePayoutCommand(botToken, chatId, accountDetails = '')
       amount_bdt: 5000, // Default requested block
       disbursement_channel: 'bKash',
       account_details: accountDetails || promoter.phone || '01700000000',
-      status: 'Pending'
+      status: 'Pending Verification'
     };
 
     const { error } = await supabase.from('payout_requests').insert([payload]);
     if (error) throw error;
 
-    const text = `✅ <b>Commission Payout Request Submitted!</b>\n\nPromoter: <b>${promoter.full_name}</b>\nRequested Amount: ৳5,000 BDT\nChannel: bKash (${payload.account_details})\nStatus: <b>⏳ Pending Admin Approval</b>\n\n<i>Your managing partner will review and clear funds shortly.</i>`;
+    const text = `✅ <b>Commission Payout Request Submitted!</b>\n\nPromoter: <b>${promoter.full_name}</b>\nRequested Amount: ৳5,000 BDT\nChannel: bKash (${payload.account_details})\nStatus: <b>⏳ Pending Verification</b>\n\n<i>Your managing partner will review and clear funds shortly.</i>`;
 
     await sendTelegramMessage(botToken, chatId, text);
   } catch (err) {

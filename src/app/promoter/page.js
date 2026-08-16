@@ -71,14 +71,34 @@ export default function PromoterPortal() {
     try {
       setLoading(true);
 
-      // If staff overseer (Admin / KAM), fetch all promoters for the switcher
+      // If staff overseer (Admin / KAM), fetch all promoters from both team and promoters tables
       if (isStaffOverseer) {
-        const { data: promotersList } = await supabase
-          .from('promoters')
-          .select('*')
-          .order('full_name', { ascending: true });
+        const [{ data: teamPromoters }, { data: legacyPromoters }] = await Promise.all([
+          supabase.from('team').select('*').eq('team_type', 'promoter').order('full_name', { ascending: true }),
+          supabase.from('promoters').select('*').order('full_name', { ascending: true })
+        ]);
 
-        if (promotersList && promotersList.length > 0) {
+        const combinedMap = new Map();
+        (teamPromoters || []).forEach(p => {
+          combinedMap.set(p.id, {
+            ...p,
+            alias_name: p.alias_name || p.full_name,
+            tier: p.tier || p.promoter_tier || 'Trainee'
+          });
+        });
+        (legacyPromoters || []).forEach(p => {
+          if (!combinedMap.has(p.id)) {
+            combinedMap.set(p.id, {
+              ...p,
+              alias_name: p.alias_name || p.full_name,
+              tier: p.tier || p.promoter_tier || 'Trainee'
+            });
+          }
+        });
+
+        const promotersList = Array.from(combinedMap.values());
+
+        if (promotersList.length > 0) {
           setAllPromoters(promotersList);
           const target = targetPromoterId 
             ? promotersList.find(p => p.id === targetPromoterId) || promotersList[0]
@@ -91,25 +111,48 @@ export default function PromoterPortal() {
         }
       }
 
-      // 1. Fetch promoter profile linked to logged in user
-      const { data: profile, error: profErr } = await supabase
-        .from('promoters')
+      // 1. Fetch promoter profile linked to logged in user (Check public.team first, then public.promoters)
+      let resolvedProfile = null;
+
+      // A) Check team table by user_id, email, or phone
+      const { data: teamMember } = await supabase
+        .from('team')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('team_type', 'promoter')
+        .or(`user_id.eq.${user.id},email.eq.${user.email || 'none'},phone.eq.${user.phone || 'none'}`)
         .maybeSingle();
 
-      if (profErr) {
-        console.error('Error fetching promoter profile:', profErr);
+      if (teamMember) {
+        resolvedProfile = {
+          ...teamMember,
+          alias_name: teamMember.alias_name || teamMember.full_name,
+          tier: teamMember.tier || teamMember.promoter_tier || 'Trainee'
+        };
+      } else {
+        // B) Check legacy promoters table
+        const { data: legacyProfile } = await supabase
+          .from('promoters')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (legacyProfile) {
+          resolvedProfile = {
+            ...legacyProfile,
+            alias_name: legacyProfile.alias_name || legacyProfile.full_name,
+            tier: legacyProfile.tier || legacyProfile.promoter_tier || 'Trainee'
+          };
+        }
       }
 
-      if (!profile) {
+      if (!resolvedProfile) {
         setPromoterProfile(null);
         setLoading(false);
         return;
       }
 
-      setPromoterProfile(profile);
-      await loadPromoterRelations(profile.id);
+      setPromoterProfile(resolvedProfile);
+      await loadPromoterRelations(resolvedProfile.id);
 
     } catch (err) {
       console.error('Error in fetchPromoterData:', err);

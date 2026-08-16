@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.8.1] — 2026-08-17
+**Promoter & Affiliate Partner Stakeholder Suite: MiniApp, Telegram Bot & Notification Automations Overhaul**
+
+### Critical Security & Bug Fixes
+- **MiniApp Role Leak**: Promoters previously had access to Admin KYC review and Payout approval tabs due to inverted `!isKam` navigation check. Added dedicated 3-tab navigation (**Home / Leads / Me**) for Promoters, strictly isolating Admin approval flows.
+- **Bot Commission Earnings Calculation**: Fixed `/earnings` in `promoterHandlers.js` which queried non-existent `commission_amount_bdt` instead of `amount_bdt`, resolving the issue where promoters always saw ৳0 earnings.
+- **Referral Showcase Link Target**: Fixed `/mycode` in `promoterHandlers.js` to point shareable links to the Deal Showcase (`/showcase?ref=...`) instead of the founder SME application page (`/apply?ref=...`).
+- **Promoter Profile Resolution Dual-Table Support**: Enhanced `/promoter` Web Hub to query `team` table (`team_type = 'promoter'`) with graceful fallback to `promoters` table, ensuring admin-onboarded promoters never encounter registration barriers.
+- **Bot Payout Request Status Check**: Updated `/payout` command in `promoterHandlers.js` to insert with status `'Pending Verification'`, conforming to database constraints.
+
+### MiniApp Upgrades
+- **Dedicated Promoter Home Experience**: Added personal Growth Referral Hero card with one-click code copy and live survey logger.
+- **Dynamic Gamified Tier Roadmap**: Replaced hardcoded progress dots with dynamic milestone tracking across Trainee, Junior, Associate, Senior, and Elite tiers mapped to live profile data.
+- **Promoter Commissions & Earnings Card**: Connected `commissionsList` to display total BDT earned and active deals credited.
+- **Personal Referred Leads Queue**: Scoped leads list in MiniApp by promoter's referral code.
+
+### Telegram Push Notifications
+- **New API Route (`/api/telegram-notify-promoter`)**: Implemented targeted Telegram push notifications for growth partners.
+- **Payout Approval & Rejection Alerts**: Connected instant Telegram push alerts when an executive admin clears or declines a withdrawal request.
+- **Milestone Tier Upgrades**: Automated real-time push alerts sent to promoters upon milestone scan upgrade or manual admin tier override.
+
+---
+
 ## [v0.8.0] — 2026-08-17
 **KAM / Managing Partner Stakeholder Suite: MiniApp, Bot & Web Dashboard Overhaul**
 

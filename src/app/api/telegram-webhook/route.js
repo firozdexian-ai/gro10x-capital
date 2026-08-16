@@ -140,33 +140,64 @@ export async function POST(request) {
           const payoutId = callbackData.split(':')[1];
           const { data: updatedPayout } = await supabase
             .from('payout_requests')
-            .update({ status: 'Cleared' })
+            .update({ status: 'Cleared', cleared_at: new Date().toISOString() })
             .eq('id', payoutId)
-            .select('*, promoters(full_name, phone, user_id)')
+            .select('*, promoters(full_name, phone, user_id), team(full_name, phone, telegram_chat_id)')
             .single();
 
           await sendTelegramMessage(botToken, chatId, `✅ Commission Payout #${payoutId.slice(0, 6)} marked as Cleared!`);
 
           // Notify promoter on Telegram if they have linked chat ID
-          if (updatedPayout && updatedPayout.promoter_id) {
-            const { data: teamP } = await supabase
-              .from('team')
-              .select('telegram_chat_id')
-              .eq('phone', updatedPayout.promoters?.phone)
-              .maybeSingle();
+          if (updatedPayout) {
+            let promoterChatId = updatedPayout.team?.telegram_chat_id;
+            if (!promoterChatId && updatedPayout.promoter_id) {
+              const { data: teamP } = await supabase
+                .from('team')
+                .select('telegram_chat_id')
+                .or(`id.eq.${updatedPayout.promoter_id},phone.eq.${updatedPayout.promoters?.phone || 'none'}`)
+                .maybeSingle();
+              promoterChatId = teamP?.telegram_chat_id;
+            }
 
-            if (teamP && teamP.telegram_chat_id) {
+            if (promoterChatId) {
               await sendTelegramMessage(
                 botToken, 
-                teamP.telegram_chat_id, 
+                promoterChatId, 
                 `🎉 <b>Commission Payout Disbursed!</b>\n\nYour withdrawal request for <b>৳${Number(updatedPayout.amount_bdt || 0).toLocaleString()}</b> via ${updatedPayout.disbursement_channel || 'bKash'} has been <b>Approved & Cleared</b> by Executive Admin.`
               );
             }
           }
         } else if (callbackData.startsWith('reject_payout:')) {
           const payoutId = callbackData.split(':')[1];
-          await supabase.from('payout_requests').update({ status: 'Rejected' }).eq('id', payoutId);
+          const { data: rejectedPayout } = await supabase
+            .from('payout_requests')
+            .update({ status: 'Rejected' })
+            .eq('id', payoutId)
+            .select('*, promoters(full_name, phone, user_id), team(full_name, phone, telegram_chat_id)')
+            .single();
+
           await sendTelegramMessage(botToken, chatId, `❌ Commission Payout #${payoutId.slice(0, 6)} Rejected.`);
+
+          // Notify promoter on Telegram of rejection
+          if (rejectedPayout) {
+            let promoterChatId = rejectedPayout.team?.telegram_chat_id;
+            if (!promoterChatId && rejectedPayout.promoter_id) {
+              const { data: teamP } = await supabase
+                .from('team')
+                .select('telegram_chat_id')
+                .or(`id.eq.${rejectedPayout.promoter_id},phone.eq.${rejectedPayout.promoters?.phone || 'none'}`)
+                .maybeSingle();
+              promoterChatId = teamP?.telegram_chat_id;
+            }
+
+            if (promoterChatId) {
+              await sendTelegramMessage(
+                botToken,
+                promoterChatId,
+                `⚠️ <b>Commission Payout Update</b>\n\nYour withdrawal request for <b>৳${Number(rejectedPayout.amount_bdt || 0).toLocaleString()}</b> via ${rejectedPayout.disbursement_channel || 'bKash'} could not be processed and has been marked as <b>Declined</b>.\n\nPlease reach out to your managing partner or Executive Admin.`
+              );
+            }
+          }
         }
       }
 

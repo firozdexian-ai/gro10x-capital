@@ -1,8 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../components/AuthProvider';
+import { supabase } from '../../lib/supabase';
 import { 
   Building2, CheckCircle2, Clock, ShieldCheck, ArrowUpRight, DollarSign, 
-  FileText, Upload, ChevronRight, AlertCircle, Wrench, Coffee, Lock, Globe
+  FileText, Upload, ChevronRight, AlertCircle, Wrench, Coffee, Lock, Globe, Loader2
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 
@@ -46,13 +49,53 @@ const initialMilestones = [
 ];
 
 export default function BuildoutTrackerPortal() {
+  const router = useRouter();
+  const { user, role, loading: authLoading } = useAuth();
   const [currency, setCurrency] = useState('BDT');
   const [selectedHub, setSelectedHub] = useState('ORO Roasters - Banani (Flagship)');
   const [milestones, setMilestones] = useState(initialMilestones);
+  const [businessName, setBusinessName] = useState('');
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth');
+      }
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    async function loadFounderBiz() {
+      if (!user) return;
+      try {
+        const { data: founder } = await supabase
+          .from('founders')
+          .select('id, businesses(brand_name)')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (founder?.businesses?.brand_name) {
+          setBusinessName(founder.businesses.brand_name);
+          setSelectedHub(`${founder.businesses.brand_name} (Expansion Outlet)`);
+        }
+      } catch (err) {
+        console.warn('Could not load founder business name:', err);
+      }
+    }
+    loadFounderBiz();
+  }, [user]);
 
   const totalCapEx = 20000000;
   const releasedCapEx = milestones.filter(m => m.status.includes('Released')).reduce((sum, m) => sum + m.amount, 0);
   const overallProgress = Math.round((releasedCapEx / totalCapEx) * 100);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+        <Loader2 className="spin" size={40} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh' }}>

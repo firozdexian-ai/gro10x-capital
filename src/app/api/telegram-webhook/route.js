@@ -36,6 +36,14 @@ import {
   handleInvestorDocuments,
   handleInvestorHelp
 } from './handlers/investorHandlers';
+import {
+  handleClientStart,
+  handleClientContact,
+  handleClientFunds,
+  handleClientPos,
+  handleClientStatus,
+  handleClientHelp
+} from './handlers/clientHandlers';
 
 export async function POST(request) {
   try {
@@ -108,6 +116,52 @@ export async function POST(request) {
 
       // Default investor fallback
       await handleInvestorHelp(botToken, chatId, appUrl);
+      return NextResponse.json({ ok: true });
+    }
+
+    // ─── CLIENT / FOUNDER / BUSINESS BOT ───────────────────────────────────────
+    if (botKey === 'client') {
+      const message = body.message || {};
+      const chat = message.chat || {};
+      const text = (message.text || '').trim();
+      const contact = message.contact || null;
+      const chatId = chat.id;
+
+      if (!chatId) return NextResponse.json({ ok: true });
+
+      if (text.startsWith('/start')) {
+        const payload = text.replace('/start', '').trim();
+        await handleClientStart(botToken, chatId, payload, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (contact && contact.phone_number) {
+        await handleClientContact(botToken, chatId, contact, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/funds' || text === '/raise' || text === '/campaign') {
+        await handleClientFunds(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/pos' || text === '/sales' || text === '/revenue') {
+        await handleClientPos(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/status' || text === '/cohort') {
+        await handleClientStatus(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/help') {
+        await handleClientHelp(botToken, chatId, appUrl);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Default client fallback
+      await handleClientHelp(botToken, chatId, appUrl);
       return NextResponse.json({ ok: true });
     }
 

@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v0.8.3] — 2026-08-17
+**Founder & Business Owner Stakeholder Suite: Bot Infrastructure, Auth Integration, Portal Security & Anomaly Telemetry**
+
+### Critical Architecture & Bug Fixes
+- **Dedicated Founder Bot Handlers (`clientHandlers.js`)**: Implemented complete command suite for `@gro10xbizbot` (`/start`, `/funds`, `/pos`, `/status`, `/help`, and contact sharing verification).
+- **Client Bot Execution Router**: Fixed webhook routing in `src/app/api/telegram-webhook/route.js` by adding dedicated `botKey === 'client'` execution block, preventing client messages from falling through to the Admin bot.
+- **Founder Telegram Verification & SSO PIN**: Extended `handleContactVerification` in `authHandlers.js` to query `public.founders`, allowing business owners to verify their registered phone numbers and receive temporary Web SSO PINs.
+- **Settlement Portal Security & Admin Alert (`/client`)**: Added `useAuth()` session check to `/client/page.js` and wired settlement payment submissions directly to `/api/telegram-notify-admin`.
+- **CapEx Buildout Tracker Security (`/buildout-tracker`)**: Added authentication guard and dynamic business entity resolution from `public.founders`.
+- **POS Telemetry Portal Access (`/pos-sync`)**: Added `founder` role to allowed roles guard for viewing outlet telemetry.
+
+### Proactive Founder & Platform Automations
+- **New API Route (`/api/telegram-notify-founder`)**: Built dedicated endpoint for dispatching targeted Telegram alerts via `@gro10xbizbot` (`TELEGRAM_CLIENT_BOT_TOKEN`).
+- **Cohort Application Confirmation Push**: Dispatches instant Telegram confirmation to lead founders upon submitting growth funding applications (`/api/apply-cohort`).
+- **Daily POS Telemetry Push Confirmation**: Sends real-time Telegram confirmation with gross sales, net profit, and profit margin breakdown upon POS data sync (`/business`).
+- **POS Telemetry Anomaly Detection**: Automated real-time alert sent to Platform Admins if daily POS profit margin falls below the 10% baseline threshold.
+
+---
+
 ## [v0.8.2] — 2026-08-17
 **Investor Stakeholder Suite: Secondary Market Fixes, Bot Performance & Lifecycle Push Automations**
 

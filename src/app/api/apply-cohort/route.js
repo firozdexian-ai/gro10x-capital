@@ -147,6 +147,43 @@ export async function POST(request) {
             }
           }
         }
+
+        // Also notify the applicant founder via client bot if phone is registered on Telegram
+        const clientBotToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
+        if (clientBotToken && lead_founder_phone) {
+          let cleanPhone = lead_founder_phone.replace(/[\s\-\+\(\)]/g, '');
+          if (cleanPhone.startsWith('880')) cleanPhone = '0' + cleanPhone.slice(3);
+          const last10 = cleanPhone.slice(-10);
+
+          const { data: founderUser } = await supabase
+            .from('founders')
+            .select('telegram_chat_id')
+            .or(`phone.eq.${lead_founder_phone},phone.eq.${cleanPhone},phone.ilike.%${last10}`)
+            .not('telegram_chat_id', 'is', null)
+            .maybeSingle();
+
+          if (founderUser && founderUser.telegram_chat_id) {
+            const founderMsg = `🎉 <b>Application Received!</b>\n\n` +
+              `Your GRO10X Capital cohort funding application has been successfully logged.\n\n` +
+              `🏷️ <b>Ref Code:</b> <code>${ref_code}</code>\n` +
+              `🏢 <b>Brand:</b> ${brand_name}\n` +
+              `💰 <b>Capital Ask:</b> ৳${Number(requested_funding_bdt).toLocaleString()} BDT\n\n` +
+              `Our Investment Committee will review your financial disclosures and reach out shortly.`;
+
+            await fetch(`https://api.telegram.org/bot${clientBotToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: founderUser.telegram_chat_id,
+                text: founderMsg,
+                parse_mode: 'HTML',
+                reply_markup: {
+                  inline_keyboard: [[{ text: '🌐 View Business Portal', url: `${appUrl}/business` }]]
+                }
+              })
+            }).catch(e => console.error('Founder cohort push error:', e));
+          }
+        }
       }
     } catch (tErr) {
       console.warn('Telegram notification alert skipped:', tErr.message);

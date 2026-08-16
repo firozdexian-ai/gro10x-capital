@@ -113,6 +113,24 @@ export function getRoleMenuKeyboard(role, appUrl) {
     };
   }
 
+  if (role === 'founder') {
+    return {
+      inline_keyboard: [
+        [
+          { text: '🏢 Open Business Portal', url: `${appUrl}/business` }
+        ],
+        [
+          { text: '💼 Funding Campaigns', url: `${appUrl}/business` },
+          { text: '📈 POS Telemetry', url: `${appUrl}/business` }
+        ],
+        [
+          { text: '🔑 New Web PIN', callback_data: 'cmd_pin' },
+          { text: '🚀 Cohort Application', url: `${appUrl}/apply` }
+        ]
+      ]
+    };
+  }
+
   // Promoter
   return {
     inline_keyboard: [
@@ -176,6 +194,27 @@ export async function handleContactVerification(botToken, chatId, contact, appUr
       referralCode: found.referral_code || null
     };
     userRole = mapTeamTypeToRole(found.team_type);
+  } else {
+    // Secondary Check: public.founders
+    const { data: founders } = await supabase
+      .from('founders')
+      .select('id, full_name, phone, email, businesses(brand_name)')
+      .or(`phone.eq.${rawPhone},phone.eq.${cleanPhone},phone.ilike.%${last10Digits}`);
+
+    if (founders && founders.length > 0) {
+      const found = founders[0];
+      matchedUser = {
+        name: found.full_name,
+        title: `Founder (${found.businesses?.brand_name || 'Business Owner'})`,
+        email: found.email,
+        phone: found.phone,
+        id: found.id,
+        table: 'founders',
+        teamType: 'founder',
+        referralCode: null
+      };
+      userRole = 'founder';
+    }
   }
 
   if (matchedUser) {
@@ -193,7 +232,11 @@ export async function handleContactVerification(botToken, chatId, contact, appUr
       linked_entity_id: matchedUser.id
     }]);
 
-    await supabase.from('team').update({ telegram_chat_id: String(chatId) }).eq('id', matchedUser.id);
+    if (matchedUser.table === 'team') {
+      await supabase.from('team').update({ telegram_chat_id: String(chatId) }).eq('id', matchedUser.id);
+    } else if (matchedUser.table === 'founders') {
+      await supabase.from('founders').update({ telegram_chat_id: String(chatId) }).eq('id', matchedUser.id);
+    }
 
     const identifier = matchedUser.email || matchedUser.phone;
     const onboardUrl = `${appUrl}/auth?onboard=1&id=${encodeURIComponent(identifier)}`;
@@ -203,7 +246,7 @@ export async function handleContactVerification(botToken, chatId, contact, appUr
     const menuKeyboard = getRoleMenuKeyboard(userRole, appUrl);
     await sendTelegramMessage(botToken, chatId, successText, menuKeyboard);
   } else {
-    const notFoundText = `⚠️ <b>Verification Failed</b>\n\nThe phone number <code>${rawPhone}</code> is not registered in public.team.\n\nPlease contact your platform administrator to pre-register your account.`;
+    const notFoundText = `⚠️ <b>Verification Failed</b>\n\nThe phone number <code>${rawPhone}</code> is not registered in our management or founder directory.\n\nPlease apply for funding at ${appUrl}/apply or contact your Key Account Manager.`;
     await sendTelegramMessage(botToken, chatId, notFoundText);
   }
 }

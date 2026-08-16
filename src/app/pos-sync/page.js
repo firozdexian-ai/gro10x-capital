@@ -38,12 +38,12 @@ export default function PosSyncPortal() {
   const [dailyExpenses, setDailyExpenses] = useState('');
   const [transactionCount, setTransactionCount] = useState('');
 
-  // Role Guard: Require auth and restrict to staff, kam, admin
+  // Role Guard: Require auth and restrict to staff, kam, admin, founder
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
         router.push('/auth');
-      } else if (role && !['staff', 'kam', 'admin'].includes(role)) {
+      } else if (role && !['staff', 'kam', 'admin', 'founder'].includes(role)) {
         router.push('/');
       }
     }

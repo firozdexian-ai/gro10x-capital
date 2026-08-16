@@ -215,13 +215,48 @@ export default function BusinessOwnerPortal() {
         .select()
         .single();
 
-      if (error) throw error;
-
       addToast('POS Telemetry Successfully Logged to Ledger!', 'success');
       
       // Update local history
       setPosHistory(prev => [data, ...prev].sort((a,b) => new Date(b.date) - new Date(a.date)));
       
+      const marginPct = parsedGross > 0 ? Math.round((parsedNet / parsedGross) * 100) : 0;
+
+      // 1. Dispatch Telegram push confirmation to founder
+      try {
+        if (founderProfile?.id) {
+          await fetch('/api/telegram-notify-founder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              founderId: founderProfile.id,
+              title: '📊 Daily POS Telemetry Synced',
+              message: `Telemetry recorded for <b>${businessData?.brand_name}</b> on ${posSyncDate}:\n\n💰 Gross Sales: ৳${parsedGross.toLocaleString()} BDT\n📈 Net Profit: ৳${parsedNet.toLocaleString()} BDT\n📊 Margin: ${marginPct}% | ${parseInt(transactionCount, 10) || 0} Txns`,
+              actionUrl: `${window.location.origin}/business`
+            })
+          });
+        }
+      } catch (err) {
+        console.warn('Founder POS telegram notification skipped:', err);
+      }
+
+      // 2. Anomaly Check: Margin below 10% -> Dispatch alert to Admin
+      if (parsedGross > 0 && (parsedNet / parsedGross) < 0.10) {
+        try {
+          await fetch('/api/telegram-notify-admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: '⚠️ POS Telemetry Anomaly Detected',
+              message: `Low profit margin reported for <b>${businessData?.brand_name}</b> on ${posSyncDate}.\n\nGross: ৳${parsedGross.toLocaleString()} | Net: ৳${parsedNet.toLocaleString()} | Margin: <b>${marginPct}%</b> (Below 10% threshold)`,
+              actionUrl: `${window.location.origin}/admin`
+            })
+          });
+        } catch (err) {
+          console.warn('Admin anomaly telegram alert skipped:', err);
+        }
+      }
+
       // Reset form
       setGrossSales('');
       setNetProfit('');

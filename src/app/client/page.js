@@ -1,8 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../components/AuthProvider';
 import { 
   Building2, TrendingUp, DollarSign, Clock, AlertTriangle, CheckCircle2, 
-  Upload, ArrowUpRight, ShieldCheck, ChevronRight, FileText, Send, Calendar
+  Upload, ArrowUpRight, ShieldCheck, ChevronRight, FileText, Send, Calendar, Loader2
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 
@@ -13,6 +15,8 @@ const initialSettlementHistory = [
 ];
 
 export default function ClientPortal() {
+  const router = useRouter();
+  const { user, role, loading: authLoading } = useAuth();
   const [currency, setCurrency] = useState('BDT');
   const [selectedHub, setSelectedHub] = useState('ORO Roasters - Mirpur');
   const [settlementCycle, setSettlementCycle] = useState('Weekly');
@@ -24,6 +28,14 @@ export default function ClientPortal() {
   const [paymentTxRef, setPaymentTxRef] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth');
+      }
+    }
+  }, [user, authLoading, router]);
+
   // Calculated current cycle metrics based on Mirpur baseline
   const currentMonthSales = 3160000;
   const investorShareOwed = 316000; // ~10% average yield distribution
@@ -31,22 +43,39 @@ export default function ClientPortal() {
   const totalLiabilityOwed = investorShareOwed + gro10xFeeOwed;
   const netOwnerRetained = currentMonthSales - totalLiabilityOwed;
 
-  const handlePayPlatform = (e) => {
+  const handlePayPlatform = async (e) => {
     e.preventDefault();
     if (!paymentTxRef) return;
 
+    const amountOwed = totalLiabilityOwed / 4;
     const newSettlement = {
       id: `SET-90${settlements.length + 1}`,
       period: `July Week 3 (${settlementCycle})`,
       sales: currentMonthSales / 4,
       investorShare: investorShareOwed / 4,
       gro10xFee: gro10xFeeOwed / 4,
-      totalOwed: totalLiabilityOwed / 4,
+      totalOwed: amountOwed,
       status: 'Pending Verification',
       method: `${paymentMethod} (Ref: ${paymentTxRef})`
     };
 
     setSettlements([newSettlement, ...settlements]);
+
+    // Dispatch Telegram push notification to Admin
+    try {
+      await fetch('/api/telegram-notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '🏢 Platform Settlement Deposit Submitted',
+          message: `Founder logged settlement distribution for ${selectedHub}.\nPeriod: July Week 3 (${settlementCycle})\nAmount: ৳${amountOwed.toLocaleString()} BDT\nMethod: ${paymentMethod}\nTxRef: ${paymentTxRef}`,
+          actionUrl: `${window.location.origin}/admin`
+        })
+      });
+    } catch (err) {
+      console.warn('Failed to notify admin of settlement payment:', err);
+    }
+
     setPaymentSuccess(true);
     setTimeout(() => {
       setPaymentSuccess(false);
@@ -54,6 +83,14 @@ export default function ClientPortal() {
       setPaymentTxRef('');
     }, 1800);
   };
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+        <Loader2 className="spin" size={40} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh' }}>

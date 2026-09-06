@@ -64,21 +64,81 @@ async function runSafeHomeTests() {
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '02_terminal_active_orders.png'), fullPage: true });
     console.log('  📸 Captured 02_terminal_active_orders.png');
 
-    // 1.4 Test Transfer Slip Modal
-    const viewSlipBtn = await mobilePage.locator('button:has-text("View Slip")').first();
-    if (await viewSlipBtn.isVisible()) {
-      await viewSlipBtn.click();
-      await mobilePage.waitForTimeout(600);
-      assert(await mobilePage.locator('img[alt="Transfer Receipt"]').isVisible(), 'Disbursement slip modal opened and displayed image');
-      await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '03_terminal_receipt_slip_modal.png') });
-      console.log('  📸 Captured 03_terminal_receipt_slip_modal.png');
-
-      // Close modal
-      await mobilePage.click('button:has-text("Close Preview")');
+    // 1.4 Test Multi-Document Inspector Modal
+    const auditDocsBtn = await mobilePage.locator('button:has-text("Audit Docs & PO")').first();
+    assert(await auditDocsBtn.isVisible(), 'Audit Docs & PO button is visible on active orders');
+    await auditDocsBtn.click();
+    await mobilePage.waitForTimeout(600);
+    assert(await mobilePage.locator('span:has-text("Document Audit Package")').isVisible(), 'Multi-document inspector opened');
+    
+    // Switch between document tabs inside inspector
+    const tranche2Tab = await mobilePage.locator('button:has-text("Tranche 2")').first();
+    if (await tranche2Tab.isVisible()) {
+      await tranche2Tab.click();
       await mobilePage.waitForTimeout(400);
+      assert(await mobilePage.locator('img[alt*="Tranche"]').isVisible(), 'Switched to Tranche 2 disbursement slip');
     }
+    await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '03_terminal_audit_docs_modal.png') });
+    console.log('  📸 Captured 03_terminal_audit_docs_modal.png');
+    
+    // Close inspector
+    await mobilePage.locator('button:has-text("Close Audit Package")').first().click();
+    await mobilePage.waitForTimeout(400);
 
-    // 1.5 Switch to Pending Approvals Tab
+    // 1.5 Test Dual-Document Settlement Modal on MSP-001
+    const settleBtn = await mobilePage.locator('button:has-text("Settle & Close")').first();
+    assert(await settleBtn.isVisible(), 'Settle & Close button is visible on active orders');
+    await settleBtn.click();
+    await mobilePage.waitForTimeout(600);
+    assert(await mobilePage.locator('span:has-text("Dual-Document Settlement")').isVisible(), 'Dual-Document settlement modal opened');
+    
+    // Attach repayment slip and delivery challan via quick buttons
+    await mobilePage.click('button:has-text("Quick Attach Verified CityTouch Slip")');
+    await mobilePage.click('button:has-text("Quick Attach Verified Delivery Challan")');
+    await mobilePage.fill('input[placeholder*="Full repayment received"]', 'EFT return received in Safe Home account; challan #DL-1013 verified at Mohakhali.');
+    await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '03b_terminal_dual_settlement_modal.png') });
+    console.log('  📸 Captured 03b_terminal_dual_settlement_modal.png');
+
+    // Confirm settlement
+    await mobilePage.click('button:has-text("Confirm Settlement & Notify Telegram")');
+    await mobilePage.waitForTimeout(1000);
+
+    // 1.6 Verify Settled Orders Tab
+    await mobilePage.click('button:has-text("Settled Orders")');
+    await mobilePage.waitForTimeout(600);
+    const settledContent = await mobilePage.content();
+    assert((settledContent.includes('Settled & Repaid') || settledContent.includes('Settled &amp; Repaid')) && settledContent.includes('MSP-001'), 'MSP-001 moved to Settled Orders tab after dual verification');
+    await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '03c_terminal_settled_orders_tab.png') });
+    console.log('  📸 Captured 03c_terminal_settled_orders_tab.png');
+
+    // 1.7 Test Standalone Form Link (/track/maats-cottage/new)
+    console.log('\n📄 [SUITE 1.7] Testing Standalone Work Order Creation Link (/track/maats-cottage/new)...');
+    await mobilePage.goto(`${BASE_URL}/track/maats-cottage/new`, { waitUntil: 'networkidle' });
+    await mobilePage.waitForTimeout(800);
+    const newPageContent = await mobilePage.content();
+    assert(newPageContent.includes('Submit New Corporate Work Order') || newPageContent.includes('Raise Work Order') || newPageContent.includes('Work Order Request'), 'Standalone page renders request header');
+    assert(newPageContent.includes('Corporate Buyer / Institutional Client') || newPageContent.includes('Corporate Buyer / Client Name'), 'Standalone page renders corporate client input');
+    assert(newPageContent.includes('Delta Warehouse, Mohakhali, Dhaka'), 'Default Mohakhali delivery address present');
+
+    // Fill standalone form
+    await mobilePage.fill('input[placeholder*="Delta Limited"]', 'Aarong Corporate Gifts');
+    await mobilePage.fill('textarea[placeholder*="Jute Laptop Bags"]', 'Branded Jute Laptop Sleeves (500 pcs)');
+    await mobilePage.fill('input[placeholder="e.g. 375000"]', '200000');
+    await mobilePage.fill('input[placeholder="e.g. 430000"]', '230000');
+    await mobilePage.waitForTimeout(300);
+
+    // Verify live profit and yield calculation
+    const calcContent = await mobilePage.content();
+    assert(calcContent.includes('30') && calcContent.includes('15.00%'), 'Live calculator computes +৳30k gross profit and 15.00% yield');
+
+    await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '04_standalone_work_order_form.png'), fullPage: true });
+    console.log('  📸 Captured 04_standalone_work_order_form.png');
+
+    // Navigate back to tracker
+    await mobilePage.goto(`${BASE_URL}/track/maats-cottage`, { waitUntil: 'networkidle' });
+    await mobilePage.waitForTimeout(600);
+
+    // 1.8 Switch to Pending Approvals Tab
     await mobilePage.click('button:has-text("Pending Approvals")');
     await mobilePage.waitForTimeout(600);
     const pendingText = await mobilePage.content();
@@ -86,10 +146,10 @@ async function runSafeHomeTests() {
     assert(pendingText.includes('MSP-007'), 'Pending order MSP-007 is present');
     assert(pendingText.includes('MSP-008') && pendingText.includes('Unique Group'), 'Pending order MSP-008 is present');
     assert(pendingText.includes('MSP-009') && pendingText.includes('Delta'), 'Pending order MSP-009 is present');
-    await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '04_terminal_pending_approvals.png') });
-    console.log('  📸 Captured 04_terminal_pending_approvals.png');
+    await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '04b_terminal_pending_approvals.png') });
+    console.log('  📸 Captured 04b_terminal_pending_approvals.png');
 
-    // 1.6 Switch to Profile & Compliance Tab
+    // 1.9 Switch to Profile & Compliance Tab
     await mobilePage.click('button:has-text("Profile & Compliance")');
     await mobilePage.waitForTimeout(600);
     const complianceText = await mobilePage.content();

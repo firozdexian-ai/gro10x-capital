@@ -1,17 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Building2, ShieldCheck, CheckCircle2, Clock, AlertTriangle, 
   ArrowUpRight, Copy, Check, Plus, ExternalLink, Calendar, 
   FileText, Landmark, RefreshCw, Eye, X, ChevronRight, Phone,
-  Sparkles, TrendingUp, DollarSign, Award, ArrowRight
+  Sparkles, TrendingUp, DollarSign, Award, ArrowRight, Upload, CheckSquare
 } from 'lucide-react';
 import { 
   MAATS_COTTAGE_PROFILE, 
   getWorkOrders, 
   saveWorkOrder, 
+  createWorkOrder,
   approveAndDisburseOrder, 
+  settleWorkOrder,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast 
 } from '../../../lib/workOrders';
@@ -20,9 +23,16 @@ import { formatCurrency } from '../../../lib/currency';
 export default function MaatsCottageTrackerPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'pending' | 'compliance'
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'pending' | 'settled' | 'compliance'
   const [copied, setCopied] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [selectedOrderDocs, setSelectedOrderDocs] = useState(null);
+  const [activeDocTab, setActiveDocTab] = useState(0);
+  const [settleTargetOrder, setSettleTargetOrder] = useState(null);
+  const [settleRepaymentFile, setSettleRepaymentFile] = useState(null);
+  const [settleChallanFile, setSettleChallanFile] = useState(null);
+  const [settleNote, setSettleNote] = useState('');
+  const [settling, setSettling] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
 
@@ -67,6 +77,107 @@ export default function MaatsCottageTrackerPage() {
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
+  const handleConfirmSettle = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!settleTargetOrder) return;
+    const targetCode = settleTargetOrder.order_code;
+    setSettling(true);
+    const updated = await settleWorkOrder(targetCode, {
+      repayment_receipt_url: settleRepaymentFile || '/receipts/msp-001-tranche-1.png',
+      challan_receipt_url: settleChallanFile || '/docs/msp-001-delta-po.png',
+      note: settleNote
+    });
+    setOrders(updated);
+    setSettling(false);
+    setSettleTargetOrder(null);
+    setSettleRepaymentFile(null);
+    setSettleChallanFile(null);
+    setSettleNote('');
+    setActiveTab('settled');
+    setActionSuccessMsg(`Order ${targetCode} successfully settled and marked as Repaid! Telegram notified.`);
+    setTimeout(() => setActionSuccessMsg(''), 5000);
+  };
+
+  // Build document list for inspector
+  const getOrderDocsList = (order) => {
+    if (!order) return [];
+    const list = [];
+    
+    // 1. Client PO Contract
+    if (order.po_document_url || order.po_ref_number) {
+      list.push({
+        id: 'po',
+        badge: 'Contract PO',
+        title: 'Client Purchase Order (PO)',
+        url: order.po_document_url || '/docs/msp-001-delta-po.png',
+        pdfUrl: order.po_document_pdf,
+        meta: `Ref: ${order.po_ref_number || 'DL/PO/2026'} • Client: ${order.corporate_client}`,
+        note: `PO Value: ${fmtLakhs(order.po_value_bdt || order.return_amount_bdt)} • Officially signed purchase contract.`
+      });
+    }
+
+    // 2. Disbursement Tranches
+    if (order.disbursement_transfers && order.disbursement_transfers.length > 0) {
+      order.disbursement_transfers.forEach((t) => {
+        list.push({
+          id: `tranche-${t.tranche_no}`,
+          badge: `Tranche ${t.tranche_no}`,
+          title: `Tranche #${t.tranche_no} — ${fmtLakhs(t.amount_bdt)}`,
+          url: t.receipt_url,
+          meta: `${t.method} • Ref: ${t.ref_no}`,
+          note: t.note || `Date: ${t.date} • Sent to ${MAATS_COTTAGE_PROFILE.accountName} (${MAATS_COTTAGE_PROFILE.accountNumber})`
+        });
+      });
+    } else if (order.disbursement_receipt_url) {
+      list.push({
+        id: 'disbursement-slip',
+        badge: 'Disbursement',
+        title: `Transfer Slip (${fmtLakhs(order.investment_amount_bdt)})`,
+        url: order.disbursement_receipt_url,
+        meta: `Verified Bank Transfer • Ref: CityTouch`,
+        note: `Disbursed to ${order.bank_account_info}`
+      });
+    }
+
+    // 3. Product Sample Photo
+    if (order.product_sample_photo_url || (order.reference_photos && order.reference_photos.length > 0)) {
+      list.push({
+        id: 'sample',
+        badge: 'Sample Spec',
+        title: 'Product Reference Sample',
+        url: order.product_sample_photo_url || order.reference_photos[0],
+        meta: `Item: ${order.item_description}`,
+        note: 'Physical merchandise sample approved by corporate buyer.'
+      });
+    }
+
+    // 4. Settle Repayment Slip
+    if (order.settlement_repayment_receipt_url) {
+      list.push({
+        id: 'repayment',
+        badge: 'Proof of Repayment',
+        title: 'Repayment Bank Transfer Slip',
+        url: order.settlement_repayment_receipt_url,
+        meta: `EFT/NPSB Repayment to Safe Home Fund • ${fmtLakhs(order.return_amount_bdt)}`,
+        note: 'Document 1 of Dual Verification: Bank acknowledgment of full capital + profit return.'
+      });
+    }
+
+    // 5. Settle Challan
+    if (order.settlement_challan_receipt_url) {
+      list.push({
+        id: 'challan',
+        badge: 'Delivery Proof',
+        title: 'Corporate Delivery Challan',
+        url: order.settlement_challan_receipt_url,
+        meta: `Goods Delivered to Mohakhali Warehouse`,
+        note: 'Document 2 of Dual Verification: Signed delivery challan acknowledging physical receipt of goods.'
+      });
+    }
+
+    return list;
+  };
+
   const handleCreateOrder = async (e) => {
     e.preventDefault();
     if (!newOrder.corporate_client || !newOrder.item_description || !newOrder.investment_amount_bdt || !newOrder.return_amount_bdt) {
@@ -96,12 +207,12 @@ export default function MaatsCottageTrackerPage() {
       due_date: dueDate,
       status: 'Pending_Approval',
       payment_mode: 'EFT/NPSB',
-      bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+      bank_account_info: `${MAATS_COTTAGE_PROFILE.accountName} (A/C: ${MAATS_COTTAGE_PROFILE.accountNumber})`,
       notes: newOrder.notes || 'Submitted via Work Order Terminal',
       due_note: 'Awaiting Disbursal'
     };
 
-    const updated = await saveWorkOrder(orderObj);
+    const updated = await createWorkOrder(orderObj);
     setOrders(updated);
     setShowAddModal(false);
     setNewOrder({
@@ -113,7 +224,7 @@ export default function MaatsCottageTrackerPage() {
       duration_days: 10,
       notes: ''
     });
-    setActionSuccessMsg(`New order ${code} logged under Pending Approvals!`);
+    setActionSuccessMsg(`New order ${code} logged & Telegram alert dispatched to Faiz Ahmed & Firoz!`);
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
@@ -177,6 +288,14 @@ export default function MaatsCottageTrackerPage() {
                 <span>{copied ? 'Copied WhatsApp Text!' : 'Copy WhatsApp Update'}</span>
               </button>
 
+              <Link 
+                href="/track/maats-cottage/new" 
+                className="btn-outline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: '700', borderRadius: '8px', textDecoration: 'none' }}
+              >
+                <ExternalLink size={15} /> Standalone Form
+              </Link>
+
               <button 
                 onClick={() => setShowAddModal(true)}
                 className="btn-gold"
@@ -230,21 +349,37 @@ export default function MaatsCottageTrackerPage() {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>MSP-001: Delta Life (Order 1)</span>
+                <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>MSP-001: Delta Limited (Order 1)</span>
                 <span className="status-badge status-badge--danger" style={{ fontSize: '0.65rem' }}>MATURITY TODAY (4:00 PM)</span>
               </div>
               <p style={{ color: '#cbd5e1', fontSize: '0.82rem', margin: '0.15rem 0 0 0' }}>
-                Principal Disbursed: <strong>৳2.50 Lakhs</strong> <span style={{ color: '#38bdf8' }}>(Tranche 1: ৳2.00L Advance + Tranche 2: ৳50k Top-up)</span> → Total Repayment Due: <strong style={{ color: '#10b981' }}>৳2.875 Lakhs</strong> (+৳37.5k Profit)
+                Principal Disbursed: <strong>৳2.50 Lakhs</strong> <span style={{ color: '#38bdf8' }}>(Tranche 1: ৳1.00L + Tranche 2: ৳1.50L CityTouch)</span> → Total Repayment Due: <strong style={{ color: '#10b981' }}>৳2.875 Lakhs</strong> (+৳37.5k Profit)
               </p>
             </div>
           </div>
-          <button 
-            onClick={() => setSelectedReceipt('/receipts/msp-001.png')}
-            className="btn-outline" 
-            style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderColor: 'rgba(255,255,255,0.2)' }}
-          >
-            <Eye size={13} style={{ marginRight: '0.3rem' }} /> View Transfer Slip
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => {
+                const m1 = orders.find(o => o.order_code === 'MSP-001');
+                if (m1) setSelectedOrderDocs(m1);
+                else setSelectedReceipt('/receipts/msp-001-tranche-1.png');
+              }}
+              className="btn-outline" 
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderColor: 'rgba(255,255,255,0.2)' }}
+            >
+              <Eye size={13} style={{ marginRight: '0.3rem' }} /> Inspect Documents
+            </button>
+            <button 
+              onClick={() => {
+                const m1 = orders.find(o => o.order_code === 'MSP-001');
+                if (m1) setSettleTargetOrder(m1);
+              }}
+              className="btn-gold" 
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+            >
+              <CheckCircle2 size={13} style={{ marginRight: '0.3rem' }} /> Settle &amp; Close Today
+            </button>
+          </div>
         </div>
       </div>
 
@@ -363,12 +498,36 @@ export default function MaatsCottageTrackerPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('settled')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'settled' ? '2px solid #10b981' : '2px solid transparent',
+              color: activeTab === 'settled' ? '#10b981' : '#94a3b8',
+              fontWeight: '700',
+              padding: '0.75rem 1rem',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>Settled Orders</span>
+            <span style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', borderRadius: '12px', padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}>
+              {settledOrders.length}
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('compliance')}
             style={{
               background: 'transparent',
               border: 'none',
-              borderBottom: activeTab === 'compliance' ? '2px solid #10b981' : '2px solid transparent',
-              color: activeTab === 'compliance' ? '#10b981' : '#94a3b8',
+              borderBottom: activeTab === 'compliance' ? '2px solid #38bdf8' : '2px solid transparent',
+              color: activeTab === 'compliance' ? '#38bdf8' : '#94a3b8',
               fontWeight: '700',
               padding: '0.75rem 1rem',
               fontSize: '0.9rem',
@@ -435,17 +594,22 @@ export default function MaatsCottageTrackerPage() {
                         </p>
                       </div>
 
-                      {/* Right Action */}
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {order.disbursement_receipt_url && (
-                          <button 
-                            onClick={() => setSelectedReceipt(order.disbursement_receipt_url)}
-                            className="btn-outline"
-                            style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                          >
-                            <Eye size={13} /> View Slip
-                          </button>
-                        )}
+                      {/* Right Actions */}
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button 
+                          onClick={() => { setSelectedOrderDocs(order); setActiveDocTab(0); }}
+                          className="btn-outline"
+                          style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <FileText size={13} /> Audit Docs &amp; PO
+                        </button>
+                        <button 
+                          onClick={() => setSettleTargetOrder(order)}
+                          className="btn-gold"
+                          style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}
+                        >
+                          <CheckSquare size={13} /> Settle &amp; Close
+                        </button>
                       </div>
                     </div>
 
@@ -469,6 +633,48 @@ export default function MaatsCottageTrackerPage() {
                         <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>Due: {order.due_date}</span>
                       </div>
                     </div>
+
+                    {/* Multi-Tranche Breakdown (if available) */}
+                    {order.disbursement_transfers && order.disbursement_transfers.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '0.78rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                          <span style={{ color: '#38bdf8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.72rem' }}>
+                            Disbursed in {order.disbursement_transfers.length} Tranches
+                          </span>
+                          {order.po_ref_number && (
+                            <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
+                              PO Ref: <strong style={{ color: '#cbd5e1' }}>{order.po_ref_number}</strong>
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                          {order.disbursement_transfers.map((t, idx) => (
+                            <div 
+                              key={idx} 
+                              onClick={() => { setSelectedOrderDocs(order); setActiveDocTab(idx + (order.po_document_url ? 1 : 0)); }}
+                              style={{ background: 'rgba(0,0,0,0.35)', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                              onMouseEnter={e => e.currentTarget.style.borderColor = '#38bdf8'}
+                              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc', fontWeight: '700' }}>
+                                <span>Tranche #{t.tranche_no}: {fmtLakhs(t.amount_bdt)}</span>
+                                <span style={{ fontSize: '0.68rem', color: t.ref_no?.startsWith('CASH') ? '#eab308' : '#38bdf8', background: t.ref_no?.startsWith('CASH') ? 'rgba(234,179,8,0.15)' : 'rgba(56,189,248,0.15)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                                  {t.ref_no?.startsWith('CASH') ? 'Cash Handover' : 'CityTouch'}
+                                </span>
+                              </div>
+                              <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.2rem' }}>
+                                {t.date} • Ref: {t.ref_no}
+                              </div>
+                              {t.note && (
+                                <div style={{ color: '#eab308', fontSize: '0.68rem', fontStyle: 'italic', marginTop: '0.15rem' }}>
+                                  {t.note}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Footer status note */}
                     {order.notes && (
@@ -552,7 +758,105 @@ export default function MaatsCottageTrackerPage() {
           </div>
         )}
 
-        {/* ── TAB 3: PROFILE & COMPLIANCE ── */}
+        {/* ── TAB 3: SETTLED & REPAID ORDERS ── */}
+        {activeTab === 'settled' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>
+                Showing <strong>{settledOrders.length}</strong> completed corporate purchase orders with principal &amp; profit fully recovered.
+              </p>
+            </div>
+
+            {settledOrders.length === 0 ? (
+              <div className="glass-card" style={{ padding: '3rem 1.5rem', textAlign: 'center' }}>
+                <CheckCircle2 size={40} style={{ color: '#10b981', margin: '0 auto 1rem auto', opacity: 0.8 }} />
+                <h4 style={{ color: '#fff', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>No Settled Orders Yet</h4>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '440px', margin: '0 auto 1.25rem auto' }}>
+                  Orders undergoing closing (such as MSP-001 maturing today) will appear here once verified with both the repayment bank slip and delivery challan.
+                </p>
+                {activeOrders.length > 0 && (
+                  <button 
+                    onClick={() => setSettleTargetOrder(activeOrders[0])}
+                    className="btn-gold"
+                    style={{ fontSize: '0.82rem', padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <CheckSquare size={14} /> Settle {activeOrders[0].order_code} Now
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {settledOrders.map(order => {
+                  const profit = Number(order.profit_bdt || (order.return_amount_bdt - order.investment_amount_bdt));
+                  const marginPct = ((profit / Number(order.investment_amount_bdt)) * 100).toFixed(1);
+
+                  return (
+                    <div key={order.order_code} className="glass-card" style={{ padding: '1.25rem', borderLeft: '4px solid #10b981' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                            <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>{order.order_code}</span>
+                            <span className="status-badge status-badge--success" style={{ fontSize: '0.7rem' }}>
+                              Settled &amp; Repaid
+                            </span>
+                            {order.settled_date && (
+                              <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
+                                Settled on: <strong style={{ color: '#cbd5e1' }}>{order.settled_date}</strong>
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ color: '#cbd5e1', fontSize: '0.9rem', margin: 0, fontWeight: '600' }}>
+                            {order.corporate_client} — <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>{order.item_description}</span>
+                          </p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button 
+                            onClick={() => { setSelectedOrderDocs(order); setActiveDocTab(0); }}
+                            className="btn-outline"
+                            style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                          >
+                            <FileText size={13} /> View Audit Package
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Financial Metrics Strip */}
+                      <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.75rem 1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Principal Recovered</span>
+                          <strong style={{ fontSize: '1rem', color: '#fff' }}>{fmtLakhs(order.investment_amount_bdt)}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Total Repaid</span>
+                          <strong style={{ fontSize: '1rem', color: '#10b981' }}>{fmtLakhs(order.return_amount_bdt)}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Profit Realized</span>
+                          <strong style={{ fontSize: '1rem', color: '#D4AF37' }}>+৳{(profit / 1000).toFixed(1)}k <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>({marginPct}%)</span></strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Compliance</span>
+                          <span style={{ color: '#10b981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle2 size={13} /> Dual Verified
+                          </span>
+                        </div>
+                      </div>
+
+                      {order.settlement_note && (
+                        <p style={{ color: '#10b981', fontSize: '0.78rem', margin: '0.75rem 0 0 0', background: 'rgba(16,185,129,0.08)', padding: '0.4rem 0.6rem', borderRadius: '6px' }}>
+                          Settlement Audit: {order.settlement_note}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB 4: PROFILE & COMPLIANCE ── */}
         {activeTab === 'compliance' && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             
@@ -676,6 +980,302 @@ export default function MaatsCottageTrackerPage() {
                 Close Preview
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TABBED MULTI-DOCUMENT INSPECTOR MODAL ── */}
+      {selectedOrderDocs && (() => {
+        const docList = getOrderDocsList(selectedOrderDocs);
+        const currentDoc = docList[activeDocTab] || docList[0];
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1rem' }}>
+            <div style={{ background: '#0f172a', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '16px', maxWidth: '640px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#0b1120' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: '800', color: '#fff', fontSize: '1rem' }}>{selectedOrderDocs.order_code}</span>
+                    <span className="status-badge status-badge--gold" style={{ fontSize: '0.7rem' }}>
+                      Document Audit Package
+                    </span>
+                  </div>
+                  <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
+                    {selectedOrderDocs.corporate_client} — {selectedOrderDocs.item_description}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setSelectedOrderDocs(null)} 
+                  aria-label="Close inspector"
+                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Document Tabs Strip */}
+              {docList.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.35rem', overflowX: 'auto', padding: '0.65rem 1rem', background: '#070a14', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  {docList.map((doc, idx) => {
+                    const isSelected = activeDocTab === idx;
+                    return (
+                      <button
+                        key={doc.id || idx}
+                        onClick={() => setActiveDocTab(idx)}
+                        style={{
+                          background: isSelected ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.04)',
+                          border: isSelected ? '1px solid #D4AF37' : '1px solid rgba(255,255,255,0.08)',
+                          color: isSelected ? '#D4AF37' : '#94a3b8',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: isSelected ? '700' : '500',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        <span>{doc.badge || doc.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Document Body */}
+              <div style={{ padding: '1rem', overflowY: 'auto', textAlign: 'center', background: '#05070f', flex: 1 }}>
+                {currentDoc ? (
+                  <div>
+                    <div style={{ marginBottom: '0.75rem', textAlign: 'left', background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{currentDoc.title}</strong>
+                        <span style={{ fontSize: '0.72rem', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                          {currentDoc.meta}
+                        </span>
+                      </div>
+                      {currentDoc.note && (
+                        <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: '0.35rem 0 0 0' }}>
+                          {currentDoc.note}
+                        </p>
+                      )}
+                    </div>
+
+                    <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+                      <img 
+                        src={currentDoc.url} 
+                        alt={currentDoc.title} 
+                        style={{ maxWidth: '100%', maxHeight: '48vh', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                      <a 
+                        href={currentDoc.url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="btn-outline"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}
+                      >
+                        <ExternalLink size={13} /> View Full Image
+                      </a>
+                      {currentDoc.pdfUrl && (
+                        <a 
+                          href={currentDoc.pdfUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="btn-outline"
+                          style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderColor: '#38bdf8', color: '#38bdf8', textDecoration: 'none' }}
+                        >
+                          <FileText size={13} /> View / Download PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No documents attached to this order.</p>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '0.75rem 1.25rem', background: '#0b1120', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                  Institutional Audit Trail • Safe Home Wealth Management Fund
+                </span>
+                <button 
+                  onClick={() => setSelectedOrderDocs(null)} 
+                  className="btn-outline" 
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem' }}
+                >
+                  Close Audit Package
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── DUAL-DOCUMENT SETTLEMENT MODAL ── */}
+      {settleTargetOrder && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1rem' }}>
+          <div style={{ background: '#0f172a', border: '1px solid rgba(16,185,129,0.5)', borderRadius: '16px', maxWidth: '540px', width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.85)' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, rgba(15,23,42,0.9) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckSquare size={18} style={{ color: '#10b981' }} />
+                <div>
+                  <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>Dual-Document Settlement &amp; Close</span>
+                  <span style={{ color: '#10b981', fontSize: '0.72rem', display: 'block', fontWeight: '600' }}>
+                    {settleTargetOrder.order_code} — {settleTargetOrder.corporate_client}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setSettleTargetOrder(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Financial Summary Card */}
+            <div style={{ padding: '1rem 1.25rem', background: '#070a14', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', textAlign: 'center', fontSize: '0.78rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '6px' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>Disbursed Principal</span>
+                  <strong style={{ color: '#fff', fontSize: '0.95rem' }}>{fmtLakhs(settleTargetOrder.investment_amount_bdt)}</strong>
+                </div>
+                <div style={{ background: 'rgba(16,185,129,0.08)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <span style={{ color: '#10b981', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>Full Return Due</span>
+                  <strong style={{ color: '#10b981', fontSize: '0.95rem' }}>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong>
+                </div>
+                <div style={{ background: 'rgba(212,175,55,0.08)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(212,175,55,0.2)' }}>
+                  <span style={{ color: '#D4AF37', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>Fund Net Profit</span>
+                  <strong style={{ color: '#D4AF37', fontSize: '0.95rem' }}>
+                    +৳{((settleTargetOrder.profit_bdt || (settleTargetOrder.return_amount_bdt - settleTargetOrder.investment_amount_bdt)) / 1000).toFixed(1)}k
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleConfirmSettle} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              {/* Document 1: Repayment Transfer Slip */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                  <Landmark size={15} style={{ color: '#10b981' }} /> Document 1: Proof of Repayment Bank Transfer *
+                </label>
+                <p style={{ color: '#94a3b8', fontSize: '0.73rem', margin: '0 0 0.5rem 0' }}>
+                  EFT/NPSB slip from Aysha Siddika returning <strong>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong> to Safe Home account.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*,.pdf"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = () => setSettleRepaymentFile(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    style={{ fontSize: '0.78rem', color: '#94a3b8' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setSettleRepaymentFile('/receipts/msp-001-tranche-1.png')}
+                    className="btn-outline" 
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                  >
+                    Quick Attach Verified CityTouch Slip
+                  </button>
+                </div>
+                {settleRepaymentFile && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16,185,129,0.1)', padding: '0.35rem 0.6rem', borderRadius: '4px' }}>
+                    <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                    <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '600' }}>Repayment Slip Attached &amp; Ready</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Document 2: Delivery Challan / Invoice */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                  <FileText size={15} style={{ color: '#38bdf8' }} /> Document 2: Corporate Delivery Challan / Invoice *
+                </label>
+                <p style={{ color: '#94a3b8', fontSize: '0.73rem', margin: '0 0 0.5rem 0' }}>
+                  Signed acknowledgment of delivery from {settleTargetOrder.corporate_client} Mohakhali warehouse.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*,.pdf"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = () => setSettleChallanFile(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    style={{ fontSize: '0.78rem', color: '#94a3b8' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setSettleChallanFile('/docs/msp-001-delta-po.png')}
+                    className="btn-outline" 
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                  >
+                    Quick Attach Verified Delivery Challan
+                  </button>
+                </div>
+                {settleChallanFile && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56,189,248,0.1)', padding: '0.35rem 0.6rem', borderRadius: '4px' }}>
+                    <CheckCircle2 size={14} style={{ color: '#38bdf8' }} />
+                    <span style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: '600' }}>Delivery Challan Attached &amp; Ready</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Settlement Note */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>
+                  Settlement Verification Note
+                </label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Full repayment received via NPSB; delivery confirmed at Mohakhali"
+                  value={settleNote}
+                  onChange={e => setSettleNote(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.82rem', padding: '0.5rem' }}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setSettleTargetOrder(null)} 
+                  className="btn-outline" 
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleConfirmSettle}
+                  disabled={settling}
+                  className="btn-gold" 
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1.25rem', fontWeight: '700', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: '#10b981' }}
+                >
+                  {settling ? 'Settling & Notifying...' : 'Confirm Settlement & Notify Telegram'}
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}

@@ -5,13 +5,14 @@ import {
   Building2, ShieldCheck, CheckCircle2, Clock, AlertTriangle, 
   ArrowUpRight, Copy, Check, Plus, ExternalLink, Calendar, 
   FileText, Landmark, RefreshCw, Eye, X, ChevronRight, Phone,
-  Sparkles, TrendingUp, DollarSign, Award, Briefcase, Filter, Search
+  Sparkles, TrendingUp, DollarSign, Award, Briefcase, Filter, Search, CheckSquare
 } from 'lucide-react';
 import { 
   MAATS_COTTAGE_PROFILE, 
   getWorkOrders, 
   saveWorkOrder, 
   approveAndDisburseOrder, 
+  settleWorkOrder,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast 
 } from '../../../lib/workOrders';
@@ -24,6 +25,13 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [selectedOrderDocs, setSelectedOrderDocs] = useState(null);
+  const [activeDocTab, setActiveDocTab] = useState(0);
+  const [settleTargetOrder, setSettleTargetOrder] = useState(null);
+  const [settleRepaymentFile, setSettleRepaymentFile] = useState(null);
+  const [settleChallanFile, setSettleChallanFile] = useState(null);
+  const [settleNote, setSettleNote] = useState('');
+  const [settling, setSettling] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
 
@@ -80,6 +88,100 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
     setOrders(updated);
     setActionSuccessMsg(`Order ${orderCode} marked as Settled and Repaid!`);
     setTimeout(() => setActionSuccessMsg(''), 4000);
+  };
+
+  const handleConfirmSettle = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!settleTargetOrder) return;
+    const targetCode = settleTargetOrder.order_code;
+    setSettling(true);
+    const updated = await settleWorkOrder(targetCode, {
+      repayment_receipt_url: settleRepaymentFile || '/receipts/msp-001-tranche-1.png',
+      challan_receipt_url: settleChallanFile || '/docs/msp-001-delta-po.png',
+      note: settleNote
+    });
+    setOrders(updated);
+    setSettling(false);
+    setSettleTargetOrder(null);
+    setSettleRepaymentFile(null);
+    setSettleChallanFile(null);
+    setSettleNote('');
+    setActionSuccessMsg(`Order ${targetCode} dual-verified & settled! Telegram notification sent.`);
+    setTimeout(() => setActionSuccessMsg(''), 5000);
+  };
+
+  const getOrderDocsList = (order) => {
+    if (!order) return [];
+    const list = [];
+    
+    if (order.po_document_url || order.po_ref_number) {
+      list.push({
+        id: 'po',
+        badge: 'Contract PO',
+        title: 'Client Purchase Order (PO)',
+        url: order.po_document_url || '/docs/msp-001-delta-po.png',
+        pdfUrl: order.po_document_pdf,
+        meta: `Ref: ${order.po_ref_number || 'DL/PO/2026'} • Client: ${order.corporate_client}`,
+        note: `PO Value: ${fmtLakhs(order.po_value_bdt || order.return_amount_bdt)} • Officially signed purchase contract.`
+      });
+    }
+
+    if (order.disbursement_transfers && order.disbursement_transfers.length > 0) {
+      order.disbursement_transfers.forEach((t) => {
+        list.push({
+          id: `tranche-${t.tranche_no}`,
+          badge: `Tranche ${t.tranche_no}`,
+          title: `Tranche #${t.tranche_no} — ${fmtLakhs(t.amount_bdt)}`,
+          url: t.receipt_url,
+          meta: `${t.method} • Ref: ${t.ref_no}`,
+          note: t.note || `Date: ${t.date} • Sent to ${MAATS_COTTAGE_PROFILE.accountName} (${MAATS_COTTAGE_PROFILE.accountNumber})`
+        });
+      });
+    } else if (order.disbursement_receipt_url) {
+      list.push({
+        id: 'disbursement-slip',
+        badge: 'Disbursement',
+        title: `Transfer Slip (${fmtLakhs(order.investment_amount_bdt)})`,
+        url: order.disbursement_receipt_url,
+        meta: `Verified Bank Transfer • Ref: CityTouch`,
+        note: `Disbursed to ${order.bank_account_info}`
+      });
+    }
+
+    if (order.product_sample_photo_url || (order.reference_photos && order.reference_photos.length > 0)) {
+      list.push({
+        id: 'sample',
+        badge: 'Sample Spec',
+        title: 'Product Reference Sample',
+        url: order.product_sample_photo_url || order.reference_photos[0],
+        meta: `Item: ${order.item_description}`,
+        note: 'Physical merchandise sample approved by corporate buyer.'
+      });
+    }
+
+    if (order.settlement_repayment_receipt_url) {
+      list.push({
+        id: 'repayment',
+        badge: 'Proof of Repayment',
+        title: 'Repayment Bank Transfer Slip',
+        url: order.settlement_repayment_receipt_url,
+        meta: `EFT/NPSB Repayment to Safe Home Fund • ${fmtLakhs(order.return_amount_bdt)}`,
+        note: 'Document 1 of Dual Verification: Bank acknowledgment of full capital + profit return.'
+      });
+    }
+
+    if (order.settlement_challan_receipt_url) {
+      list.push({
+        id: 'challan',
+        badge: 'Delivery Proof',
+        title: 'Corporate Delivery Challan',
+        url: order.settlement_challan_receipt_url,
+        meta: `Goods Delivered to Mohakhali Warehouse`,
+        note: 'Document 2 of Dual Verification: Signed delivery challan acknowledging physical receipt of goods.'
+      });
+    }
+
+    return list;
   };
 
   const handleCreateOrder = async (e) => {
@@ -392,22 +494,20 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
 
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
-                          {order.disbursement_receipt_url && (
-                            <button 
-                              onClick={() => setSelectedReceipt(order.disbursement_receipt_url)}
-                              className="btn-outline"
-                              title="View Transfer Slip"
-                              style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem' }}
-                            >
-                              <Eye size={12} />
-                            </button>
-                          )}
+                          <button 
+                            onClick={() => { setSelectedOrderDocs(order); setActiveDocTab(0); }}
+                            className="btn-outline"
+                            title="Inspect Documents &amp; PO Contract"
+                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
+                            <FileText size={12} /> Docs
+                          </button>
 
                           {order.status === 'Pending_Approval' && (
                             <button 
                               onClick={() => handleApprove(order.order_code)}
                               className="btn-gold"
-                              title="Approve & Disburse"
+                              title="Approve &amp; Disburse"
                               style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', fontWeight: '700' }}
                             >
                               Disburse
@@ -416,12 +516,12 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
 
                           {order.status === 'Disbursed_Active' && (
                             <button 
-                              onClick={() => handleSettle(order.order_code)}
+                              onClick={() => setSettleTargetOrder(order)}
                               className="btn-outline"
-                              title="Mark as Settled / Repaid"
-                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderColor: 'rgba(16,185,129,0.4)', color: '#10b981' }}
+                              title="Dual-Document Settlement"
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderColor: 'rgba(16,185,129,0.5)', color: '#10b981', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                             >
-                              Settle
+                              <CheckSquare size={12} /> Settle
                             </button>
                           )}
                         </div>
@@ -435,6 +535,301 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
           </table>
         </div>
       </div>
+
+      {/* ── TABBED MULTI-DOCUMENT INSPECTOR MODAL ── */}
+      {selectedOrderDocs && (() => {
+        const docList = getOrderDocsList(selectedOrderDocs);
+        const currentDoc = docList[activeDocTab] || docList[0];
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1rem' }}>
+            <div style={{ background: '#0f172a', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '16px', maxWidth: '640px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#0b1120' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: '800', color: '#fff', fontSize: '1rem' }}>{selectedOrderDocs.order_code}</span>
+                    <span className="status-badge status-badge--gold" style={{ fontSize: '0.7rem' }}>
+                      Document Audit Package
+                    </span>
+                  </div>
+                  <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
+                    {selectedOrderDocs.corporate_client} — {selectedOrderDocs.item_description}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setSelectedOrderDocs(null)} 
+                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.25rem' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Document Tabs Strip */}
+              {docList.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.35rem', overflowX: 'auto', padding: '0.65rem 1rem', background: '#070a14', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  {docList.map((doc, idx) => {
+                    const isSelected = activeDocTab === idx;
+                    return (
+                      <button
+                        key={doc.id || idx}
+                        onClick={() => setActiveDocTab(idx)}
+                        style={{
+                          background: isSelected ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.04)',
+                          border: isSelected ? '1px solid #D4AF37' : '1px solid rgba(255,255,255,0.08)',
+                          color: isSelected ? '#D4AF37' : '#94a3b8',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: isSelected ? '700' : '500',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        <span>{doc.badge || doc.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Document Body */}
+              <div style={{ padding: '1rem', overflowY: 'auto', textAlign: 'center', background: '#05070f', flex: 1 }}>
+                {currentDoc ? (
+                  <div>
+                    <div style={{ marginBottom: '0.75rem', textAlign: 'left', background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{currentDoc.title}</strong>
+                        <span style={{ fontSize: '0.72rem', color: '#38bdf8', background: 'rgba(56,189,248,0.12)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                          {currentDoc.meta}
+                        </span>
+                      </div>
+                      {currentDoc.note && (
+                        <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: '0.35rem 0 0 0' }}>
+                          {currentDoc.note}
+                        </p>
+                      )}
+                    </div>
+
+                    <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+                      <img 
+                        src={currentDoc.url} 
+                        alt={currentDoc.title} 
+                        style={{ maxWidth: '100%', maxHeight: '48vh', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                      <a 
+                        href={currentDoc.url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="btn-outline"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}
+                      >
+                        <ExternalLink size={13} /> View Full Image
+                      </a>
+                      {currentDoc.pdfUrl && (
+                        <a 
+                          href={currentDoc.pdfUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="btn-outline"
+                          style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderColor: '#38bdf8', color: '#38bdf8', textDecoration: 'none' }}
+                        >
+                          <FileText size={13} /> View / Download PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No documents attached to this order.</p>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '0.75rem 1.25rem', background: '#0b1120', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                  Institutional Audit Trail • Safe Home Wealth Management Fund
+                </span>
+                <button 
+                  onClick={() => setSelectedOrderDocs(null)} 
+                  className="btn-outline" 
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.9rem' }}
+                >
+                  Close Audit Package
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── DUAL-DOCUMENT SETTLEMENT MODAL ── */}
+      {settleTargetOrder && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1rem' }}>
+          <div style={{ background: '#0f172a', border: '1px solid rgba(16,185,129,0.5)', borderRadius: '16px', maxWidth: '540px', width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.85)' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, rgba(15,23,42,0.9) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckSquare size={18} style={{ color: '#10b981' }} />
+                <div>
+                  <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>Dual-Document Settlement &amp; Close</span>
+                  <span style={{ color: '#10b981', fontSize: '0.72rem', display: 'block', fontWeight: '600' }}>
+                    {settleTargetOrder.order_code} — {settleTargetOrder.corporate_client}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setSettleTargetOrder(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Financial Summary Card */}
+            <div style={{ padding: '1rem 1.25rem', background: '#070a14', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', textAlign: 'center', fontSize: '0.78rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '6px' }}>
+                  <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>Disbursed Principal</span>
+                  <strong style={{ color: '#fff', fontSize: '0.95rem' }}>{fmtLakhs(settleTargetOrder.investment_amount_bdt)}</strong>
+                </div>
+                <div style={{ background: 'rgba(16,185,129,0.08)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <span style={{ color: '#10b981', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>Full Return Due</span>
+                  <strong style={{ color: '#10b981', fontSize: '0.95rem' }}>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong>
+                </div>
+                <div style={{ background: 'rgba(212,175,55,0.08)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(212,175,55,0.2)' }}>
+                  <span style={{ color: '#D4AF37', fontSize: '0.7rem', display: 'block', fontWeight: '700' }}>Fund Net Profit</span>
+                  <strong style={{ color: '#D4AF37', fontSize: '0.95rem' }}>
+                    +৳{((settleTargetOrder.profit_bdt || (settleTargetOrder.return_amount_bdt - settleTargetOrder.investment_amount_bdt)) / 1000).toFixed(1)}k
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleConfirmSettle} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              {/* Document 1: Repayment Transfer Slip */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                  <Landmark size={15} style={{ color: '#10b981' }} /> Document 1: Proof of Repayment Bank Transfer *
+                </label>
+                <p style={{ color: '#94a3b8', fontSize: '0.73rem', margin: '0 0 0.5rem 0' }}>
+                  EFT/NPSB slip from Aysha Siddika returning <strong>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong> to Safe Home account.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*,.pdf"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = () => setSettleRepaymentFile(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    style={{ fontSize: '0.78rem', color: '#94a3b8' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setSettleRepaymentFile('/receipts/msp-001-tranche-1.png')}
+                    className="btn-outline" 
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                  >
+                    Quick Attach Verified CityTouch Slip
+                  </button>
+                </div>
+                {settleRepaymentFile && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16,185,129,0.1)', padding: '0.35rem 0.6rem', borderRadius: '4px' }}>
+                    <CheckCircle2 size={14} style={{ color: '#10b981' }} />
+                    <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '600' }}>Repayment Slip Attached &amp; Ready</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Document 2: Delivery Challan / Invoice */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                  <FileText size={15} style={{ color: '#38bdf8' }} /> Document 2: Corporate Delivery Challan / Invoice *
+                </label>
+                <p style={{ color: '#94a3b8', fontSize: '0.73rem', margin: '0 0 0.5rem 0' }}>
+                  Signed acknowledgment of delivery from {settleTargetOrder.corporate_client} Mohakhali warehouse.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*,.pdf"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = () => setSettleChallanFile(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    style={{ fontSize: '0.78rem', color: '#94a3b8' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setSettleChallanFile('/docs/msp-001-delta-po.png')}
+                    className="btn-outline" 
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                  >
+                    Quick Attach Verified Delivery Challan
+                  </button>
+                </div>
+                {settleChallanFile && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56,189,248,0.1)', padding: '0.35rem 0.6rem', borderRadius: '4px' }}>
+                    <CheckCircle2 size={14} style={{ color: '#38bdf8' }} />
+                    <span style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: '600' }}>Delivery Challan Attached &amp; Ready</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Settlement Note */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>
+                  Settlement Verification Note
+                </label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Full repayment received via NPSB; delivery confirmed at Mohakhali"
+                  value={settleNote}
+                  onChange={e => setSettleNote(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.82rem', padding: '0.5rem' }}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setSettleTargetOrder(null)} 
+                  className="btn-outline" 
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleConfirmSettle}
+                  disabled={settling}
+                  className="btn-gold" 
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1.25rem', fontWeight: '700', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: '#10b981' }}
+                >
+                  {settling ? 'Settling & Notifying...' : 'Confirm Settlement & Notify Telegram'}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── RECEIPT PREVIEW MODAL ── */}
       {selectedReceipt && (

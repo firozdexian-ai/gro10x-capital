@@ -33,8 +33,11 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-001',
     order_code: 'MSP-001',
-    corporate_client: 'Delta Life Insurance',
-    item_description: 'Corporate Merchandise (Order 1)',
+    corporate_client: 'Delta Limited',
+    po_ref_number: 'DL/Bag Combo/2026/1013(August)',
+    po_date: '2026-08-30',
+    po_value_bdt: 313500,
+    item_description: 'Cross Body Bag (550 pcs) & Jute Carrying Bag (550 pcs)',
     investment_amount_bdt: 250000,
     return_amount_bdt: 287500,
     profit_bdt: 37500,
@@ -44,28 +47,81 @@ export const SEED_WORK_ORDERS = [
     status: 'Disbursed_Active',
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Disbursed in 2 tranches: ৳2.00L advance (Aug 30) + ৳50k top-up (Sep 1) = ৳2.50L total. Delta Life Order 1 — Closing today Sep 6 by 4:00 PM.',
-    disbursement_receipt_url: '/receipts/msp-001.png',
+    notes: 'PO Ref: DL/Bag Combo/2026/1013(August) (৳3,13,500 total value). Disbursed in 2 CityTouch tranches (৳1.00L + ৳1.50L = ৳2.50L). Closing today Sep 6 by 4:00 PM.',
+    disbursement_receipt_url: '/receipts/msp-001-tranche-1.png',
+    po_document_url: '/docs/msp-001-delta-po.png',
+    po_document_pdf: '/docs/msp-001-delta-po.pdf',
     due_note: 'CLOSING TODAY (4:00 PM)',
-    tranche_info: '2 Tranches: ৳2.00L Advance + ৳50k Top-up'
+    tranche_info: '2 Tranches: ৳1.00L + ৳1.50L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 100000,
+        date: '30 Aug 2026, 12:58 PM',
+        ref_no: '100009619443',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-001-tranche-1.png'
+      },
+      {
+        tranche_no: 2,
+        amount_bdt: 150000,
+        date: '30 Aug 2026, 09:16 PM',
+        ref_no: '100009716502',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-001-tranche-2.png'
+      }
+    ]
   },
   {
     id: 'wo-002',
     order_code: 'MSP-002',
-    corporate_client: 'Delta Life Insurance',
-    item_description: 'Corporate Merchandise (Order 2)',
+    corporate_client: 'Delta Limited',
+    po_ref_number: 'DL/Laptop Bag/2026/1014(August)',
+    po_date: '2026-08-31',
+    po_value_bdt: 442000,
+    item_description: 'Jute Laptop Bag (680 pcs)',
     investment_amount_bdt: 375000,
     return_amount_bdt: 430000,
     profit_bdt: 55000,
-    duration_days: 7,
-    start_date: '2026-09-01',
-    due_date: '2026-09-08',
+    duration_days: 9,
+    start_date: '2026-08-31',
+    due_date: '2026-09-09',
     status: 'Disbursed_Active',
-    payment_mode: 'EFT/NPSB',
+    payment_mode: 'EFT/NPSB + Cash Handover',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Delta Life Order 2 — Quality inspection passed, dispatch scheduled.',
-    disbursement_receipt_url: '/receipts/msp-002.png',
-    due_note: 'Due Sep 8 (2 days left)'
+    notes: 'PO Ref: DL/Laptop Bag/2026/1014(August) (৳4,42,000 total value). Disbursed in 3 tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k cash handover.',
+    disbursement_receipt_url: '/receipts/msp-002-tranche-1.png',
+    po_document_url: '/docs/msp-002-delta-po.png',
+    po_document_pdf: '/docs/msp-002-delta-po.pdf',
+    due_note: 'Due Sep 9 (3 days left)',
+    tranche_info: '3 Tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k Cash Handover',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 200000,
+        date: '31 Aug 2026, 05:30 PM',
+        ref_no: '100009840628',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-002-tranche-1.png'
+      },
+      {
+        tranche_no: 2,
+        amount_bdt: 125000,
+        date: '01 Sep 2026, 05:33 PM',
+        ref_no: '100010014539',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-002-tranche-2.png'
+      },
+      {
+        tranche_no: 3,
+        amount_bdt: 50000,
+        date: '01 Sep 2026, 07:05 PM',
+        ref_no: 'CASH-HANDOVER-01',
+        method: 'Cash Handover to Aysha Siddika Husband/Driver',
+        receipt_url: '/receipts/msp-002-tranche-3-cash-comms.png',
+        note: 'Confirmed via WhatsApp chat with Aysha Siddika & Firoz'
+      }
+    ]
   },
   {
     id: 'wo-003',
@@ -195,13 +251,26 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v2';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v3';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data
  */
 export async function getWorkOrders() {
-  // 1. Try Supabase first
+  // 1. Check local session cache first for instantaneous UI state
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 2. Try Supabase if no local session cache
   try {
     const { data, error } = await supabase
       .from('work_orders')
@@ -216,19 +285,6 @@ export async function getWorkOrders() {
     }
   } catch (err) {
     // Schema cache / table not created yet or offline
-  }
-
-  // 2. Fallback to localStorage if modified by user actions
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem(STORAGE_KEY);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      } catch (e) {}
-    }
   }
 
   // 3. Return canonical seed list
@@ -255,18 +311,36 @@ export async function saveWorkOrder(order) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedOrders));
   }
 
-  // Try saving to Supabase
+  // Sync to Supabase in background
   try {
-    await supabase.from('work_orders').upsert([order], { onConflict: 'order_code' });
+    supabase.from('work_orders').upsert([order], { onConflict: 'order_code' }).then(() => {}).catch(() => {});
   } catch (err) {}
 
   return updatedOrders;
 }
 
 /**
+ * Create a new work order and fire Telegram notification
+ */
+export async function createWorkOrder(orderObj) {
+  const updated = await saveWorkOrder(orderObj);
+
+  // Trigger Telegram notification asynchronously
+  if (typeof window !== 'undefined') {
+    fetch('/api/notify-work-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: 'created', order: orderObj })
+    }).catch(() => {});
+  }
+
+  return updated;
+}
+
+/**
  * Approve and Disburse a pending order
  */
-export async function approveAndDisburseOrder(orderCode) {
+export async function approveAndDisburseOrder(orderCode, options = {}) {
   const existing = await getWorkOrders();
   const order = existing.find(o => o.order_code === orderCode);
   if (!order) return existing;
@@ -281,10 +355,56 @@ export async function approveAndDisburseOrder(orderCode) {
     status: 'Disbursed_Active',
     start_date: today,
     due_date: dueDate,
-    due_note: `Disbursed today (Due in ${order.duration_days || 10} days)`
+    due_note: `Disbursed today (Due in ${order.duration_days || 10} days)`,
+    ...options
   };
 
-  return await saveWorkOrder(updatedOrder);
+  const updated = await saveWorkOrder(updatedOrder);
+
+  // Trigger Telegram notification asynchronously
+  if (typeof window !== 'undefined') {
+    fetch('/api/notify-work-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: 'approved', order: updatedOrder })
+    }).catch(() => {});
+  }
+
+  return updated;
+}
+
+/**
+ * Settle and Close an active order with dual-document verification
+ */
+export async function settleWorkOrder(orderCode, settlementData = {}) {
+  const existing = await getWorkOrders();
+  const order = existing.find(o => o.order_code === orderCode);
+  if (!order) return existing;
+
+  const today = new Date().toISOString().split('T')[0];
+  const updatedOrder = {
+    ...order,
+    status: 'Settled_Repaid',
+    settled_date: today,
+    due_note: 'Settled & Repaid',
+    settlement_repayment_receipt_url: settlementData.repayment_receipt_url || null,
+    settlement_challan_receipt_url: settlementData.challan_receipt_url || null,
+    settlement_invoice_receipt_url: settlementData.invoice_receipt_url || null,
+    settlement_note: settlementData.note || 'Repayment verified via bank slip & delivery challan'
+  };
+
+  const updated = await saveWorkOrder(updatedOrder);
+
+  // Trigger Telegram notification asynchronously
+  if (typeof window !== 'undefined') {
+    fetch('/api/notify-work-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: 'settled', order: updatedOrder })
+    }).catch(() => {});
+  }
+
+  return updated;
 }
 
 /**

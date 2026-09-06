@@ -795,9 +795,10 @@ within 48 hours for your physical audit scheduling.
                         onChange={(e) => updateFormField('preferred_funding_type', e.target.value)}
                         style={{ width: '100%', padding: '0.85rem', background: '#0f172a', border: '1px solid rgba(212,175,55,0.22)', color: '#fff', borderRadius: '10px' }}
                       >
-                        <option value="Franchise">Franchise Outlet Expansion</option>
+                        <option value="Working Capital">Working Capital &amp; Revolving Work Orders (7–10 Day Turnover)</option>
+                        <option value="Franchise">Franchise Outlet Expansion (Asset-Backed Co-Ownership)</option>
                         <option value="Distribution">Distribution Hub Expansion</option>
-                        <option value="Equity">Equity SPV Placement</option>
+                        <option value="Equity">Strategic Equity Syndicate</option>
                         <option value="Short-Term Debt">Short-Term Debt Facility</option>
                       </select>
                     </div>
@@ -849,7 +850,20 @@ within 48 hours for your physical audit scheduling.
               {/* STEP 4: PITCH & DOCUMENTS */}
               {step === 4 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#D4AF37', margin: 0 }}>Step 4: Pitch & Document Vault</h3>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#D4AF37', margin: 0 }}>Step 4: Pitch &amp; Document Vault</h3>
+
+                  {/* ZERO COLLATERAL INTAKE REASSURANCE BANNER */}
+                  <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', padding: '1rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <ShieldCheck size={24} style={{ color: '#10b981', flexShrink: 0 }} />
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#10b981', fontWeight: '700' }}>
+                        Frictionless Intake: Zero Cheques or CIB Reports Required to Apply
+                      </p>
+                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                        Security documents (Security Cheque leaf &amp; CIB credit clearance) are strictly requested at a later stage during final facility limit approval. Our investment team connects directly via WhatsApp to review your business.
+                      </p>
+                    </div>
+                  </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Short Pitch / Value Proposition</label>

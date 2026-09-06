@@ -35,7 +35,24 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
   const [settleNote, setSettleNote] = useState('');
   const [settling, setSettling] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [onboardSuccessData, setOnboardSuccessData] = useState(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  // Onboard SME Facility state
+  const [newFacility, setNewFacility] = useState({
+    company_name: '',
+    slug: '',
+    sector: 'Finished Goods & Corporate Merchandise',
+    facility_limit_bdt: '5000000',
+    cycle_tenor_days: '10',
+    founder_name: '',
+    founder_phone: '',
+    bank_account: '',
+    security_cheque_received: true,
+    cib_cleared: true,
+    trade_license_verified: true
+  });
 
   // Add order state
   const [newOrder, setNewOrder] = useState({
@@ -315,6 +332,14 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copied WhatsApp!' : 'Copy WhatsApp Broadcast'}
+            </button>
+
+            <button 
+              onClick={() => { setShowOnboardModal(true); setOnboardSuccessData(null); }}
+              className="btn-outline" 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.55rem 1rem', fontWeight: '700', borderColor: 'rgba(59,130,246,0.5)', color: '#38bdf8' }}
+            >
+              <Briefcase size={14} /> Onboard SME &amp; Set Limit
             </button>
 
             <button 
@@ -1009,6 +1034,253 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── ONBOARD SME FACILITY & SET CREDIT LIMIT MODAL ── */}
+      {showOnboardModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1rem' }}>
+          <div style={{ background: '#0f172a', border: '1px solid rgba(59,130,246,0.5)', borderRadius: '16px', maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(15,23,42,0.9) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Briefcase size={18} style={{ color: '#38bdf8' }} />
+                <div>
+                  <h3 style={{ margin: 0, fontWeight: '800', color: '#fff', fontSize: '1.05rem' }}>Onboard SME Facility &amp; Underwrite Limit</h3>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Safe Home Wealth Management SPV-01 • Multi-Tenant Workspace</span>
+                </div>
+              </div>
+              <button onClick={() => setShowOnboardModal(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {onboardSuccessData ? (
+              /* Success & WhatsApp Broadcast Copy Card */
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)', borderRadius: '12px', padding: '1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <CheckCircle2 size={24} style={{ color: '#10b981', flexShrink: 0, marginTop: '0.1rem' }} />
+                  <div>
+                    <h4 style={{ margin: '0 0 0.2rem 0', color: '#fff', fontSize: '0.95rem' }}>Facility Approved &amp; Workspace Provisioned!</h4>
+                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem' }}>
+                      <strong>{onboardSuccessData.company_name}</strong> facility set at <strong>৳{(Number(onboardSuccessData.facility_limit_bdt)/100000).toFixed(2)} Lakhs</strong> under Safe Home SPV-01.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.82rem' }}>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>Dedicated Borrower URL</span>
+                    <strong style={{ color: '#38bdf8', display: 'block', marginTop: '0.15rem' }}>{onboardSuccessData.portalUrl}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>Standalone Work Order Creation Form</span>
+                    <strong style={{ color: '#D4AF37', display: 'block', marginTop: '0.15rem' }}>{onboardSuccessData.formUrl}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>Telegram Authentication Bot</span>
+                    <p style={{ margin: '0.2rem 0 0 0', color: '#cbd5e1' }}>Founder connects registered phone ({onboardSuccessData.founder_phone}) to <strong>@gro10x_os_bot</strong> to receive their 4-digit access PIN.</p>
+                  </div>
+                </div>
+
+                <div style={{ background: '#070a14', border: '1px dashed rgba(212,175,55,0.3)', borderRadius: '10px', padding: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: '800', textTransform: 'uppercase' }}>Ready-to-Send WhatsApp Onboarding Message</span>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(onboardSuccessData.whatsAppMsg);
+                        alert('Copied WhatsApp message!');
+                      }}
+                      className="btn-gold" 
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                    >
+                      <Copy size={12} /> Copy Text
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#94a3b8', fontSize: '0.75rem', lineHeight: '1.5', fontFamily: 'monospace' }}>
+                    {onboardSuccessData.whatsAppMsg}
+                  </pre>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowOnboardModal(false)}
+                    className="btn-gold"
+                    style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem', fontWeight: '700' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Facility Intake Form */
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const slug = newFacility.slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-') || 'sme-partner';
+                  const limitLakhs = (Number(newFacility.facility_limit_bdt || 5000000) / 100000).toFixed(2);
+                  const portalUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://gro10x-capital-rho.vercel.app'}/track/${slug}`;
+                  const formUrl = `${portalUrl}/new`;
+                  
+                  const whatsAppMsg = `Assalamu Alaikum ${newFacility.founder_name || 'Founder'},\n\n` +
+                    `We are pleased to inform you that the revolving credit facility for *${newFacility.company_name}* has been approved by Managing Partner Faiz Ahmed & GRO10X Investment Committee.\n\n` +
+                    `💼 Approved Facility Limit: *৳${limitLakhs} Lakhs*\n` +
+                    `⏳ Tenor: *${newFacility.cycle_tenor_days || 10} Days per Cycle*\n` +
+                    `🏛️ SPV Entity: *Safe Home Wealth Management SPV-01*\n\n` +
+                    `🔗 Dedicated Company Portal:\n${portalUrl}\n\n` +
+                    `📝 Direct Work Order Creation Link:\n${formUrl}\n\n` +
+                    `🔑 Access PIN: Open Telegram bot @gro10x_os_bot and type /pin (or share contact) from ${newFacility.founder_phone} to receive your 4-digit temporary access PIN.\n\n` +
+                    `GRO10X Capital Operations Desk`;
+
+                  setOnboardSuccessData({
+                    ...newFacility,
+                    slug,
+                    portalUrl,
+                    formUrl,
+                    whatsAppMsg
+                  });
+                }} 
+                style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Company Legal Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. Apex Industrial Supplies Ltd."
+                      value={newFacility.company_name}
+                      onChange={e => {
+                        const name = e.target.value;
+                        const autoSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                        setNewFacility({ ...newFacility, company_name: name, slug: newFacility.slug ? newFacility.slug : autoSlug });
+                      }}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Portal Slug (URL) *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. apex-supplies"
+                      value={newFacility.slug}
+                      onChange={e => setNewFacility({ ...newFacility, slug: e.target.value })}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Industry Sector</label>
+                    <input 
+                      type="text" 
+                      value={newFacility.sector}
+                      onChange={e => setNewFacility({ ...newFacility, sector: e.target.value })}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Approved Facility Limit (BDT) *</label>
+                    <input 
+                      type="number" 
+                      required
+                      value={newFacility.facility_limit_bdt}
+                      onChange={e => setNewFacility({ ...newFacility, facility_limit_bdt: e.target.value })}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Founder / MD Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. Rafiqul Islam"
+                      value={newFacility.founder_name}
+                      onChange={e => setNewFacility({ ...newFacility, founder_name: e.target.value })}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Founder Phone (for Telegram Bot PIN) *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="+880 1712 345678"
+                      value={newFacility.founder_phone}
+                      onChange={e => setNewFacility({ ...newFacility, founder_phone: e.target.value })}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Settlement Bank Account Details</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Al-Arafah Islami Bank, A/C: 10294819201"
+                    value={newFacility.bank_account}
+                    onChange={e => setNewFacility({ ...newFacility, bank_account: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+
+                {/* MANDATORY SECURITY DOCUMENTATION CHECKLIST */}
+                <div style={{ background: 'rgba(7,10,20,0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '0.85rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
+                    Mandatory Risk Underwriting Clearance (Approval Stage)
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={newFacility.security_cheque_received} 
+                        onChange={e => setNewFacility({ ...newFacility, security_cheque_received: e.target.checked })}
+                      />
+                      <span>Physical Signed Undated Security Cheque Deposited to Safe Home SPV</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={newFacility.cib_cleared} 
+                        onChange={e => setNewFacility({ ...newFacility, cib_cleared: e.target.checked })}
+                      />
+                      <span>Director NID &amp; Bangladesh Bank CIB Clearance Verified (Clean Score)</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={newFacility.trade_license_verified} 
+                        onChange={e => setNewFacility({ ...newFacility, trade_license_verified: e.target.checked })}
+                      />
+                      <span>City Corporation Trade License &amp; e-TIN / BIN Validated</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => setShowOnboardModal(false)} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.5rem 1.25rem', fontWeight: '700', background: 'linear-gradient(135deg, #38bdf8, #0284c7)', color: '#fff', border: 'none' }}>
+                    Approve Facility &amp; Generate Workspace
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

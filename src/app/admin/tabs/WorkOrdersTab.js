@@ -341,7 +341,12 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                       }}
                     >
                       <td style={{ padding: '0.85rem 1rem', fontWeight: '700', color: '#fff' }}>
-                        {order.order_code}
+                        <div>{order.order_code}</div>
+                        {order.tranche_info && (
+                          <div style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: '500', marginTop: '0.2rem' }}>
+                            {order.tranche_info}
+                          </div>
+                        )}
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>

@@ -33,24 +33,6 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-001',
     order_code: 'MSP-001',
-    corporate_client: 'Greenfield / Advance',
-    item_description: 'Initial Advance',
-    investment_amount_bdt: 200000,
-    return_amount_bdt: 230000,
-    profit_bdt: 30000,
-    duration_days: 5,
-    start_date: '2026-08-30',
-    due_date: '2026-09-04',
-    status: 'Disbursed_Active',
-    payment_mode: 'EFT/NPSB',
-    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Initial work order advance. Production cycle complete.',
-    disbursement_receipt_url: '/receipts/msp-001.png',
-    due_note: 'Matured'
-  },
-  {
-    id: 'wo-002',
-    order_code: 'MSP-002',
     corporate_client: 'Delta Life Insurance',
     item_description: 'Corporate Merchandise (Order 1)',
     investment_amount_bdt: 250000,
@@ -62,13 +44,14 @@ export const SEED_WORK_ORDERS = [
     status: 'Disbursed_Active',
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Delta Life Order 1 — Closing today Sep 6 by 4:00 PM.',
-    disbursement_receipt_url: '/receipts/msp-002.png',
-    due_note: 'CLOSING TODAY (4:00 PM)'
+    notes: 'Disbursed in 2 tranches: ৳2.00L advance (Aug 30) + ৳50k top-up (Sep 1) = ৳2.50L total. Delta Life Order 1 — Closing today Sep 6 by 4:00 PM.',
+    disbursement_receipt_url: '/receipts/msp-001.png',
+    due_note: 'CLOSING TODAY (4:00 PM)',
+    tranche_info: '2 Tranches: ৳2.00L Advance + ৳50k Top-up'
   },
   {
-    id: 'wo-003',
-    order_code: 'MSP-003',
+    id: 'wo-002',
+    order_code: 'MSP-002',
     corporate_client: 'Delta Life Insurance',
     item_description: 'Corporate Merchandise (Order 2)',
     investment_amount_bdt: 375000,
@@ -81,12 +64,12 @@ export const SEED_WORK_ORDERS = [
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
     notes: 'Delta Life Order 2 — Quality inspection passed, dispatch scheduled.',
-    disbursement_receipt_url: '/receipts/msp-003.png',
+    disbursement_receipt_url: '/receipts/msp-002.png',
     due_note: 'Due Sep 8 (2 days left)'
   },
   {
-    id: 'wo-004',
-    order_code: 'MSP-004',
+    id: 'wo-003',
+    order_code: 'MSP-003',
     corporate_client: 'Greenfield',
     item_description: 'Institutional Supplies (Order 1)',
     investment_amount_bdt: 230000,
@@ -99,12 +82,12 @@ export const SEED_WORK_ORDERS = [
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
     notes: 'Greenfield corporate supply batch 1.',
-    disbursement_receipt_url: '/receipts/msp-004.png',
+    disbursement_receipt_url: '/receipts/msp-003.png',
     due_note: 'Due Sep 9 (3 days left)'
   },
   {
-    id: 'wo-005',
-    order_code: 'MSP-005',
+    id: 'wo-004',
+    order_code: 'MSP-004',
     corporate_client: 'Delta Life Insurance',
     item_description: 'Corporate Merchandise (Order 3)',
     investment_amount_bdt: 145000,
@@ -117,12 +100,12 @@ export const SEED_WORK_ORDERS = [
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
     notes: 'Delta Life Order 3 — Finishing & packaging in progress.',
-    disbursement_receipt_url: '/receipts/msp-005.png',
+    disbursement_receipt_url: null,
     due_note: 'Due Sep 9 (3 days left)'
   },
   {
-    id: 'wo-005b',
-    order_code: 'MSP-005B',
+    id: 'wo-005',
+    order_code: 'MSP-005',
     corporate_client: 'Greenfield',
     item_description: 'Bag pack manufacturing',
     investment_amount_bdt: 400000,
@@ -135,7 +118,7 @@ export const SEED_WORK_ORDERS = [
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
     notes: 'Greenfield customized backpack batch. Fabric cut and stitching commenced.',
-    disbursement_receipt_url: '/receipts/msp-005b.png',
+    disbursement_receipt_url: null,
     due_note: 'Due Sep 13 (7 days left)'
   },
   {
@@ -212,7 +195,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v1';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v2';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

@@ -230,16 +230,16 @@ export default function MaatsCottageTrackerPage() {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>MSP-002: Delta Life (Order 1)</span>
+                <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>MSP-001: Delta Life (Order 1)</span>
                 <span className="status-badge status-badge--danger" style={{ fontSize: '0.65rem' }}>MATURITY TODAY (4:00 PM)</span>
               </div>
               <p style={{ color: '#cbd5e1', fontSize: '0.82rem', margin: '0.15rem 0 0 0' }}>
-                Principal Disbursed: <strong>৳2.50 Lakhs</strong> → Total Repayment Due: <strong style={{ color: '#10b981' }}>৳2.875 Lakhs</strong> (+৳37.5k Profit)
+                Principal Disbursed: <strong>৳2.50 Lakhs</strong> <span style={{ color: '#38bdf8' }}>(Tranche 1: ৳2.00L Advance + Tranche 2: ৳50k Top-up)</span> → Total Repayment Due: <strong style={{ color: '#10b981' }}>৳2.875 Lakhs</strong> (+৳37.5k Profit)
               </p>
             </div>
           </div>
           <button 
-            onClick={() => setSelectedReceipt('/receipts/msp-002.png')}
+            onClick={() => setSelectedReceipt('/receipts/msp-001.png')}
             className="btn-outline" 
             style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderColor: 'rgba(255,255,255,0.2)' }}
           >
@@ -422,6 +422,11 @@ export default function MaatsCottageTrackerPage() {
                           {isClosingToday && (
                             <span className="status-badge status-badge--danger" style={{ fontSize: '0.68rem', fontWeight: '700' }}>
                               CLOSING TODAY (4:00 PM)
+                            </span>
+                          )}
+                          {order.tranche_info && (
+                            <span style={{ background: 'rgba(56,189,248,0.15)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '600' }}>
+                              {order.tranche_info}
                             </span>
                           )}
                         </div>

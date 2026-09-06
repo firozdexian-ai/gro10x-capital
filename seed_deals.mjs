@@ -135,21 +135,6 @@ async function run() {
   const workOrders = [
     {
       order_code: 'MSP-001',
-      corporate_client: 'Greenfield / Advance',
-      item_description: 'Initial Advance',
-      investment_amount_bdt: 200000,
-      return_amount_bdt: 230000,
-      profit_bdt: 30000,
-      duration_days: 5,
-      start_date: '2026-08-30',
-      due_date: '2026-09-04',
-      status: 'Disbursed_Active',
-      payment_mode: 'EFT/NPSB',
-      bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Initial work order advance. Completed production run.'
-    },
-    {
-      order_code: 'MSP-002',
       corporate_client: 'Delta Life Insurance',
       item_description: 'Corporate Merchandise (Order 1)',
       investment_amount_bdt: 250000,
@@ -161,10 +146,10 @@ async function run() {
       status: 'Disbursed_Active',
       payment_mode: 'EFT/NPSB',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Delta Life Order 1 — Due today Sep 6 by 4:00 PM.'
+      notes: 'Disbursed in 2 tranches: ৳2.00L advance + ৳50k top-up = ৳2.50L. Delta Life Order 1 — Closing today Sep 6 by 4:00 PM.'
     },
     {
-      order_code: 'MSP-003',
+      order_code: 'MSP-002',
       corporate_client: 'Delta Life Insurance',
       item_description: 'Corporate Merchandise (Order 2)',
       investment_amount_bdt: 375000,
@@ -179,7 +164,7 @@ async function run() {
       notes: 'Delta Life Order 2 — In transit for delivery.'
     },
     {
-      order_code: 'MSP-004',
+      order_code: 'MSP-003',
       corporate_client: 'Greenfield',
       item_description: 'Institutional Supplies (Order 1)',
       investment_amount_bdt: 230000,
@@ -194,7 +179,7 @@ async function run() {
       notes: 'Greenfield corporate supply batch 1.'
     },
     {
-      order_code: 'MSP-005',
+      order_code: 'MSP-004',
       corporate_client: 'Delta Life Insurance',
       item_description: 'Corporate Merchandise (Order 3)',
       investment_amount_bdt: 145000,
@@ -209,7 +194,7 @@ async function run() {
       notes: 'Delta Life Order 3 — Finishing & packaging.'
     },
     {
-      order_code: 'MSP-005B',
+      order_code: 'MSP-005',
       corporate_client: 'Greenfield',
       item_description: 'Bag pack manufacturing',
       investment_amount_bdt: 400000,
@@ -286,6 +271,7 @@ async function run() {
   ];
 
   try {
+    await sb.from('work_orders').delete().eq('order_code', 'MSP-005B');
     const { error: woErr } = await sb.from('work_orders').upsert(workOrders, { onConflict: 'order_code' });
     if (woErr) {
       console.log('  ℹ️  Work Orders table not created in Supabase yet (Run supabase_safe_home_work_orders.sql)');

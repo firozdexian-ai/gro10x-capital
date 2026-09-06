@@ -48,18 +48,19 @@ async function runSafeHomeTests() {
     assert(pageText.includes('01784397960') || pageText.includes('Faiz Ahmed'), 'Terminal displays Faiz Ahmed partner information');
     assert(pageText.includes('2621519538001'), 'Terminal displays settlement bank account 2621519538001');
 
-    // 1.2 Verify Critical Due Alert Banner (MSP-002 Delta Life Closing Today)
-    assert(pageText.includes('MSP-002') && pageText.includes('CLOSING TODAY'), 'Critical maturity alert for MSP-002 closing today is present');
+    // 1.2 Verify Critical Due Alert Banner (MSP-001 Delta Life Closing Today)
+    assert(pageText.includes('MSP-001') && pageText.includes('CLOSING TODAY'), 'Critical maturity alert for MSP-001 closing today is present');
 
     // Screenshot Mobile Hero
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '01_terminal_mobile_hero.png'), fullPage: false });
     console.log('  📸 Captured 01_terminal_mobile_hero.png');
 
-    // 1.3 Verify Active Deployments Tab (MSP-001 through MSP-005B)
+    // 1.3 Verify Active Deployments Tab (MSP-001 through MSP-005)
     assert(pageText.includes('MSP-001'), 'Active order MSP-001 is displayed');
+    assert(pageText.includes('MSP-002'), 'Active order MSP-002 is displayed');
     assert(pageText.includes('MSP-003'), 'Active order MSP-003 is displayed');
     assert(pageText.includes('MSP-004'), 'Active order MSP-004 is displayed');
-    assert(pageText.includes('MSP-005B'), 'Active order MSP-005B is displayed');
+    assert(pageText.includes('MSP-005'), 'Active order MSP-005 is displayed');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '02_terminal_active_orders.png'), fullPage: true });
     console.log('  📸 Captured 02_terminal_active_orders.png');
 
@@ -181,6 +182,7 @@ async function runSafeHomeTests() {
     assert(adminContent.includes('Facility Utilization'), 'Maats Cottage facility utilization widget is rendered');
 
     // Verify table lists work orders
+    assert(adminContent.includes('MSP-001'), 'MSP-001 is listed in the admin table');
     assert(adminContent.includes('MSP-002'), 'MSP-002 is listed in the admin table');
     assert(adminContent.includes('Delta Life Insurance'), 'Corporate client Delta Life is listed in table');
 

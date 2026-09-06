@@ -6,7 +6,8 @@ import {
   Building2, ShieldCheck, CheckCircle2, Clock, AlertTriangle, 
   ArrowUpRight, Copy, Check, Plus, ExternalLink, Calendar, 
   FileText, Landmark, RefreshCw, Eye, X, ChevronRight, Phone,
-  Sparkles, TrendingUp, DollarSign, Award, ArrowRight, Upload, CheckSquare
+  Sparkles, TrendingUp, DollarSign, Award, ArrowRight, Upload, CheckSquare,
+  RotateCcw, Download, Image as ImageIcon
 } from 'lucide-react';
 import { 
   MAATS_COTTAGE_PROFILE, 
@@ -15,6 +16,7 @@ import {
   createWorkOrder,
   approveAndDisburseOrder, 
   settleWorkOrder,
+  revertOrderToPending,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast 
 } from '../../../lib/workOrders';
@@ -35,6 +37,7 @@ export default function MaatsCottageTrackerPage() {
   const [settling, setSettling] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+  const [selectedGalleryImg, setSelectedGalleryImg] = useState(null);
 
   // Add order form
   const [newOrder, setNewOrder] = useState({
@@ -74,6 +77,17 @@ export default function MaatsCottageTrackerPage() {
     const updated = await approveAndDisburseOrder(orderCode);
     setOrders(updated);
     setActionSuccessMsg(`Order ${orderCode} approved & marked as Disbursed!`);
+    setTimeout(() => setActionSuccessMsg(''), 4000);
+  };
+
+  const handleRevert = async (orderCode) => {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(`Revert ${orderCode} back to Pending Approval? This will move it out of active deployments.`);
+      if (!confirmed) return;
+    }
+    const updated = await revertOrderToPending(orderCode);
+    setOrders(updated);
+    setActionSuccessMsg(`Order ${orderCode} reverted back to Pending Approval.`);
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
@@ -595,7 +609,7 @@ export default function MaatsCottageTrackerPage() {
                       </div>
 
                       {/* Right Actions */}
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button 
                           onClick={() => { setSelectedOrderDocs(order); setActiveDocTab(0); }}
                           className="btn-outline"
@@ -609,6 +623,13 @@ export default function MaatsCottageTrackerPage() {
                           style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700' }}
                         >
                           <CheckSquare size={13} /> Settle &amp; Close
+                        </button>
+                        <button 
+                          onClick={() => handleRevert(order.order_code)}
+                          title="Revert back to Pending Approval if accidentally marked as disbursed"
+                          style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '6px', fontSize: '0.72rem', padding: '0.35rem 0.55rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          <RotateCcw size={11} /> Undo
                         </button>
                       </div>
                     </div>
@@ -893,6 +914,35 @@ export default function MaatsCottageTrackerPage() {
                   <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Credit Line Under</span>
                   <strong style={{ color: '#D4AF37' }}>{MAATS_COTTAGE_PROFILE.facilityName}</strong>
                 </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Established / Experience</span>
+                  <strong style={{ color: '#fff' }}>Since {MAATS_COTTAGE_PROFILE.foundedYear} (10+ Years Manufacturing)</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Factory &amp; Registered Office</span>
+                  <strong style={{ color: '#cbd5e1' }}>{MAATS_COTTAGE_PROFILE.headquarters}</strong>
+                </div>
+              </div>
+
+              {/* Company Profile PDF Card */}
+              <div style={{ marginTop: '1.25rem', padding: '1rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#D4AF37', fontWeight: '700', fontSize: '0.9rem' }}>
+                    <FileText size={16} /> Official Company Profile Deck (19 Pages)
+                  </div>
+                  <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0.2rem 0 0 0' }}>
+                    Comprehensive corporate presentation: finished leather catalog, jute production lines, factory capacity, and institutional clients.
+                  </p>
+                </div>
+                <a 
+                  href={MAATS_COTTAGE_PROFILE.companyProfilePdf} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="btn-gold" 
+                  style={{ fontSize: '0.8rem', padding: '0.45rem 0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none', fontWeight: '700' }}
+                >
+                  <Download size={14} /> View / Download PDF Deck
+                </a>
               </div>
             </div>
 
@@ -946,6 +996,51 @@ export default function MaatsCottageTrackerPage() {
                   <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>Preferred Rail</span>
                   <strong style={{ color: '#10b981' }}>{MAATS_COTTAGE_PROFILE.paymentMode}</strong>
                 </div>
+              </div>
+            </div>
+
+            {/* Product Showroom & Factory Gallery */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '700', margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Sparkles size={18} style={{ color: '#D4AF37' }} /> Product Showroom &amp; Manufacturing Gallery
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0 0' }}>
+                    Verified physical merchandise, manufacturing floor &amp; delivery batches for corporate clients
+                  </p>
+                </div>
+                <span style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', borderRadius: '4px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: '700' }}>
+                  {MAATS_COTTAGE_PROFILE.showroomGallery?.length || 8} Verified Assets
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem' }}>
+                {MAATS_COTTAGE_PROFILE.showroomGallery?.map((item, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => setSelectedGalleryImg(item)}
+                    style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#D4AF37'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                  >
+                    <div style={{ height: '160px', background: '#0a0f1d', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      <img 
+                        src={item.url} 
+                        alt={item.title} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    </div>
+                    <div style={{ padding: '0.75rem' }}>
+                      <span style={{ fontSize: '0.68rem', color: '#D4AF37', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+                        {item.category}
+                      </span>
+                      <p style={{ color: '#f1f5f9', fontSize: '0.8rem', fontWeight: '600', margin: 0, lineHeight: 1.3 }}>
+                        {item.title}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1396,6 +1491,39 @@ export default function MaatsCottageTrackerPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── GALLERY LIGHTBOX MODAL ── */}
+      {selectedGalleryImg && (
+        <div 
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1.25rem' }}
+          onClick={() => setSelectedGalleryImg(null)}
+        >
+          <div 
+            style={{ background: '#0b0f19', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '12px', maxWidth: '750px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '0.68rem', color: '#D4AF37', fontWeight: '700', textTransform: 'uppercase' }}>{selectedGalleryImg.category}</span>
+                <h4 style={{ color: '#fff', margin: '0.15rem 0 0 0', fontSize: '0.95rem' }}>{selectedGalleryImg.title}</h4>
+              </div>
+              <button 
+                onClick={() => setSelectedGalleryImg(null)} 
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#94a3b8', cursor: 'pointer', borderRadius: '50%', width: '32px', height: '32px', display: 'grid', placeItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ maxHeight: '72vh', overflow: 'hidden', display: 'grid', placeItems: 'center', background: '#05070e', padding: '0.75rem' }}>
+              <img 
+                src={selectedGalleryImg.url} 
+                alt={selectedGalleryImg.title} 
+                style={{ maxWidth: '100%', maxHeight: '68vh', objectFit: 'contain', borderRadius: '6px' }} 
+              />
+            </div>
           </div>
         </div>
       )}

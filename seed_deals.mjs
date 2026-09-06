@@ -294,8 +294,11 @@ async function run() {
     },
     {
       order_code: 'MSP-005',
-      corporate_client: 'Greenfield',
-      item_description: 'Bag pack manufacturing',
+      corporate_client: 'Greenfield Jutex',
+      po_ref_number: 'GFJ/09/2026/214',
+      po_date: '2026-09-03',
+      po_value_bdt: 486000,
+      item_description: 'Back Pack (450 pcs)',
       investment_amount_bdt: 400000,
       return_amount_bdt: 475000,
       profit_bdt: 75000,
@@ -303,9 +306,34 @@ async function run() {
       start_date: '2026-09-03',
       due_date: '2026-09-13',
       status: 'Disbursed_Active',
-      payment_mode: 'EFT/NPSB',
+      payment_mode: 'City Bank Transfer (CityTouch)',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Greenfield customized backpack batch.'
+      notes: 'PO Ref: GFJ/09/2026/214 (৳4,86,000 PO value). Disbursed in 2 CityTouch tranches: ৳3.00L (Sep 3) + ৳1.00L (Sep 4) = ৳4.00L total.',
+      disbursement_receipt_url: '/receipts/msp-005-tranche-1.png',
+      po_document_url: '/docs/msp-005-greenfield-po.png',
+      po_document_pdf: '/docs/msp-005-greenfield-po.pdf',
+      due_note: 'Due Sep 13 (7 days left)',
+      tranche_info: '2 Tranches: ৳3.00L + ৳1.00L CityTouch',
+      disbursement_transfers: [
+        {
+          tranche_no: 1,
+          amount_bdt: 300000,
+          date: '03 Sep 2026, 07:28 PM',
+          ref_no: '100010368445',
+          method: 'City Bank Transfer (CityTouch)',
+          receipt_url: '/receipts/msp-005-tranche-1.png',
+          note: 'Tranche 1: ৳3.00L disbursed via CityTouch to Aysha Siddika'
+        },
+        {
+          tranche_no: 2,
+          amount_bdt: 100000,
+          date: '04 Sep 2026, 07:24 PM',
+          ref_no: '100010489125',
+          method: 'City Bank Transfer (CityTouch)',
+          receipt_url: '/receipts/msp-005-tranche-2.png',
+          note: 'Tranche 2: ৳1.00L top-up disbursed via CityTouch to Aysha Siddika'
+        }
+      ]
     },
     {
       order_code: 'MSP-006',

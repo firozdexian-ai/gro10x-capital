@@ -14,6 +14,20 @@ export const MAATS_COTTAGE_PROFILE = {
   paymentMode: 'EFT / NPSB Fast Transfer',
   revolvingFacilityLimit: 2500000, // ৳25 Lakhs
   facilityName: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+  foundedYear: 2016,
+  headquarters: 'Solmaid Dhali Bari, Vatara, Dhaka-1212',
+  website: 'www.maatscottage.com',
+  companyProfilePdf: '/docs/maats-company-profile.pdf',
+  showroomGallery: [
+    { url: '/maats/5.jpeg', title: 'Executive Finished Leather Wallets', category: 'Leather Goods' },
+    { url: '/maats/6.jpeg', title: 'Handcrafted Minimalist Leather Wallets', category: 'Leather Goods' },
+    { url: '/maats/7.jpeg', title: 'Premium Full-Grain Leather Belts', category: 'Accessories' },
+    { url: '/maats/8.jpeg', title: 'Hand-stitched Formal Leather Belts', category: 'Accessories' },
+    { url: '/maats/2.jpeg', title: 'Greenfield Jutex Travel Kit & Duffel Bags', category: 'Jute & Canvas' },
+    { url: '/maats/3.jpeg', title: 'Heavy-Duty Corporate Backpacks', category: 'Bags & Packs' },
+    { url: '/maats/4.jpeg', title: 'Custom Institutional Jute Conference Bags', category: 'Corporate Gifts' },
+    { url: '/maats/WhatsApp Image 2026-08-31 at 2.59.40 PM.jpeg', title: 'Finished Order Packaging & Mohakhali Dispatch Ready', category: 'Logistics' }
+  ],
   managingPartner: {
     name: 'Faiz Ahmed (Faiz Bhai)',
     phone: '01784397960',
@@ -200,8 +214,11 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-005',
     order_code: 'MSP-005',
-    corporate_client: 'Greenfield',
-    item_description: 'Bag pack manufacturing',
+    corporate_client: 'Greenfield Jutex',
+    po_ref_number: 'GFJ/09/2026/214',
+    po_date: '2026-09-03',
+    po_value_bdt: 486000,
+    item_description: 'Back Pack (450 pcs)',
     investment_amount_bdt: 400000,
     return_amount_bdt: 475000,
     profit_bdt: 75000,
@@ -209,11 +226,34 @@ export const SEED_WORK_ORDERS = [
     start_date: '2026-09-03',
     due_date: '2026-09-13',
     status: 'Disbursed_Active',
-    payment_mode: 'EFT/NPSB',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Greenfield customized backpack batch. Fabric cut and stitching commenced.',
-    disbursement_receipt_url: null,
-    due_note: 'Due Sep 13 (7 days left)'
+    notes: 'PO Ref: GFJ/09/2026/214 (৳4,86,000 PO value). Disbursed in 2 CityTouch tranches: ৳3.00L (Sep 3) + ৳1.00L (Sep 4) = ৳4.00L total.',
+    disbursement_receipt_url: '/receipts/msp-005-tranche-1.png',
+    po_document_url: '/docs/msp-005-greenfield-po.png',
+    po_document_pdf: '/docs/msp-005-greenfield-po.pdf',
+    due_note: 'Due Sep 13 (7 days left)',
+    tranche_info: '2 Tranches: ৳3.00L + ৳1.00L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 300000,
+        date: '03 Sep 2026, 07:28 PM',
+        ref_no: '100010368445',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-005-tranche-1.png',
+        note: 'Tranche 1: ৳3.00L disbursed via CityTouch to Aysha Siddika'
+      },
+      {
+        tranche_no: 2,
+        amount_bdt: 100000,
+        date: '04 Sep 2026, 07:24 PM',
+        ref_no: '100010489125',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-005-tranche-2.png',
+        note: 'Tranche 2: ৳1.00L top-up disbursed via CityTouch to Aysha Siddika'
+      }
+    ]
   },
   {
     id: 'wo-006',
@@ -289,7 +329,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v4';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v5';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data
@@ -408,6 +448,27 @@ export async function approveAndDisburseOrder(orderCode, options = {}) {
     }).catch(() => {});
   }
 
+  return updated;
+}
+
+/**
+ * Revert an order back to Pending_Approval (useful if accidentally disbursed)
+ */
+export async function revertOrderToPending(orderCode) {
+  const existing = await getWorkOrders();
+  const order = existing.find(o => o.order_code === orderCode);
+  if (!order) return existing;
+
+  const updatedOrder = {
+    ...order,
+    status: 'Pending_Approval',
+    start_date: null,
+    due_note: 'Awaiting Disbursal',
+    disbursement_receipt_url: null,
+    disbursement_transfers: []
+  };
+
+  const updated = await saveWorkOrder(updatedOrder);
   return updated;
 }
 

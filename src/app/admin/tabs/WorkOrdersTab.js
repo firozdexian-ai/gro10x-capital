@@ -5,7 +5,8 @@ import {
   Building2, ShieldCheck, CheckCircle2, Clock, AlertTriangle, 
   ArrowUpRight, Copy, Check, Plus, ExternalLink, Calendar, 
   FileText, Landmark, RefreshCw, Eye, X, ChevronRight, Phone,
-  Sparkles, TrendingUp, DollarSign, Award, Briefcase, Filter, Search, CheckSquare
+  Sparkles, TrendingUp, DollarSign, Award, Briefcase, Filter, Search, CheckSquare,
+  RotateCcw, Download
 } from 'lucide-react';
 import { 
   MAATS_COTTAGE_PROFILE, 
@@ -13,6 +14,7 @@ import {
   saveWorkOrder, 
   approveAndDisburseOrder, 
   settleWorkOrder,
+  revertOrderToPending,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast 
 } from '../../../lib/workOrders';
@@ -70,6 +72,17 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
     const updated = await approveAndDisburseOrder(orderCode);
     setOrders(updated);
     setActionSuccessMsg(`Order ${orderCode} approved & marked as Disbursed!`);
+    setTimeout(() => setActionSuccessMsg(''), 4000);
+  };
+
+  const handleRevert = async (orderCode) => {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(`Revert ${orderCode} back to Pending Approval?`);
+      if (!confirmed) return;
+    }
+    const updated = await revertOrderToPending(orderCode);
+    setOrders(updated);
+    setActionSuccessMsg(`Order ${orderCode} reverted back to Pending Approval.`);
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
@@ -279,6 +292,16 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.55rem 0.95rem' }}
             >
               <ExternalLink size={14} /> Open Live Mobile Tracker
+            </a>
+
+            <a 
+              href={MAATS_COTTAGE_PROFILE.companyProfilePdf} 
+              target="_blank" 
+              rel="noreferrer"
+              className="btn-outline" 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.55rem 0.95rem' }}
+            >
+              <Download size={14} /> Company Profile Deck
             </a>
 
             <button 
@@ -515,14 +538,23 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                           )}
 
                           {order.status === 'Disbursed_Active' && (
-                            <button 
-                              onClick={() => setSettleTargetOrder(order)}
-                              className="btn-outline"
-                              title="Dual-Document Settlement"
-                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderColor: 'rgba(16,185,129,0.5)', color: '#10b981', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                            >
-                              <CheckSquare size={12} /> Settle
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => setSettleTargetOrder(order)}
+                                className="btn-outline"
+                                title="Dual-Document Settlement"
+                                style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderColor: 'rgba(16,185,129,0.5)', color: '#10b981', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              >
+                                <CheckSquare size={12} /> Settle
+                              </button>
+                              <button 
+                                onClick={() => handleRevert(order.order_code)}
+                                title="Revert back to Pending Approval if accidentally marked as disbursed"
+                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.72rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                              >
+                                <RotateCcw size={11} /> Undo
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

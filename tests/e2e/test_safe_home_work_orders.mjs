@@ -161,6 +161,8 @@ async function runSafeHomeTests() {
     assert(complianceText.includes('BIN / VAT'), 'BIN/VAT item present in checklist');
     assert(complianceText.includes('Director NID'), 'Director NID & CIB clearance verified');
     assert(complianceText.includes('Security Cheque'), 'Security cheque verified');
+    assert(complianceText.includes('Company Profile Deck'), 'Company Profile Deck download link present');
+    assert(complianceText.includes('Product Showroom'), 'Product Showroom & Gallery present');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '05_terminal_compliance_checklist.png') });
     console.log('  📸 Captured 05_terminal_compliance_checklist.png');
 

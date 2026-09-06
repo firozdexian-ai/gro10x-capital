@@ -107,10 +107,9 @@ export default function LeadBot() {
         && (
         <button
           onClick={() => setIsOpen(true)}
+          className="leadbot-floating-btn"
+          aria-label="Talk to Investment Advisor"
           style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
             background: 'linear-gradient(135deg, #D4AF37, #b49127)',
             color: '#070a14',
             border: 'none',
@@ -123,7 +122,6 @@ export default function LeadBot() {
             display: 'flex',
             alignItems: 'center',
             gap: '0.6rem',
-            zIndex: 9999,
             transition: 'all 0.3s ease'
           }}
         >

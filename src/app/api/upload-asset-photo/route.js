@@ -30,12 +30,19 @@ export async function POST(request) {
       ? supabase.storage.from('public-docs').getPublicUrl(filePath).data.publicUrl
       : `https://gro10x.com/uploads/${fileName}`;
 
-    // Insert inspection audit log
-    await supabase.from('notifications').insert([{
-      title: 'Field Asset Verified',
-      message: `KAM uploaded verified physical inspection photo for ${asset_name || 'Business Asset'}.`,
-      type: 'info'
-    }]);
+    const user_id = formData.get('user_id');
+
+    // Insert inspection audit log (safeguarded so notification errors don't fail upload)
+    try {
+      await supabase.from('notifications').insert([{
+        user_id: user_id || null,
+        title: 'Field Asset Verified',
+        message: `KAM uploaded verified physical inspection photo for ${asset_name || 'Business Asset'}.`,
+        type: 'info'
+      }]);
+    } catch (notifErr) {
+      console.warn('Non-fatal inspection notification error:', notifErr);
+    }
 
     return NextResponse.json({ success: true, photo_url: publicUrl });
   } catch (err) {

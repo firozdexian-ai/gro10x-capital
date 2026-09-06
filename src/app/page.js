@@ -421,9 +421,9 @@ export default function Homepage() {
               <p style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.5', margin: '0 0 1rem 0' }}>
                 Bangladesh's premier revenue-share co-investment platform. Connecting verified investors with high-performing SME &amp; franchise campaigns.
               </p>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <a href="https://t.me/gro10xmanbot" target="_blank" rel="noreferrer" style={{ background: 'rgba(255,255,255,0.05)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 'bold' }}>
-                  Telegram Bot
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <a href="/telegram" style={{ background: 'rgba(0,136,204,0.15)', color: '#0088cc', border: '1px solid rgba(0,136,204,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 'bold' }}>
+                  🤖 Telegram Hub (3 Bots)
                 </a>
               </div>
             </div>
@@ -436,6 +436,8 @@ export default function Homepage() {
                 <li><a href="/cash-concierge" style={{ color: '#94a3b8', textDecoration: 'none' }}>Cash Concierge OTC</a></li>
                 <li><a href="/secondary-market" style={{ color: '#94a3b8', textDecoration: 'none' }}>Secondary Market</a></li>
                 <li><a href="/apply" style={{ color: '#94a3b8', textDecoration: 'none' }}>Apply for Raising</a></li>
+                <li><a href="/apply/status" style={{ color: '#D4AF37', textDecoration: 'none', fontWeight: '600' }}>Cohort Status Tracker</a></li>
+                <li><a href="/telegram" style={{ color: '#0088cc', textDecoration: 'none' }}>Telegram Bot Mesh</a></li>
               </ul>
             </div>
 

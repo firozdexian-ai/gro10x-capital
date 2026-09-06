@@ -128,20 +128,27 @@ export default function PosSyncPortal() {
       const grossBdt = currentGross / rate;
       const netBdt = currentNet / rate;
 
-      const { error } = await supabase
-        .from('pos_daily_sales')
-        .insert([{
+      const res = await fetch('/api/edge-pos-ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           business_id: selectedBusinessId,
           date: reportDate,
           gross_sales_bdt: grossBdt,
           net_profit_bdt: netBdt,
           transaction_count: Number(transactionCount) || 0,
           sync_source: 'Staff_Submit'
-        }]);
+        })
+      });
 
-      if (error && error.code !== '42P01') throw error;
+      const ingestData = await res.json();
+      if (!res.ok) throw new Error(ingestData.error || 'Failed to ingest POS telemetry');
 
-      addToast('🎉 Daily POS telemetry verified & logged!', 'success');
+      if (ingestData.is_anomaly) {
+        addToast('⚠️ POS telemetry logged — Deviation flagged & dispatched to assigned KAM.', 'alert');
+      } else {
+        addToast('🎉 Daily POS telemetry verified & logged!', 'success');
+      }
       
       // Reset inputs
       setDineInSales('');

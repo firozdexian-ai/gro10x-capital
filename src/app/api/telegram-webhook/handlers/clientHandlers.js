@@ -107,7 +107,7 @@ export async function handleClientContact(botToken, chatId, contact, appUrl) {
     // Check if there is an active cohort application matching this phone
     let appQuery = supabase
       .from('business_cohort_applications')
-      .select('id, brand_name, lead_founder_name, application_status, reference_code')
+      .select('id, brand_name, lead_founder_name, application_status, reference_code, status, ref_code')
       .or(`lead_founder_phone.in.(${phoneVariants.join(',')}),lead_founder_phone.ilike.%${last10}`)
       .limit(1);
 
@@ -115,17 +115,20 @@ export async function handleClientContact(botToken, chatId, contact, appUrl) {
     const app = matchedApps && matchedApps.length > 0 ? matchedApps[0] : null;
 
     if (app) {
+      const displayRef = app.reference_code || app.ref_code || 'Pending';
+      const displayStatus = app.application_status || app.status || 'Under Review';
+
       await sendMsg(botToken, chatId,
         `📋 <b>Cohort Application Found!</b>\n\n` +
         `<b>Brand:</b> ${app.brand_name}\n` +
-        `<b>Ref Code:</b> <code>${app.reference_code || 'Pending'}</code>\n` +
-        `<b>Status:</b> <b>${app.application_status || 'Under Review'}</b>\n\n` +
+        `<b>Ref Code:</b> <code>${displayRef}</code>\n` +
+        `<b>Status:</b> <b>${displayStatus}</b>\n\n` +
         `Your application is currently being evaluated by the Investment Committee. You will receive real-time notifications here as your review progresses.`,
         {
           reply_markup: {
             remove_keyboard: true,
             inline_keyboard: [[
-              { text: '🌐 View Application Portal', url: `${appUrl}/apply` }
+              { text: '🔍 Check Status Online', url: `${appUrl}/apply/status?ref=${displayRef}` }
             ]]
           }
         }

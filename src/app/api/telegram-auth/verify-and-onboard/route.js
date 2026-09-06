@@ -100,6 +100,36 @@ export async function POST(request) {
       }
     }
 
+    // --- C: If not found in TEAM or INVESTORS, search FOUNDERS table ---
+    let resolvedFounderId = null;
+    if (!resolvedTeamId && !resolvedInvestorId) {
+      if (isEmail) {
+        const { data: founder } = await supabase
+          .from('founders')
+          .select('id, email, full_name, phone')
+          .eq('email', targetEmail)
+          .maybeSingle();
+
+        if (founder) {
+          userName = founder.full_name || 'Founder Partner';
+          userRole = 'founder';
+          resolvedFounderId = founder.id;
+        }
+      } else {
+        const { data: allFounders } = await supabase
+          .from('founders')
+          .select('id, email, full_name, phone');
+
+        const foundFounder = (allFounders || []).find(f => normalizePhone(f.phone) === phoneClean);
+        if (foundFounder) {
+          targetEmail = foundFounder.email;
+          userName = foundFounder.full_name || 'Founder Partner';
+          userRole = 'founder';
+          resolvedFounderId = foundFounder.id;
+        }
+      }
+    }
+
     if (!targetEmail || !targetEmail.includes('@')) {
       return NextResponse.json({
         error: `Account not found for '${identifier}'. Please verify your registered phone or email.`
@@ -146,17 +176,20 @@ export async function POST(request) {
       authUserId = newUser?.user?.id;
     }
 
-    // 5. Link auth.users.id → investors.user_id (if investor)
-    if (resolvedInvestorId && authUserId) {
-      await supabase
-        .from('investors')
-        .update({ user_id: authUserId })
-        .eq('id', resolvedInvestorId);
+    // 5. Link auth.users.id → entity table (investors, founders, or team)
+    if (authUserId) {
+      if (resolvedInvestorId) {
+        await supabaseAdmin.from('investors').update({ user_id: authUserId }).eq('id', resolvedInvestorId);
+      } else if (resolvedFounderId) {
+        await supabaseAdmin.from('founders').update({ user_id: authUserId }).eq('id', resolvedFounderId);
+      } else if (resolvedTeamId) {
+        await supabaseAdmin.from('team').update({ user_id: authUserId }).eq('id', resolvedTeamId);
+      }
     }
 
     // 6. Upsert user_roles table
     if (authUserId) {
-      await supabase.from('user_roles').upsert({
+      await supabaseAdmin.from('user_roles').upsert({
         user_id: authUserId,
         role: userRole
       }, { onConflict: 'user_id' });

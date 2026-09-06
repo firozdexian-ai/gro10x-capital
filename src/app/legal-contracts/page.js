@@ -1,19 +1,94 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, ShieldCheck, Printer, Download, CheckCircle2, ArrowUpRight, 
-  Building2, Award, Lock, Users, Sparkles, Globe
+  Building2, Award, Lock, Users, Sparkles, Globe, Loader2
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
+import { useAuth } from '../../components/AuthProvider';
+import { supabase } from '../../lib/supabase';
 
 export default function LegalContractsPortal() {
+  const { user } = useAuth();
   const [currency, setCurrency] = useState('BDT');
   const [docType, setDocType] = useState('spv-cert');
-  const [investorName, setInvestorName] = useState('Tanvir Ahmed (NRB Expatriate)');
+  const [investorName, setInvestorName] = useState('Syndicate Partner');
   const [hubName, setHubName] = useState('ORO Roasters - Mirpur');
   const [spvName, setSpvName] = useState('GRO10X Mirpur SPV Ltd.');
   const [amount, setAmount] = useState(1500000);
   const [yieldOption, setYieldOption] = useState('Option 3: The Partnership (5% Floor + 35% Profit)');
+  
+  const [userInvestments, setUserInvestments] = useState([]);
+  const [availableProjects, setAvailableProjects] = useState([]);
+  const [selectedInvestmentId, setSelectedInvestmentId] = useState('');
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoadingData(true);
+        // 1. Fetch available projects for hub selection
+        const { data: projData } = await supabase
+          .from('funding_projects')
+          .select('id, project_title, spv_name')
+          .order('project_title');
+          
+        if (projData && projData.length > 0) {
+          setAvailableProjects(projData);
+        }
+
+        // 2. If logged in user, fetch investor record & holdings
+        if (user) {
+          const { data: invProfile } = await supabase
+            .from('investors')
+            .select('id, alias_name, email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (invProfile) {
+            setInvestorName(invProfile.alias_name || user.email || 'Verified Syndicate Investor');
+
+            const { data: holdings } = await supabase
+              .from('investments')
+              .select('id, amount_invested_bdt, yield_option, funding_projects(id, project_title, spv_name)')
+              .eq('investor_id', invProfile.id)
+              .order('created_at', { ascending: false });
+
+            if (holdings && holdings.length > 0) {
+              setUserInvestments(holdings);
+              const first = holdings[0];
+              setSelectedInvestmentId(first.id);
+              if (first.funding_projects?.project_title) setHubName(first.funding_projects.project_title);
+              if (first.funding_projects?.spv_name) setSpvName(first.funding_projects.spv_name);
+              if (first.amount_invested_bdt) setAmount(Number(first.amount_invested_bdt));
+              if (first.yield_option) {
+                setYieldOption(`Option ${first.yield_option}: Verified Syndicate Yield Agreement`);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed loading legal contracts live data:', err);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+
+    loadData();
+  }, [user]);
+
+  const handleInvestmentSelect = (invId) => {
+    setSelectedInvestmentId(invId);
+    const chosen = userInvestments.find(i => i.id === invId);
+    if (chosen) {
+      if (chosen.funding_projects?.project_title) setHubName(chosen.funding_projects.project_title);
+      if (chosen.funding_projects?.spv_name) setSpvName(chosen.funding_projects.spv_name);
+      if (chosen.amount_invested_bdt) setAmount(Number(chosen.amount_invested_bdt));
+      if (chosen.yield_option) {
+        setYieldOption(`Option ${chosen.yield_option}: Verified Syndicate Yield Agreement`);
+      }
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -95,7 +170,27 @@ export default function LegalContractsPortal() {
 
         {/* CUSTOMIZER FORM (HIDDEN ON PRINT) */}
         <div className="glass-card no-print" style={{ marginBottom: '2.5rem', padding: '1.5rem' }}>
-          <h4 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#D4AF37' }}>Customize Legal Document Parameters</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h4 style={{ fontSize: '1.1rem', margin: 0, color: '#D4AF37' }}>Customize Legal Document Parameters</h4>
+            {userInvestments.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>● Auto-filled from your Portfolio:</span>
+                <select 
+                  value={selectedInvestmentId} 
+                  onChange={(e) => handleInvestmentSelect(e.target.value)}
+                  className="form-input"
+                  style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', background: 'rgba(15,23,42,0.9)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}
+                >
+                  {userInvestments.map(inv => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.funding_projects?.project_title} (৳{Number(inv.amount_invested_bdt).toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>Investor / Party Name</label>
@@ -103,11 +198,23 @@ export default function LegalContractsPortal() {
             </div>
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>Target Outlet Hub</label>
-              <select value={hubName} onChange={(e) => setHubName(e.target.value)} className="form-input">
-                <option>ORO Roasters - Mirpur</option>
-                <option>ORO Roasters - Banani</option>
-                <option>Segreto Hub - Dhanmondi</option>
-              </select>
+              {availableProjects.length > 0 ? (
+                <select 
+                  value={hubName} 
+                  onChange={(e) => {
+                    setHubName(e.target.value);
+                    const matched = availableProjects.find(p => p.project_title === e.target.value);
+                    if (matched?.spv_name) setSpvName(matched.spv_name);
+                  }} 
+                  className="form-input"
+                >
+                  {availableProjects.map(p => (
+                    <option key={p.id} value={p.project_title}>{p.project_title}</option>
+                  ))}
+                </select>
+              ) : (
+                <input type="text" value={hubName} onChange={(e) => setHubName(e.target.value)} className="form-input" />
+              )}
             </div>
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.3rem' }}>Capital / Deal Value ({currency})</label>
@@ -120,10 +227,10 @@ export default function LegalContractsPortal() {
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>Yield / Compensation Structure</label>
               <select value={yieldOption} onChange={(e) => setYieldOption(e.target.value)} className="form-input">
-                <option>Option 1: The Fast-Paced (10% Gross / 22% Cap)</option>
-                <option>Option 2: The Multiplier (12% Gross / 1.5x Cap)</option>
-                <option>Option 3: The Partnership (35% Net Profit / 5% Floor)</option>
-                <option>Promoter Affiliate (0.50% Gross Volume)</option>
+                <option value="Option 1: The Fast-Paced (10% Gross / 22% Cap)">Option 1: The Fast-Paced (10% Gross / 22% Cap)</option>
+                <option value="Option 2: The Multiplier (12% Gross / 1.5x Cap)">Option 2: The Multiplier (12% Gross / 1.5x Cap)</option>
+                <option value="Option 3: The Partnership (35% Net Profit / 5% Floor)">Option 3: The Partnership (35% Net Profit / 5% Floor)</option>
+                <option value="Promoter Affiliate (0.50% Gross Volume)">Promoter Affiliate (0.50% Gross Volume)</option>
               </select>
             </div>
           </div>

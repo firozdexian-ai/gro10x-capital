@@ -26,6 +26,7 @@ const ROLE_TABS = {
     { href: '/legal-contracts',   label: 'Contracts',    icon: '📜' },
     { href: '/cash-concierge',    label: 'Concierge',    icon: '💎' },
     { href: '/showcase',          label: 'Showcase',     icon: '⭐' },
+    { href: '/telegram',          label: 'Bot Mesh',     icon: '🤖' },
   ],
   kam: [
     { href: '/kam-dashboard',     label: 'Dashboard',   icon: '📋' },
@@ -33,20 +34,27 @@ const ROLE_TABS = {
     { href: '/fraud-detection',   label: 'Fraud',       icon: '🛡️' },
     { href: '/buildout-tracker',  label: 'Buildout',    icon: '🏗️' },
     { href: '/showcase',          label: 'Showcase',    icon: '⭐' },
+    { href: '/telegram',          label: 'Bot Mesh',    icon: '🤖' },
   ],
   promoter: [
     { href: '/promoter',  label: 'My Hub',   icon: '🤝' },
     { href: '/payouts',   label: 'Payouts',  icon: '💸' },
     { href: '/showcase',  label: 'Showcase', icon: '⭐' },
+    { href: '/telegram',  label: 'Bot Mesh', icon: '🤖' },
   ],
   founder: [
-    { href: '/business',  label: 'Business Portal', icon: '🏢' },
-    { href: '/showcase',  label: 'Showcase',        icon: '⭐' },
+    { href: '/business',      label: 'Business Portal', icon: '🏢' },
+    { href: '/apply/status',  label: 'Cohort Status',   icon: '📋' },
+    { href: '/showcase',      label: 'Showcase',        icon: '⭐' },
+    { href: '/telegram',      label: 'Bot Mesh',        icon: '🤖' },
   ],
 };
 
 const PUBLIC_TABS = [
-  { href: '/showcase', label: 'Showcase', icon: '⭐' },
+  { href: '/showcase',     label: 'Showcase',      icon: '⭐' },
+  { href: '/apply',        label: 'Raise Capital', icon: '🚀' },
+  { href: '/apply/status', label: 'Cohort Status', icon: '📋' },
+  { href: '/telegram',     label: 'Telegram Mesh', icon: '🤖' },
 ];
 
 // ── Pill nav link (non-admin roles) ──────────────────────────────────────────

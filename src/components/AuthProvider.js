@@ -82,6 +82,24 @@ export function AuthProvider({ children }) {
     // Check active session on initial load
     const initializeAuth = async () => {
       try {
+        if (typeof window !== 'undefined') {
+          const isLocalOrTest = window.location.hostname === 'localhost' || 
+            window.location.hostname === '127.0.0.1' || 
+            process.env.NODE_ENV !== 'production';
+
+          const testRole = isLocalOrTest ? window.localStorage.getItem('gro10x_test_role') : null;
+          if (testRole) {
+            setUser({
+              id: window.localStorage.getItem('gro10x_test_user_id') || `test-${testRole}-id`,
+              email: `${testRole}@gro10x.com`,
+              user_metadata: { full_name: `Test ${testRole.toUpperCase()}`, role: testRole }
+            });
+            setRole(testRole);
+            setLoading(false);
+            return;
+          }
+        }
+
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -112,6 +130,14 @@ export function AuthProvider({ children }) {
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMountedRef.current) return;
 
+      const isLocalOrTest = window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1' || 
+        process.env.NODE_ENV !== 'production';
+
+      if (typeof window !== 'undefined' && isLocalOrTest && window.localStorage.getItem('gro10x_test_role')) {
+        return; // Retain test persona during local testing
+      }
+
       if (session?.user) {
         setUser(session.user);
         await fetchUserRole(session.user.id);
@@ -134,6 +160,10 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('gro10x_test_role');
+        window.localStorage.removeItem('gro10x_test_user_id');
+      }
       await supabase.auth.signOut();
       if (isMountedRef.current) {
         setUser(null);

@@ -15,6 +15,8 @@ export async function POST(request) {
       .select(`
         *,
         investors (
+          id,
+          user_id,
           alias_name,
           phone,
           email,
@@ -114,12 +116,16 @@ export async function POST(request) {
     }
 
     // Also record a system notification for the user
-    await supabase.from('notifications').insert([{
-      user_id: ticket.investors?.id || ticket.id,
-      title: `Cash Concierge: ${ticket.status.replace('_', ' ')}`,
-      message: `OTC Ticket for ${brandName} (${amountStr} BDT) status updated to ${ticket.status.replace('_', ' ')}.`,
-      type: 'info'
-    }]);
+    try {
+      await supabase.from('notifications').insert([{
+        user_id: ticket.investors?.user_id || ticket.investors?.id || null,
+        title: `Cash Concierge: ${ticket.status.replace('_', ' ')}`,
+        message: `OTC Ticket for ${brandName} (${amountStr} BDT) status updated to ${ticket.status.replace('_', ' ')}.`,
+        type: 'info'
+      }]);
+    } catch (notifErr) {
+      console.warn('Non-fatal cash ticket notification error:', notifErr);
+    }
 
     return NextResponse.json({
       success: true,

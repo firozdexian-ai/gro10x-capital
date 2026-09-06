@@ -2,26 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, Users, AlertCircle, PhoneCall, CheckCircle, ShieldCheck, 
-  Send, Award, DollarSign, FileText, Share2, Copy, RefreshCw, ChevronRight,
-  LogOut, Home, Briefcase, PlusCircle, UserCheck, Layers, ArrowUpRight,
-  CheckCircle2, XCircle, CreditCard, Shield, Clock, Search
+  AlertCircle, ShieldCheck, RefreshCw, Briefcase, PlusCircle, CheckCircle2,
+  Home, UserCheck, DollarSign, CreditCard
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { 
+  STYLES, navTabStyle, inputStyle, modalNextBtn, modalBackBtn, bottomNavStyle 
+} from './styles';
 
-// bKash-style Design Tokens
-const STYLES = {
-  bg: '#0f1a2e',
-  cardBg: '#1a2d4a',
-  cardBorder: '1px solid rgba(255, 255, 255, 0.08)',
-  gold: '#f0b429',
-  emerald: '#10b981',
-  amber: '#f59e0b',
-  rose: '#f43f5e',
-  blue: '#3b82f6',
-  purple: '#a855f7',
-  textMuted: '#94a3b8'
-};
+// Role-specific Mini Views
+import AdminMiniView from './views/AdminMiniView';
+import KamMiniView from './views/KamMiniView';
+import PromoterMiniView from './views/PromoterMiniView';
+import InvestorMiniView from './views/InvestorMiniView';
+import FounderMiniView from './views/FounderMiniView';
 
 export default function TeamMiniAppPage() {
   // Authentication & Telegram WebApp State
@@ -31,7 +25,7 @@ export default function TeamMiniAppPage() {
   const [tg, setTg] = useState(null);
 
   // App Navigation State
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'leads' | 'payouts' | 'kyc' | 'me'
+  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'leads' | 'payouts' | 'kyc' | 'portfolio' | 'tickets' | 'me'
   
   // Data States
   const [kpis, setKpis] = useState({ totalAum: 0, activeInvestors: 0, activeProjects: 0, unworkedLeads: 0 });
@@ -43,6 +37,8 @@ export default function TeamMiniAppPage() {
   const [projectsList, setProjectsList] = useState([]);
   const [commissionsList, setCommissionsList] = useState([]);
   const [kamTicketsList, setKamTicketsList] = useState([]);
+  const [investorData, setInvestorData] = useState({ holdings: [], totalInvested: 0, totalYields: 0 });
+  const [founderData, setFounderData] = useState({ businesses: [], totalRaised: 0 });
   const [toastMsg, setToastMsg] = useState(null);
 
   // Multi-Step Survey State (bKash-style step wizard)
@@ -62,7 +58,63 @@ export default function TeamMiniAppPage() {
     initTelegramApp();
   }, []);
 
-  const showToast = (msg) => {
+  const triggerHaptic = (type = 'light') => {
+    try {
+      if (tg?.HapticFeedback) {
+        if (type === 'success' || type === 'error' || type === 'warning') {
+          tg.HapticFeedback.notificationOccurred(type);
+        } else {
+          tg.HapticFeedback.impactOccurred(type);
+        }
+      }
+    } catch (e) {}
+  };
+
+  const switchTab = (tab) => {
+    triggerHaptic('light');
+    setActiveTab(tab);
+  };
+
+  useEffect(() => {
+    if (!tg) return;
+
+    if (showSurveyModal) {
+      try { tg.enableClosingConfirmation?.(); } catch (e) {}
+    } else {
+      try { tg.disableClosingConfirmation?.(); } catch (e) {}
+    }
+
+    if (activeTab !== 'home' || showSurveyModal) {
+      tg.BackButton?.show();
+      const handleBack = () => {
+        triggerHaptic('light');
+        if (showSurveyModal) {
+          setShowSurveyModal(false);
+        } else {
+          setActiveTab('home');
+        }
+      };
+      tg.BackButton?.onClick(handleBack);
+      return () => {
+        tg.BackButton?.offClick(handleBack);
+      };
+    } else {
+      tg.BackButton?.hide();
+    }
+  }, [tg, activeTab, showSurveyModal]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showSurveyModal) {
+        setShowSurveyModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSurveyModal]);
+
+  const showToast = (msg, hapticType = 'light') => {
+    triggerHaptic(hapticType);
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
@@ -97,31 +149,26 @@ export default function TeamMiniAppPage() {
         } else if (res.status === 403) {
           setAuthError(data.message || 'Account not registered in public.team');
         } else {
-          setAuthError(data.error || 'Authentication failed');
+          setAuthError(data.error || 'Authentication handshake failed');
         }
       } else {
-        // Fallback for browser preview / local dev testing
-        const { data: teamDev } = await supabase.from('team').select('*').limit(1).maybeSingle();
-        if (teamDev) {
-          const devUser = {
-            id: teamDev.id,
-            full_name: teamDev.full_name,
-            email: teamDev.email,
-            phone: teamDev.phone,
-            team_type: teamDev.team_type,
-            role: teamDev.team_type === 'promoter' ? 'promoter' : 'admin',
-            referral_code: teamDev.referral_code || 'GRO-ALI-4892',
-            promoter_tier: teamDev.promoter_tier || 'Associate'
-          };
-          setUser(devUser);
-          await loadDashboardData(devUser);
+        // Fallback for browser testing
+        const { data: testUser } = await supabase
+          .from('team')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (testUser) {
+          setUser(testUser);
+          await loadDashboardData(testUser);
         } else {
-          setAuthError('No dev user found in database for preview mode');
+          setAuthError('No active session or mock user available');
         }
       }
     } catch (err) {
-      console.error('MiniApp initialization error:', err);
-      setAuthError(err.message || 'Failed to initialize Mini App');
+      console.error('Telegram init error:', err);
+      setAuthError('Network error connecting to Telegram Bot API');
     } finally {
       setLoading(false);
     }
@@ -129,51 +176,59 @@ export default function TeamMiniAppPage() {
 
   const loadDashboardData = async (userData) => {
     try {
-      // Fetch KPIs & Alerts with proper status inclusions
+      // 1. Fetch High-Level Operational Metrics
       const [
-        { data: invs }, 
-        { count: activeInvestors }, 
-        { count: activeProjects }, 
-        { data: leads }, 
-        { data: kyc }, 
-        { data: pay }, 
-        { data: payouts }, 
-        { data: projs }, 
-        { data: comms }
+        { count: aumProjects, data: projectsData },
+        { count: investorCount },
+        { count: unworkedCount },
+        { data: leads }
       ] = await Promise.all([
-        supabase.from('investments').select('amount_bdt, amount_invested_bdt'),
-        supabase.from('investors').select('*', { count: 'exact', head: true }),
-        supabase.from('funding_projects').select('*', { count: 'exact', head: true }),
-        supabase.from('inquiry_leads').select('*').order('created_at', { ascending: false }).limit(15),
-        supabase.from('kyc_submissions').select('*').eq('status', 'Pending').order('created_at', { ascending: false }).limit(10),
-        supabase.from('payment_submissions').select('*').eq('status', 'Pending').order('created_at', { ascending: false }).limit(10),
-        supabase.from('payout_requests').select('*, team(full_name), promoters(full_name, phone)').in('status', ['Pending', 'Pending Verification']).order('created_at', { ascending: false }),
-        supabase.from('funding_projects').select('*, businesses(brand_name)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('promoter_commissions').select('*').limit(10)
+        supabase.from('funding_projects').select('amount_raised_bdt, target_raise_bdt, status, project_title, id, funding_type, businesses(brand_name)'),
+        supabase.from('investors').select('id', { count: 'exact', head: true }).eq('kyc_verified', true),
+        supabase.from('inquiry_leads').select('id', { count: 'exact', head: true }).eq('status', 'New'),
+        supabase.from('inquiry_leads').select('*').order('created_at', { ascending: false }).limit(10)
       ]);
 
-      const totalAum = (invs || []).reduce((sum, i) => sum + Number(i.amount_bdt || i.amount_invested_bdt || 0), 0);
-      const unworked = (leads || []).filter(l => l.status === 'New').length;
+      const totalAum = (projectsData || []).reduce((sum, p) => sum + Number(p.amount_raised_bdt || 0), 0);
+      const activeProjectsCount = (projectsData || []).filter(p => p.status === 'Active' || p.status === 'Funding').length;
 
-      setKpis({ totalAum, activeInvestors: activeInvestors || 0, activeProjects: activeProjects || 0, unworkedLeads: unworked });
-      setAlerts({ kycPending: kyc?.length || 0, payPending: pay?.length || 0, payoutPending: payouts?.length || 0 });
+      setKpis({
+        totalAum,
+        activeInvestors: investorCount || 0,
+        activeProjects: activeProjectsCount,
+        unworkedLeads: unworkedCount || 0
+      });
+
+      setProjectsList(projectsData || []);
       setLeadsList(leads || []);
-      setKycList(kyc || []);
-      setPaymentsList(pay || []);
-      setPayoutsList(payouts || []);
-      setProjectsList(projs || []);
-      setCommissionsList(comms || []);
 
-      // KAM-specific: fetch cash concierge OTC tickets
+      // 2. Fetch Pending Action Queues
+      const [
+        { count: kycCount, data: kycData },
+        { count: payCount, data: payData },
+        { count: payoutCount, data: payoutData }
+      ] = await Promise.all([
+        supabase.from('kyc_submissions').select('*').eq('status', 'Pending').limit(5),
+        supabase.from('payment_submissions').select('*').limit(5),
+        supabase.from('payout_requests').select('*, promoters(full_name)').eq('status', 'Pending').limit(5)
+      ]);
+
+      setAlerts({
+        kycPending: kycCount || 0,
+        payPending: payCount || 0,
+        payoutPending: payoutCount || 0
+      });
+
+      setKycList(kycData || []);
+      setPaymentsList(payData || []);
+      setPayoutsList(payoutData || []);
+
+      // 3. KAM-specific data: fetch assigned OTC tickets
       if (userData?.team_type === 'kam') {
         const { data: kamTickets } = await supabase
           .from('cash_tickets')
-          .select(`
-            id, ticket_amount_bdt, status, preferred_meeting_time, created_at,
-            investors(alias_name, full_name, requires_anonymity),
-            funding_projects!target_project_id(project_title)
-          `)
-          .not('status', 'eq', 'Closed')
+          .select('*, investors(alias_name, full_name, requires_anonymity), funding_projects!target_project_id(project_title)')
+          .or(`kam_id.eq.${userData.id},assigned_kam_id.eq.${userData.id}`)
           .order('created_at', { ascending: false })
           .limit(20);
         setKamTicketsList(kamTickets || []);
@@ -200,6 +255,50 @@ export default function TeamMiniAppPage() {
           if (pLeads && pLeads.length > 0) setLeadsList(pLeads);
         }
       }
+
+      // Investor-specific: fetch holdings and yields
+      if (userData?.role === 'investor' || userData?.team_type === 'investor') {
+        const [{ data: invHoldings }, { data: invYields }] = await Promise.all([
+          supabase
+            .from('investments')
+            .select('id, amount_invested_bdt, status, created_at, funding_projects(project_title, businesses(brand_name))')
+            .eq('investor_id', userData.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('investor_yields')
+            .select('amount_bdt')
+            .eq('investor_id', userData.id)
+        ]);
+
+        const totalInvested = (invHoldings || []).reduce((s, h) => s + Number(h.amount_invested_bdt || 0), 0);
+        const totalYields = (invYields || []).reduce((s, y) => s + Number(y.amount_bdt || 0), 0);
+
+        setInvestorData({
+          holdings: invHoldings || [],
+          totalInvested,
+          totalYields
+        });
+      }
+
+      // Founder-specific: fetch business entities & funding projects
+      if (userData?.role === 'founder' || userData?.team_type === 'founder') {
+        const { data: founderBusinesses } = await supabase
+          .from('businesses')
+          .select('*, funding_projects(*)')
+          .eq('founder_id', userData.id);
+
+        let totalRaised = 0;
+        (founderBusinesses || []).forEach(b => {
+          (b.funding_projects || []).forEach(p => {
+            totalRaised += Number(p.amount_raised_bdt || 0);
+          });
+        });
+
+        setFounderData({
+          businesses: founderBusinesses || [],
+          totalRaised
+        });
+      }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     }
@@ -208,12 +307,10 @@ export default function TeamMiniAppPage() {
   // Actions
   const handleApprovePayout = async (payoutId) => {
     try {
-      const { data: updatedPayout, error } = await supabase
+      const { error } = await supabase
         .from('payout_requests')
         .update({ status: 'Cleared' })
-        .eq('id', payoutId)
-        .select('*, promoters(full_name, phone)')
-        .single();
+        .eq('id', payoutId);
 
       if (error) throw error;
 
@@ -254,17 +351,6 @@ export default function TeamMiniAppPage() {
       showToast('✅ KYC verified successfully!');
     } catch (err) {
       showToast('❌ Failed to verify KYC');
-    }
-  };
-
-  const handleVerifyPayment = async (payId) => {
-    try {
-      await supabase.from('payment_submissions').update({ status: 'Verified' }).eq('id', payId);
-      setPaymentsList(prev => prev.filter(p => p.id !== payId));
-      setAlerts(prev => ({ ...prev, payPending: Math.max(0, prev.payPending - 1) }));
-      showToast('✅ Deposit payment verified!');
-    } catch (err) {
-      showToast('❌ Failed to verify payment');
     }
   };
 
@@ -352,12 +438,14 @@ export default function TeamMiniAppPage() {
     );
   }
 
-  const isPromoter = user?.team_type === 'promoter';
-  const isKam = user?.team_type === 'kam';
-  const isAdmin = !isPromoter && !isKam;
+  const isPromoter = user?.team_type === 'promoter' || user?.role === 'promoter';
+  const isKam = user?.team_type === 'kam' || user?.role === 'kam';
+  const isAdmin = user?.team_type === 'admin' || user?.team_type === 'manager' || user?.role === 'admin';
+  const isInvestor = user?.role === 'investor' || user?.team_type === 'investor';
+  const isFounder = user?.role === 'founder' || user?.team_type === 'founder';
 
   return (
-    <div style={{ minHeight: '100vh', background: STYLES.bg, paddingBottom: '5.5rem' }}>
+    <div style={{ minHeight: '100vh', background: STYLES.bg, paddingBottom: 'max(5.5rem, calc(4.5rem + env(safe-area-inset-bottom, 0px)))' }}>
       
       {/* TOAST NOTIFICATION */}
       {toastMsg && (
@@ -388,390 +476,71 @@ export default function TeamMiniAppPage() {
       {/* MAIN CONTENT AREA */}
       <main style={{ padding: '1.25rem' }}>
 
-        {/* ---------------------------------------------------- */}
-        {/* TAB: HOME (ADMIN / KAM / PROMOTER) */}
-        {/* ---------------------------------------------------- */}
+        {/* TAB: HOME */}
         {activeTab === 'home' && (
           <div>
-            {/* ======= PROMOTER HOME ======= */}
             {isPromoter && (
-              <div>
-                {/* PROMOTER REFERRAL HERO CARD */}
-                <div style={{ background: 'linear-gradient(135deg, #1a2d4a, #0f172a)', border: '1px solid rgba(240, 180, 41, 0.4)', borderRadius: '16px', padding: '1.25rem', marginBottom: '1.25rem', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }}>
-                  <div style={{ fontSize: '0.7rem', color: STYLES.gold, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.3rem' }}>
-                    🎯 Your Growth Referral Code
-                  </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fff', letterSpacing: '1px', marginBottom: '0.5rem', fontFamily: 'monospace' }}>
-                    {user?.referral_code || '—'}
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button 
-                      onClick={() => { 
-                        if (user?.referral_code) {
-                          navigator.clipboard?.writeText(user.referral_code); 
-                          showToast('Referral code copied!'); 
-                        } else {
-                          showToast('No referral code assigned yet.');
-                        }
-                      }}
-                      style={{ flex: 1, background: 'rgba(240, 180, 41, 0.15)', border: '1px solid #f0b429', color: STYLES.gold, padding: '0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', cursor: 'pointer' }}
-                    >
-                      <Copy size={14} /> Copy Code
-                    </button>
-                    <button 
-                      onClick={() => setShowSurveyModal(true)}
-                      style={{ flex: 1, background: STYLES.gold, border: 'none', color: '#000', padding: '0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', cursor: 'pointer' }}
-                    >
-                      <PlusCircle size={14} /> Log Survey
-                    </button>
-                  </div>
-                </div>
-
-                {/* GAMIFIED TIER ROADMAP (PROMOTER ONLY - DYNAMIC PROGRESS) */}
-                {(() => {
-                  const TIERS = ['Trainee', 'Junior', 'Associate', 'Senior', 'Elite'];
-                  const userTierRaw = user?.promoter_tier || user?.tier || 'Associate';
-                  const currentTierIdx = TIERS.findIndex(t => t.toLowerCase() === userTierRaw.toLowerCase().replace('_', ' ')) >= 0
-                    ? TIERS.findIndex(t => t.toLowerCase() === userTierRaw.toLowerCase().replace('_', ' '))
-                    : (userTierRaw.toLowerCase().includes('junior') ? 1 : userTierRaw.toLowerCase().includes('senior') ? 3 : userTierRaw.toLowerCase().includes('elite') ? 4 : userTierRaw.toLowerCase().includes('associate') ? 2 : 0);
-                  const progressPct = Math.min(100, Math.round((currentTierIdx / 4) * 100));
-
-                  return (
-                    <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1.25rem', marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <Award size={16} style={{ color: STYLES.gold }} /> Gamified Tier Roadmap
-                        </div>
-                        <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: STYLES.emerald, padding: '0.2rem 0.5rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800' }}>
-                          {userTierRaw.replace('_', ' ')} Tier
-                        </span>
-                      </div>
-                      
-                      {/* Horizontal Step Dots */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', margin: '1rem 0' }}>
-                        <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '2px', background: 'rgba(255,255,255,0.1)', zIndex: 1 }}></div>
-                        <div style={{ position: 'absolute', top: '50%', left: 0, width: `${progressPct}%`, height: '2px', background: STYLES.gold, zIndex: 1, transition: 'width 0.3s' }}></div>
-                        
-                        {TIERS.map((t, idx) => {
-                          const isDone = idx <= currentTierIdx;
-                          return (
-                            <div key={t} style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-                              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: isDone ? STYLES.gold : '#0f172a', border: isDone ? 'none' : '2px solid rgba(255,255,255,0.2)', display: 'grid', placeItems: 'center', color: '#000', fontSize: '0.65rem', fontWeight: '900' }}>
-                                {isDone ? '✓' : idx + 1}
-                              </div>
-                              <div style={{ fontSize: '0.6rem', color: isDone ? STYLES.gold : STYLES.textMuted, fontWeight: '700' }}>{t}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* PROMOTER COMMISSIONS SUMMARY CARD */}
-                {(() => {
-                  const totalEarned = commissionsList.reduce((sum, c) => sum + Number(c.amount_bdt || c.commission_amount_bdt || 0), 0);
-                  return (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
-                      <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                        <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Total Commission</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.gold }}>
-                          ৳{totalEarned >= 100000 ? `${(totalEarned / 100000).toFixed(2)}L` : totalEarned.toLocaleString()}
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: STYLES.emerald, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                          <DollarSign size={12} /> {commissionsList.length} Deals Credited
-                        </div>
-                      </div>
-                      <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                        <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Referred Leads</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#fff' }}>
-                          {leadsList.length}
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: STYLES.blue, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                          <Users size={12} /> Prospects Logged
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* PROMOTER QUICK ACTIONS */}
-                <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem', marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff', marginBottom: '0.85rem' }}>⚡ Promoter Actions</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
-                    <button onClick={() => setShowSurveyModal(true)} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(240, 180, 41, 0.2)', color: STYLES.gold }}><PlusCircle size={18} /></div>
-                      <div style={circleLabelStyle}>Log Survey</div>
-                    </button>
-                    <button onClick={() => setActiveTab('leads')} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(59, 130, 246, 0.2)', color: STYLES.blue }}><Users size={18} /></div>
-                      <div style={circleLabelStyle}>My Leads</div>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const url = `${window.location.origin}/showcase?ref=${user?.referral_code || ''}`;
-                        navigator.clipboard?.writeText(url);
-                        showToast('Showcase link copied!');
-                      }} 
-                      style={actionCircleStyle}
-                    >
-                      <div style={{ ...circleIconStyle, background: 'rgba(16, 185, 129, 0.2)', color: STYLES.emerald }}><Share2 size={18} /></div>
-                      <div style={circleLabelStyle}>Share Link</div>
-                    </button>
-                    <button onClick={handleRequestPinInChat} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(168, 85, 247, 0.2)', color: STYLES.purple }}><ShieldCheck size={18} /></div>
-                      <div style={circleLabelStyle}>Web PIN</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* RECENT LEADS PREVIEW */}
-                <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem', marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#fff', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>📋 My Recent Prospects</span>
-                    <span style={{ fontSize: '0.7rem', color: STYLES.gold, cursor: 'pointer' }} onClick={() => setActiveTab('leads')}>View All →</span>
-                  </div>
-                  {leadsList.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: STYLES.textMuted, fontSize: '0.8rem', padding: '1rem 0' }}>No leads logged yet. Tap "Log Survey" to add your first prospect!</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {leadsList.slice(0, 3).map((lead) => (
-                        <div key={lead.id} style={{ background: '#0f172a', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff' }}>{lead.name}</div>
-                            <div style={{ fontSize: '0.7rem', color: STYLES.textMuted }}>Range: {lead.investment_range || 'N/A'}</div>
-                          </div>
-                          <span style={{ background: lead.status === 'New' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)', color: lead.status === 'New' ? STYLES.emerald : STYLES.textMuted, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
-                            {lead.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <PromoterMiniView
+                user={user}
+                commissionsList={commissionsList}
+                leadsList={leadsList}
+                showToast={showToast}
+                setShowSurveyModal={setShowSurveyModal}
+                setActiveTab={setActiveTab}
+                handleRequestPinInChat={handleRequestPinInChat}
+              />
             )}
 
-
-            {/* ======= KAM HOME: Portfolio KPIs + Quick Actions + Recent Tickets ======= */}
             {isKam && (
-              <div>
-                {/* KAM Identity Hero */}
-                <div style={{ background: 'linear-gradient(135deg, #1a2d4a, #0f172a)', border: '1px solid rgba(240,180,41,0.4)', borderRadius: '16px', padding: '1.25rem', marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.7rem', color: STYLES.gold, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.3rem' }}>
-                    📁 Managing Partner OS
-                  </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: '900', color: '#fff', marginBottom: '0.5rem' }}>
-                    {user?.full_name}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: STYLES.textMuted }}>
-                    Key Account Manager · GRO10X Capital
-                  </div>
-                </div>
-
-                {/* KAM 2x2 KPI Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
-                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Active Projects</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.gold }}>{kpis.activeProjects}</div>
-                    <div style={{ fontSize: '0.65rem', color: STYLES.gold, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <Briefcase size={12} /> CapEx Pipeline
-                    </div>
-                  </div>
-                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>OTC Tickets</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.blue }}>{kamTicketsList.length}</div>
-                    <div style={{ fontSize: '0.65rem', color: STYLES.blue, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <CreditCard size={12} /> Active Pipeline
-                    </div>
-                  </div>
-                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Pending Review</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.amber }}>
-                      {kamTicketsList.filter(t => t.status === 'Pending_Review').length}
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: STYLES.amber, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <Clock size={12} /> Awaiting Action
-                    </div>
-                  </div>
-                  <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                    <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Total AUM</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.emerald }}>
-                      ৳{(kpis.totalAum / 10000000).toFixed(1)} Cr
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: STYLES.emerald, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <TrendingUp size={12} /> Platform CapEx
-                    </div>
-                  </div>
-                </div>
-
-                {/* KAM Quick Actions */}
-                <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem', marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff', marginBottom: '0.85rem' }}>⚡ Quick Actions</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
-                    <button onClick={() => setActiveTab('portfolio')} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(240, 180, 41, 0.2)', color: STYLES.gold }}><Briefcase size={18} /></div>
-                      <div style={circleLabelStyle}>Portfolio</div>
-                    </button>
-                    <button onClick={() => setActiveTab('tickets')} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(59, 130, 246, 0.2)', color: STYLES.blue }}><CreditCard size={18} /></div>
-                      <div style={circleLabelStyle}>Tickets</div>
-                    </button>
-                    <button onClick={() => setShowSurveyModal(true)} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(16, 185, 129, 0.2)', color: STYLES.emerald }}><PlusCircle size={18} /></div>
-                      <div style={circleLabelStyle}>New Lead</div>
-                    </button>
-                    <button onClick={handleRequestPinInChat} style={actionCircleStyle}>
-                      <div style={{ ...circleIconStyle, background: 'rgba(168, 85, 247, 0.2)', color: STYLES.purple }}><ShieldCheck size={18} /></div>
-                      <div style={circleLabelStyle}>Web PIN</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Recent OTC Tickets Preview */}
-                <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#fff', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>🎫 Recent OTC Tickets</span>
-                    <span style={{ fontSize: '0.7rem', color: STYLES.gold, cursor: 'pointer' }} onClick={() => setActiveTab('tickets')}>View All →</span>
-                  </div>
-                  {kamTicketsList.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: STYLES.textMuted, fontSize: '0.8rem', padding: '1rem 0' }}>No active OTC tickets</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {kamTicketsList.slice(0, 3).map((t) => {
-                        const investor = t.investors;
-                        const name = investor?.requires_anonymity ? (investor?.alias_name || '🔒 Anonymous') : (investor?.alias_name || investor?.full_name || 'Investor');
-                        const statusColor = t.status === 'Pending_Review' ? STYLES.amber : t.status === 'Meeting_Scheduled' ? STYLES.blue : t.status === 'Funds_Cleared' ? STYLES.emerald : STYLES.textMuted;
-                        return (
-                          <div key={t.id} style={{ background: '#0f172a', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff' }}>{name}</div>
-                              <div style={{ fontSize: '0.7rem', color: STYLES.textMuted }}>৳{Number(t.ticket_amount_bdt || 0).toLocaleString()} · {t.funding_projects?.project_title || 'CapEx'}</div>
-                            </div>
-                            <span style={{ background: `${statusColor}22`, color: statusColor, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                              {t.status?.replace(/_/g, ' ')}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <KamMiniView
+                user={user}
+                kpis={kpis}
+                kamTicketsList={kamTicketsList}
+                projectsList={projectsList}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                handleRequestPinInChat={handleRequestPinInChat}
+                setShowSurveyModal={setShowSurveyModal}
+              />
             )}
 
-            {/* ======= ADMIN HOME KPIs + QUICK ACTIONS ======= */}
-            {!isKam && !isPromoter && (
-              <div>
-            {/* 2x2 KPI GRID CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
-              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Total AUM Raised</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.gold }}>
-                  ৳{(kpis.totalAum / 10000000).toFixed(2)} Cr
-                </div>
-                <div style={{ fontSize: '0.65rem', color: STYLES.emerald, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                  <TrendingUp size={12} /> Platform CapEx
-                </div>
-              </div>
+            {isAdmin && (
+              <AdminMiniView
+                kpis={kpis}
+                alerts={alerts}
+                leadsList={leadsList}
+                payoutsList={payoutsList}
+                kycList={kycList}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                handleRequestPinInChat={handleRequestPinInChat}
+                handleApprovePayout={handleApprovePayout}
+                handleRejectPayout={handleRejectPayout}
+                handleApproveKyc={handleApproveKyc}
+                setShowSurveyModal={setShowSurveyModal}
+              />
+            )}
 
-              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Active Investors</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#fff' }}>
-                  {kpis.activeInvestors}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: STYLES.blue, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                  <Users size={12} /> KYC Verified
-                </div>
-              </div>
+            {isInvestor && (
+              <InvestorMiniView
+                user={user}
+                investorData={investorData}
+                handleRequestPinInChat={handleRequestPinInChat}
+              />
+            )}
 
-              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Action Queue</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.amber }}>
-                  {alerts.kycPending + alerts.payPending + alerts.payoutPending}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: STYLES.amber, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                  <AlertCircle size={12} /> Items Pending
-                </div>
-              </div>
-
-              <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', color: STYLES.textMuted, marginBottom: '0.3rem' }}>Unworked Leads</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '900', color: STYLES.emerald }}>
-                  {kpis.unworkedLeads}
-                </div>
-                <div style={{ fontSize: '0.65rem', color: STYLES.textMuted, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                  <PhoneCall size={12} /> Inquiry Queue
-                </div>
-              </div>
-            </div>
-
-            {/* BKASH-STYLE CIRCULAR QUICK ACTIONS STRIP */}
-            <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff', marginBottom: '0.85rem' }}>
-                ⚡ Quick Operational Actions
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
-                <button onClick={() => setActiveTab('leads')} style={actionCircleStyle}>
-                  <div style={{ ...circleIconStyle, background: 'rgba(59, 130, 246, 0.2)', color: STYLES.blue }}>
-                    <Users size={18} />
-                  </div>
-                  <div style={circleLabelStyle}>Leads</div>
-                </button>
-
-                <button onClick={() => setActiveTab('payouts')} style={actionCircleStyle}>
-                  <div style={{ ...circleIconStyle, background: 'rgba(240, 180, 41, 0.2)', color: STYLES.gold }}>
-                    <DollarSign size={18} />
-                  </div>
-                  <div style={circleLabelStyle}>Payouts</div>
-                </button>
-
-                <button onClick={() => setActiveTab('kyc')} style={actionCircleStyle}>
-                  <div style={{ ...circleIconStyle, background: 'rgba(16, 185, 129, 0.2)', color: STYLES.emerald }}>
-                    <ShieldCheck size={18} />
-                  </div>
-                  <div style={circleLabelStyle}>KYC</div>
-                </button>
-
-                <button onClick={handleRequestPinInChat} style={actionCircleStyle}>
-                  <div style={{ ...circleIconStyle, background: 'rgba(168, 85, 247, 0.2)', color: STYLES.purple }}>
-                    <ShieldCheck size={18} />
-                  </div>
-                  <div style={circleLabelStyle}>Web PIN</div>
-                </button>
-              </div>
-            </div>
-
-            {/* RECENT ACTIVITY LIST */}
-            <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#fff', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>📋 Latest Inquiries Queue</span>
-                <span style={{ fontSize: '0.7rem', color: STYLES.gold, cursor: 'pointer' }} onClick={() => setActiveTab('leads')}>View All →</span>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {leadsList.slice(0, 3).map((lead) => (
-                  <div key={lead.id} style={{ background: '#0f172a', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff' }}>{lead.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: STYLES.textMuted }}>Range: {lead.investment_range || 'N/A'} • {lead.source_channel || 'Web'}</div>
-                    </div>
-                    <span style={{ background: lead.status === 'New' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)', color: lead.status === 'New' ? STYLES.emerald : STYLES.textMuted, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
-                      {lead.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            </div>
+            {isFounder && (
+              <FounderMiniView
+                user={user}
+                founderData={founderData}
+                handleRequestPinInChat={handleRequestPinInChat}
+              />
             )}
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
         {/* TAB: LEADS QUEUE */}
-        {/* ---------------------------------------------------- */}
-        {activeTab === 'leads' && (
+        {activeTab === 'leads' && (isAdmin || isPromoter) && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🎯 Inquiry Lead CRM ({leadsList.length})</h3>
@@ -806,9 +575,7 @@ export default function TeamMiniAppPage() {
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
-        {/* TAB: KAM PORTFOLIO (KAM ONLY) */}
-        {/* ---------------------------------------------------- */}
+        {/* TAB: KAM PORTFOLIO */}
         {activeTab === 'portfolio' && isKam && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -827,22 +594,22 @@ export default function TeamMiniAppPage() {
                   const pct = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
                   return (
                     <div key={p.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                         <div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{p.businesses?.brand_name || 'GRO10X SPV'}</div>
-                          <div style={{ fontSize: '0.75rem', color: STYLES.gold, fontWeight: '600' }}>{p.project_title}</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{p.businesses?.brand_name || 'GRO10X'}</div>
+                          <div style={{ fontSize: '0.75rem', color: STYLES.textMuted }}>{p.project_title}</div>
                         </div>
-                        <span style={{ background: 'rgba(240,180,41,0.15)', color: STYLES.gold, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
-                          {p.status || 'Origination'}
+                        <span style={{ background: 'rgba(240, 180, 41, 0.15)', color: STYLES.gold, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
+                          {p.funding_type || 'Franchise'}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.4rem' }}>
-                        ৳{raised.toLocaleString()} / ৳{target.toLocaleString()} raised
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: STYLES.textMuted, marginBottom: '0.4rem' }}>
+                        <span>Raised: ৳{raised.toLocaleString()}</span>
+                        <span>Target: ৳{target.toLocaleString()}</span>
                       </div>
-                      <div style={{ background: '#0f172a', borderRadius: '6px', height: '6px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 80 ? STYLES.emerald : pct >= 40 ? STYLES.gold : STYLES.blue, borderRadius: '6px', transition: 'width 0.3s' }} />
+                      <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
+                        <div style={{ background: STYLES.gold, width: `${pct}%`, height: '100%', borderRadius: '4px' }} />
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: STYLES.textMuted, marginTop: '0.3rem' }}>{pct}% funded · {p.funding_type}</div>
                     </div>
                   );
                 })}
@@ -851,50 +618,39 @@ export default function TeamMiniAppPage() {
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
-        {/* TAB: KAM OTC CASH TICKETS (KAM ONLY) */}
-        {/* ---------------------------------------------------- */}
+        {/* TAB: KAM OTC TICKETS */}
         {activeTab === 'tickets' && isKam && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🎫 Cash Concierge Tickets ({kamTicketsList.length})</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🎫 Cash Concierge OTC Desk ({kamTicketsList.length})</h3>
             </div>
             {kamTicketsList.length === 0 ? (
               <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '2.5rem 1rem', textAlign: 'center' }}>
                 <CreditCard size={36} color={STYLES.textMuted} style={{ margin: '0 auto 0.5rem auto', display: 'block' }} />
-                <div style={{ color: STYLES.textMuted, fontSize: '0.85rem' }}>No active OTC tickets</div>
-                <div style={{ color: STYLES.textMuted, fontSize: '0.75rem', marginTop: '0.3rem' }}>All consultations are complete</div>
+                <div style={{ color: STYLES.textMuted, fontSize: '0.85rem' }}>No cash tickets assigned</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {kamTicketsList.map((t) => {
-                  const investor = t.investors;
-                  const name = investor?.requires_anonymity
-                    ? (investor?.alias_name || '🔒 Anonymous OTC')
-                    : (investor?.alias_name || investor?.full_name || 'Investor');
-                  const statusColor = t.status === 'Pending_Review' ? STYLES.amber : t.status === 'Meeting_Scheduled' ? STYLES.blue : t.status === 'Funds_Cleared' ? STYLES.emerald : STYLES.textMuted;
+                  const inv = t.investors;
+                  const name = inv?.requires_anonymity ? (inv?.alias_name || '🔒 Anonymous HNI') : (inv?.alias_name || inv?.full_name || 'HNI Investor');
                   return (
                     <div key={t.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                         <div>
-                          <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#fff' }}>{name}</div>
-                          <div style={{ fontSize: '0.7rem', color: STYLES.gold }}>#{t.id.slice(0, 8)}</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{name}</div>
+                          <div style={{ fontSize: '0.75rem', color: STYLES.textMuted }}>{t.funding_projects?.project_title || 'CapEx Target'}</div>
                         </div>
-                        <span style={{ background: `${statusColor}22`, color: statusColor, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                        <span style={{ background: t.status === 'Pending_Review' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: t.status === 'Pending_Review' ? STYLES.amber : STYLES.emerald, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
                           {t.status?.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', fontWeight: '700', color: STYLES.gold, marginBottom: '0.3rem' }}>
-                        ৳{Number(t.ticket_amount_bdt || 0).toLocaleString()} BDT
+                      <div style={{ fontSize: '1.1rem', fontWeight: '900', color: STYLES.gold, marginBottom: '0.3rem' }}>
+                        ৳{Number(t.ticket_amount_bdt || 0).toLocaleString()}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: STYLES.textMuted }}>
-                        → {t.funding_projects?.project_title || 'CapEx Target'}
+                      <div style={{ fontSize: '0.7rem', color: STYLES.textMuted }}>
+                        Pref. Meeting: {t.preferred_meeting_time || 'TBD'}
                       </div>
-                      {t.preferred_meeting_time && (
-                        <div style={{ fontSize: '0.72rem', color: STYLES.blue, marginTop: '0.3rem' }}>
-                          📅 Preferred: {t.preferred_meeting_time}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -903,11 +659,8 @@ export default function TeamMiniAppPage() {
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
-        {/* TAB: PAYOUTS APPROVAL QUEUE (ADMIN ONLY) */}
-        {/* ---------------------------------------------------- */}
-        {activeTab === 'payouts' && !isPromoter && !isKam && (
-
+        {/* TAB: PAYOUTS APPROVAL QUEUE */}
+        {activeTab === 'payouts' && isAdmin && (
           <div>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>💳 Commission Payout Queue ({payoutsList.length})</h3>
             
@@ -948,10 +701,8 @@ export default function TeamMiniAppPage() {
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
-        {/* TAB: KYC REVIEW (ADMIN ONLY) */}
-        {/* ---------------------------------------------------- */}
-        {activeTab === 'kyc' && !isPromoter && !isKam && (
+        {/* TAB: KYC REVIEW */}
+        {activeTab === 'kyc' && isAdmin && (
           <div>
             <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>🛡️ KYC Submissions Queue ({kycList.length})</h3>
             
@@ -965,18 +716,21 @@ export default function TeamMiniAppPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {kycList.map((k) => (
                   <div key={k.id} style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '14px', padding: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>{k.full_name}</div>
-                      <span style={{ background: 'rgba(240, 180, 41, 0.15)', color: STYLES.gold, padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800' }}>
-                        Pending Review
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>
+                        {k.full_name || 'Investor'}
+                      </div>
+                      <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: STYLES.amber, padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '700' }}>
+                        Level {k.target_level || 2}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.65rem' }}>
-                      NID / Passport: <strong style={{ color: '#fff' }}>{k.nid_number || 'Attached'}</strong> • Date: {new Date(k.created_at).toLocaleDateString('en-GB')}
+                    <div style={{ fontSize: '0.75rem', color: STYLES.textMuted, marginBottom: '0.75rem' }}>
+                      ID Number: <strong style={{ color: '#cbd5e1' }}>{k.id_number || 'Provided in Document'}</strong>
                     </div>
+
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => handleApproveKyc(k.id)} style={{ flex: 1, background: STYLES.emerald, color: '#000', border: 'none', padding: '0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>
-                        ✓ Verify KYC
+                      <button onClick={() => handleApproveKyc(k.id)} style={{ flex: 1, background: STYLES.emerald, color: '#000', border: 'none', padding: '0.55rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}>
+                        ✅ Verify & Approve
                       </button>
                     </div>
                   </div>
@@ -986,9 +740,7 @@ export default function TeamMiniAppPage() {
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
         {/* TAB: ME & PROFILE */}
-        {/* ---------------------------------------------------- */}
         {activeTab === 'me' && (
           <div>
             <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '16px', padding: '1.5rem', textAlign: 'center', marginBottom: '1.25rem' }}>
@@ -1018,9 +770,14 @@ export default function TeamMiniAppPage() {
 
       </main>
 
-      {/* MULTI-STEP BKASH-STYLE INVESTOR SURVEY MODAL */}
+      {/* MULTI-STEP INVESTOR SURVEY MODAL */}
       {showSurveyModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 26, 46, 0.95)', backdropFilter: 'blur(10px)', zIndex: 100, padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div 
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSurveyModal(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 26, 46, 0.95)', backdropFilter: 'blur(10px)', zIndex: 100, padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+        >
           <div style={{ background: STYLES.cardBg, border: STYLES.cardBorder, borderRadius: '20px', padding: '1.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: '800', color: STYLES.gold, textTransform: 'uppercase' }}>
@@ -1133,18 +890,18 @@ export default function TeamMiniAppPage() {
       {/* BOTTOM FIXED NAVIGATION BAR */}
       {isKam ? (
         /* KAM 4-TAB NAV: Home / Portfolio / Tickets / Me */
-        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
-          <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
+        <nav style={bottomNavStyle(4)}>
+          <button onClick={() => switchTab('home')} style={navTabStyle(activeTab === 'home')}>
             <Home size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
           </button>
 
-          <button onClick={() => setActiveTab('portfolio')} style={navTabStyle(activeTab === 'portfolio')}>
+          <button onClick={() => switchTab('portfolio')} style={navTabStyle(activeTab === 'portfolio')}>
             <Briefcase size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Portfolio</span>
           </button>
 
-          <button onClick={() => setActiveTab('tickets')} style={{ ...navTabStyle(activeTab === 'tickets'), position: 'relative' }}>
+          <button onClick={() => switchTab('tickets')} style={{ ...navTabStyle(activeTab === 'tickets'), position: 'relative' }}>
             {kamTicketsList.filter(t => t.status === 'Pending_Review').length > 0 && (
               <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.amber, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
                 {kamTicketsList.filter(t => t.status === 'Pending_Review').length}
@@ -1154,20 +911,20 @@ export default function TeamMiniAppPage() {
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Tickets</span>
           </button>
 
-          <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
+          <button onClick={() => switchTab('me')} style={navTabStyle(activeTab === 'me')}>
             <UserCheck size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
           </button>
         </nav>
       ) : isPromoter ? (
         /* PROMOTER 3-TAB NAV: Home / Leads / Me */
-        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
-          <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
+        <nav style={bottomNavStyle(3)}>
+          <button onClick={() => switchTab('home')} style={navTabStyle(activeTab === 'home')}>
             <Home size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
           </button>
 
-          <button onClick={() => setActiveTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
+          <button onClick={() => switchTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
             {leadsList.length > 0 && (
               <span style={{ position: 'absolute', top: '0.1rem', right: '28%', background: STYLES.emerald, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
                 {leadsList.length}
@@ -1177,20 +934,20 @@ export default function TeamMiniAppPage() {
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>My Leads</span>
           </button>
 
-          <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
+          <button onClick={() => switchTab('me')} style={navTabStyle(activeTab === 'me')}>
             <UserCheck size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
           </button>
         </nav>
-      ) : (
+      ) : isAdmin ? (
         /* ADMIN 5-TAB NAV: Home / Leads / Payouts / KYC / Me */
-        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(26, 45, 74, 0.95)', backdropFilter: 'blur(10px)', borderTop: STYLES.cardBorder, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', padding: '0.5rem 0', zIndex: 50 }}>
-          <button onClick={() => setActiveTab('home')} style={navTabStyle(activeTab === 'home')}>
+        <nav style={bottomNavStyle(5)}>
+          <button onClick={() => switchTab('home')} style={navTabStyle(activeTab === 'home')}>
             <Home size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
           </button>
 
-          <button onClick={() => setActiveTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
+          <button onClick={() => switchTab('leads')} style={{ ...navTabStyle(activeTab === 'leads'), position: 'relative' }}>
             {kpis.unworkedLeads > 0 && (
               <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.emerald, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
                 {kpis.unworkedLeads}
@@ -1200,7 +957,7 @@ export default function TeamMiniAppPage() {
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Leads</span>
           </button>
 
-          <button onClick={() => setActiveTab('payouts')} style={{ ...navTabStyle(activeTab === 'payouts'), position: 'relative' }}>
+          <button onClick={() => switchTab('payouts')} style={{ ...navTabStyle(activeTab === 'payouts'), position: 'relative' }}>
             {alerts.payoutPending > 0 && (
               <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.gold, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
                 {alerts.payoutPending}
@@ -1210,7 +967,7 @@ export default function TeamMiniAppPage() {
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Payouts</span>
           </button>
 
-          <button onClick={() => setActiveTab('kyc')} style={{ ...navTabStyle(activeTab === 'kyc'), position: 'relative' }}>
+          <button onClick={() => switchTab('kyc')} style={{ ...navTabStyle(activeTab === 'kyc'), position: 'relative' }}>
             {alerts.kycPending > 0 && (
               <span style={{ position: 'absolute', top: '0.1rem', right: '22%', background: STYLES.amber, color: '#000', borderRadius: '10px', fontSize: '0.55rem', fontWeight: '900', padding: '0.05rem 0.35rem' }}>
                 {alerts.kycPending}
@@ -1220,7 +977,19 @@ export default function TeamMiniAppPage() {
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>KYC</span>
           </button>
 
-          <button onClick={() => setActiveTab('me')} style={navTabStyle(activeTab === 'me')}>
+          <button onClick={() => switchTab('me')} style={navTabStyle(activeTab === 'me')}>
+            <UserCheck size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
+          </button>
+        </nav>
+      ) : (
+        /* INVESTOR & FOUNDER 2-TAB NAV: Home / Me */
+        <nav style={bottomNavStyle(2)}>
+          <button onClick={() => switchTab('home')} style={navTabStyle(activeTab === 'home')}>
+            <Home size={18} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Home</span>
+          </button>
+          <button onClick={() => switchTab('me')} style={navTabStyle(activeTab === 'me')}>
             <UserCheck size={18} />
             <span style={{ fontSize: '0.65rem', fontWeight: '700', marginTop: '0.2rem' }}>Me</span>
           </button>
@@ -1230,78 +999,3 @@ export default function TeamMiniAppPage() {
     </div>
   );
 }
-
-// Sub-component inline styles
-const actionCircleStyle = {
-  background: 'none',
-  border: 'none',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  cursor: 'pointer',
-  padding: 0
-};
-
-const circleIconStyle = {
-  width: '44px',
-  height: '44px',
-  borderRadius: '50%',
-  display: 'grid',
-  placeItems: 'center',
-  marginBottom: '0.35rem'
-};
-
-const circleLabelStyle = {
-  fontSize: '0.68rem',
-  fontWeight: '700',
-  color: '#fff'
-};
-
-const navTabStyle = (active) => ({
-  background: 'none',
-  border: 'none',
-  color: active ? STYLES.gold : STYLES.textMuted,
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  padding: '0.3rem 0'
-});
-
-const inputStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  background: '#0f172a',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '12px',
-  color: '#fff',
-  fontSize: '0.85rem',
-  outline: 'none',
-  boxSizing: 'border-box'
-};
-
-const modalNextBtn = {
-  width: '100%',
-  padding: '0.85rem',
-  background: STYLES.blue,
-  color: '#fff',
-  fontWeight: '800',
-  border: 'none',
-  borderRadius: '12px',
-  fontSize: '0.85rem',
-  marginTop: '1rem',
-  cursor: 'pointer'
-};
-
-const modalBackBtn = {
-  flex: 1,
-  padding: '0.85rem',
-  background: 'rgba(255,255,255,0.05)',
-  color: STYLES.textMuted,
-  fontWeight: '700',
-  border: STYLES.cardBorder,
-  borderRadius: '12px',
-  fontSize: '0.85rem',
-  cursor: 'pointer'
-};

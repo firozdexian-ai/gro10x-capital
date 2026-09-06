@@ -39,18 +39,32 @@ export default function PayoutsPage() {
     try {
       setLoading(true);
       
-      const { data: profile, error: profErr } = await supabase
+      let profile = null;
+      const { data: legacyProfile } = await supabase
         .from('promoters')
         .select('*')
         .eq('user_id', user.id)
-        .single();
-        
-      if (profErr) {
-        if (profErr.code !== 'PGRST116') throw profErr;
+        .maybeSingle();
+
+      if (legacyProfile) {
+        profile = legacyProfile;
+      } else {
+        const { data: teamProfile } = await supabase
+          .from('team')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('team_type', 'promoter')
+          .maybeSingle();
+        if (teamProfile) {
+          profile = teamProfile;
+        }
+      }
+
+      if (!profile) {
         setLoading(false);
         return;
       }
-      
+
       setPromoterProfile(profile);
 
       // Fetch actual commissions from DB

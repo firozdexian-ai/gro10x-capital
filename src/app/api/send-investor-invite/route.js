@@ -27,13 +27,17 @@ export async function POST(request) {
     const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'GRO10XBot';
     const inviteLink = `https://t.me/${botUsername}?start=verify_${preProfile.id}`;
 
-    // 2. Log notification record
-    await supabase.from('notifications').insert([{
-      user_id: preProfile.submitted_by_promoter_id || pre_profile_id,
-      title: 'Telegram Investor Invite Dispatched',
-      message: `Bot invite generated for ${preProfile.full_name} (${preProfile.phone}). Verification link: ${inviteLink}`,
-      type: 'Telegram_Invite'
-    }]);
+    // 2. Log notification record (safeguarded)
+    try {
+      await supabase.from('notifications').insert([{
+        user_id: preProfile.submitted_by_promoter_id || null,
+        title: 'Telegram Investor Invite Dispatched',
+        message: `Bot invite generated for ${preProfile.full_name || preProfile.name} (${preProfile.phone}). Verification link: ${inviteLink}`,
+        type: 'Telegram_Invite'
+      }]);
+    } catch (notifErr) {
+      console.warn('Non-fatal invite notification error:', notifErr);
+    }
 
     // 3. Update status to Telegram_Invite_Sent
     const { error: updateErr } = await supabase

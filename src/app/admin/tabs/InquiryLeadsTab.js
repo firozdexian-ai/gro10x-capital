@@ -58,11 +58,25 @@ export default function InquiryLeadsTab({ currency = 'BDT', addToast, logPlatfor
         .order('created_at', { ascending: false });
       setLeads(leadsData || []);
 
-      // Fetch Pre-Profiles (Promoter Surveys)
-      const { data: preData } = await supabase
-        .from('investor_pre_profiles')
-        .select(`*, funding_projects(project_title, businesses(brand_name))`)
-        .order('created_at', { ascending: false });
+      // Fetch Pre-Profiles (Promoter Surveys) with fallback
+      let preData = null;
+      try {
+        const { data, error } = await supabase
+          .from('investor_pre_profiles')
+          .select(`*, funding_projects(project_title, businesses(brand_name))`)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          preData = data;
+        } else {
+          const { data: fallbackData } = await supabase
+            .from('investor_pre_profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+          preData = fallbackData || [];
+        }
+      } catch (e) {
+        console.warn('Non-fatal pre-profiles query fallback:', e);
+      }
       setPreProfiles(preData || []);
 
       // Fetch Marketing Campaigns

@@ -1,64 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, TrendingUp, ShieldCheck, HelpCircle, MessageSquare, 
-  Calendar, CheckCircle, Lock, ArrowUpRight, DollarSign, Send,
-  FileText, Award, ChevronDown, ChevronUp, AlertTriangle, Info, Sparkles, Globe,
-  UserCheck, Shield, Unlock, RefreshCw, Loader2, Download
-} from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
-import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
+import { Shield, FileText, Sparkles, HelpCircle, ShieldCheck, Unlock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../components/AuthProvider';
-import Skeleton from '../../components/Skeleton';
 import { useToast } from '../../components/Toast';
 
-// Global constants for month order mapping
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+import PortfolioTab from './tabs/PortfolioTab';
+import KycVerificationTab from './tabs/KycVerificationTab';
+import DocumentVaultTab from './tabs/DocumentVaultTab';
+import AiConciergeTab from './tabs/AiConciergeTab';
+import FaqTab from './tabs/FaqTab';
+import SecondarySellModal from './modals/SecondarySellModal';
 
-const dueDiligenceFAQs = [
-  {
-    q: "Who owns GRO10X, and do any ORO Roasters founders hold equity in GRO10X?",
-    a: "GRO10X operates as an independent growth & data management entity (24-Month Master Growth Agreement). GRO10X has zero operational, payroll, or real estate liabilities for ORO Roasters. ORO founders handle culinary execution, payroll, and supply chain logistics, while GRO10X handles digital demand gen, live COGS monitoring, and capital rotation."
-  },
-  {
-    q: "How does GRO10X make money from each outlet?",
-    a: "GRO10X charges a 2.5% management fee on monthly gross network sales, clear of all payroll liabilities, plus a 2.5% capital success fee on total raised capital."
-  },
-  {
-    q: "How are coffee roasting equipment and physical fit-outs owned?",
-    a: "Physical assets (machinery, civil fit-outs, kitchen equipment) are held directly under the specific outlet SPV entity in which investors hold their yield/partnership agreements, ensuring clear asset-backed claim."
-  },
-  {
-    q: "What is the minimum investment required to participate in a GRO10X funding round?",
-    a: "Standard syndicate micro-allocations start from BDT 1,00,000 for retail syndicate investors up to multi-crore private tranches for Level 3 Accredited HNI partners."
-  },
-  {
-    q: "How and when are monthly yield distributions paid?",
-    a: "Monthly yields are calculated from daily POS telemetry data recorded in the system and reconciled by the assigned KAM after monthly physical asset audits. Disbursements are credited directly to investor bank accounts by the 10th of each calendar month."
-  },
-  {
-    q: "What is the secondary market exit mechanism and how liquid is it?",
-    a: "Level 2+ verified investors can list their SPV shares on the internal GRO10X Secondary P2P Orderbook within a ±10% anti-speculation fair-market-value corridor. Matching buyers can acquire active shares instantly without waiting for project maturity."
-  },
-  {
-    q: "What happens to my investment if a business outlet underperforms or closes?",
-    a: "All investments are legally asset-backed. In the event of persistent outlet underperformance, the SPV entity holds direct first-charge claim on physical equipment, fit-outs, and remaining escrow reserves for liquidation recovery."
-  },
-  {
-    q: "Are GRO10X investment distributions subject to tax in Bangladesh?",
-    a: "Yield disbursements are treated as partnership profit-share/dividends under Bangladeshi tax law. Investors receive formal annual tax statements from the Document Vault for standard income tax filings."
-  },
-  {
-    q: "What is the difference between Option 1 (Rev-Share) and Option 2 (Growth Yield)?",
-    a: "Option 1 provides steady monthly revenue-share yields calculated directly on top-line gross sales. Option 2 provides a blended base return plus an equity upside kicker tied to franchise expansion and secondary valuation growth."
-  },
-  {
-    q: "How does the Progressive KYC verification process work?",
-    a: "Level 1 is granted upon registration for browsing deals. Level 2 requires NID/Passport identity submission for Secondary Market trading rights. Level 3 requires Source of Funds declaration for high-ticket Private Cash Concierge deals."
-  }
-];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function InvestorPortal() {
   const { user, loading: authLoading } = useAuth();
@@ -114,6 +69,20 @@ export default function InvestorPortal() {
     }
   }, [user]);
 
+  // Deep linking: read query parameter (?tab=kyc) or URL hash (#kyc)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const queryTab = params.get('tab');
+      const hashTab = window.location.hash.replace('#', '');
+      const validTabs = ['portfolio', 'kyc', 'vault', 'ai-concierge', 'faq'];
+      const target = queryTab || hashTab;
+      if (target && validTabs.includes(target.toLowerCase())) {
+        setActiveTab(target.toLowerCase());
+      }
+    }
+  }, []);
+
   const fetchInvestorData = async (authUserId) => {
     try {
       // 1. Fetch internal investor_id from auth user
@@ -135,9 +104,8 @@ export default function InvestorPortal() {
       
       // Determine kyc level
       if (invData.kyc_verified) {
-        setKycLevel(3); // For MVP, verified means L3. Could be more granular.
+        setKycLevel(3);
       } else {
-        // Check if they have a pending submission
         const { data: sub } = await supabase
           .from('kyc_submissions')
           .select('status, target_level')
@@ -174,11 +142,10 @@ export default function InvestorPortal() {
       
       setHoldings(investments || []);
       
-      // Calculate total
       const total = (investments || []).reduce((acc, curr) => acc + Number(curr.amount_invested_bdt), 0);
       setTotalInvested(total);
 
-      // 3. Fetch pending bookings (Action Required)
+      // 3. Fetch pending bookings
       const { data: pending, error: pendingErr } = await supabase
         .from('investment_bookings')
         .select(`
@@ -198,7 +165,7 @@ export default function InvestorPortal() {
       if (pendingErr) throw pendingErr;
       setPendingBookings(pending || []);
       
-      // 4. Fetch actual yields from investor_yields
+      // 4. Fetch actual yields
       const { data: yields, error: yieldsErr } = await supabase
         .from('investor_yields')
         .select(`
@@ -225,7 +192,6 @@ export default function InvestorPortal() {
         
         setTotalEarned(earned);
         
-        // Map back to array sorted by months
         const historyData = [];
         MONTHS.forEach(m => {
           const shortM = m.substring(0, 3);
@@ -234,7 +200,6 @@ export default function InvestorPortal() {
           }
         });
         
-        // If history is empty but we have zero earned, supply empty array.
         setYieldHistory(historyData);
       } else {
         setTotalEarned(0);
@@ -287,7 +252,6 @@ export default function InvestorPortal() {
 
     setIsUploading(true);
     try {
-      // Real Supabase Storage upload
       const fileExt = screenshotFile.name.split('.').pop();
       const fileName = `payment-proofs/${user.id}-${Date.now()}.${fileExt}`;
       let screenshotUrl = null;
@@ -298,7 +262,6 @@ export default function InvestorPortal() {
 
       if (uploadErr) {
         console.warn('Storage upload fallback:', uploadErr.message);
-        // Graceful fallback — still record with placeholder URL
         screenshotUrl = `payment-proof-pending:${Date.now()}`;
       } else {
         screenshotUrl = supabase.storage.from('public-docs').getPublicUrl(fileName).data.publicUrl;
@@ -315,7 +278,6 @@ export default function InvestorPortal() {
 
       if (insertErr) throw insertErr;
 
-      // Update Booking status to Proof_Submitted
       const { error: updateErr } = await supabase
         .from('investment_bookings')
         .update({ status: 'Proof_Submitted' })
@@ -323,7 +285,6 @@ export default function InvestorPortal() {
 
       if (updateErr) throw updateErr;
 
-      // Dispatch Telegram push notification to Admin
       try {
         await fetch('/api/telegram-notify-admin', {
           method: 'POST',
@@ -367,7 +328,6 @@ export default function InvestorPortal() {
 
     setIsSubmittingKyc(true);
     try {
-      // Real Supabase Storage upload for NID
       let frontUrl = null;
       let backUrl = null;
 
@@ -400,7 +360,6 @@ export default function InvestorPortal() {
 
       if (error) throw error;
 
-      // Dispatch Telegram push notification to Admin
       try {
         await fetch('/api/telegram-notify-admin', {
           method: 'POST',
@@ -429,30 +388,38 @@ export default function InvestorPortal() {
     }
   };
 
+  const handleOpenSellModal = (holding) => {
+    if (kycLevel < 2) {
+      addToast('Level 2 Verification is required to access the Secondary Market.', 'error');
+      return;
+    }
+    setSelectedHolding(holding);
+    setSellPrice(holding.amount_invested_bdt);
+    setShowSellModal(true);
+  };
+
   const handleListForSell = async (e) => {
     e.preventDefault();
     if (!selectedHolding || !sellPrice) return;
     
-    // Anti-speculation Guardrail (±10%)
     const originalAmt = Number(selectedHolding.amount_invested_bdt);
     const minPrice = originalAmt * 0.90;
     const maxPrice = originalAmt * 1.10;
     const inputPrice = Number(sellPrice);
     
     if (inputPrice < minPrice || inputPrice > maxPrice) {
-      addToast(`Price must be between ${formatCurrency(minPrice, currency)} and ${formatCurrency(maxPrice, currency)} (±10% of original investment).`, 'error');
+      addToast(`Price must be within ±10% of original investment.`, 'error');
       return;
     }
     
     setIsListing(true);
     try {
-      // Create listing
       const { error } = await supabase.from('secondary_orders').insert([{
         seller_investor_id: investorDbId,
         investment_id: selectedHolding.id,
         original_investment_bdt: originalAmt,
         seller_price_bdt: inputPrice,
-        fmv_at_listing_bdt: originalAmt, // For MVP, FMV is original amount
+        fmv_at_listing_bdt: originalAmt,
         status: 'Active'
       }]);
       
@@ -478,7 +445,7 @@ export default function InvestorPortal() {
   return (
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>
       
-      {/* LOCAL INVESTOR TABS (Under the global Navigation) */}
+      {/* LOCAL INVESTOR TABS */}
       <div style={{ background: 'rgba(15,23,42,0.8)', borderBottom: '1px solid rgba(16,185,129,0.2)', padding: '1rem 2.5rem', display: 'flex', justifyContent: 'center', gap: '1rem', position: 'sticky', top: '70px', zIndex: 9, backdropFilter: 'blur(10px)' }}>
         <button onClick={() => setActiveTab('portfolio')} style={tabBtnStyle(activeTab === 'portfolio')}>
           My Portfolio
@@ -525,1078 +492,84 @@ export default function InvestorPortal() {
 
         {/* 1. PORTFOLIO DASHBOARD */}
         {activeTab === 'portfolio' && (
-          <div style={{ display: 'grid', gap: '1.75rem' }}>
-            
-            {/* TAB HEADER ROW */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
-                  My Portfolio & Active Holdings
-                </h2>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Track SPV allocations, live yield distributions, and secondary market exits
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ 
-                  background: 'rgba(16,185,129,0.15)', 
-                  color: '#10b981', 
-                  border: '1px solid rgba(16,185,129,0.3)', 
-                  padding: '0.25rem 0.75rem', 
-                  borderRadius: '20px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: '800' 
-                }}>
-                  ● {holdings.filter(h => h.status === 'Active' || !h.status).length} Active Position{holdings.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-
-            {/* ACTION REQUIRED: PENDING BOOKINGS */}
-            {pendingBookings.length > 0 && (
-              <div style={{ marginBottom: '0.5rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 0.85rem 0', fontWeight: '800' }}>
-                  <AlertTriangle size={18} /> Action Required: Complete Pending Payments ({pendingBookings.length})
-                </h3>
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                  {pendingBookings.map(booking => (
-                    <div key={booking.id} className="glass-card" style={{ borderLeft: '4px solid #ef4444', padding: '1.25rem 1.5rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                        <div>
-                          <h4 style={{ fontSize: '1.1rem', margin: '0 0 0.25rem 0', fontWeight: '800', color: '#fff' }}>
-                            {booking.funding_projects?.businesses?.brand_name} - {booking.funding_projects?.project_title}
-                          </h4>
-                          <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: 0 }}>
-                            Intent: <strong style={{ color: '#f0b429' }}>{formatCurrency(booking.amount_bdt, currency)}</strong> • Option {booking.yield_option} Yield • Type: {booking.booking_type}
-                          </p>
-                        </div>
-                        {uploadBookingId === booking.id ? (
-                          <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '8px', width: '100%', maxWidth: '420px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: '#D4AF37', fontWeight: '700' }}>Upload Proof of Transfer</p>
-                            <form onSubmit={handlePaymentUpload} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                              <select 
-                                value={paymentMethod}
-                                onChange={(e) => setPaymentMethod(e.target.value)}
-                                style={{ padding: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.82rem' }}
-                              >
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="bKash">bKash</option>
-                                <option value="Cash Deposit">Cash Deposit</option>
-                              </select>
-                              <input 
-                                type="text" 
-                                placeholder="Transaction Ref / Slip ID" 
-                                value={transactionId} 
-                                onChange={(e) => setTransactionId(e.target.value)}
-                                style={{ padding: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.82rem' }}
-                                required
-                              />
-                              <input 
-                                type="file" 
-                                accept="image/*"
-                                onChange={(e) => setScreenshotFile(e.target.files[0])}
-                                style={{ fontSize: '0.78rem', color: '#94a3b8' }}
-                                required
-                              />
-                              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                <button type="submit" disabled={isUploading} className="btn-gold" style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', flex: 1 }}>
-                                  {isUploading ? 'Uploading...' : 'Confirm Upload'}
-                                </button>
-                                <button type="button" onClick={() => setUploadBookingId(null)} style={{ background: 'transparent', border: '1px solid #64748b', color: '#94a3b8', padding: '0.45rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
-                                  Cancel
-                                </button>
-                              </div>
-                            </form>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => setUploadBookingId(booking.id)}
-                            style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', border: 'none', padding: '0.55rem 1.1rem', borderRadius: '6px', fontWeight: '800', cursor: 'pointer', fontSize: '0.82rem' }}
-                          >
-                            Upload Payment Proof →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {loadingData ? (
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-                 {[1,2,3,4].map(i => (
-                   <div key={i} className="glass-card">
-                     <Skeleton width="60%" height="16px" className="mb-2" />
-                     <Skeleton width="80%" height="32px" className="mb-2" />
-                     <Skeleton width="40%" height="14px" />
-                   </div>
-                 ))}
-               </div>
-            ) : (
-              <>
-                {/* 4-CARD LIVE KPI STRIP */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-                  
-                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #D4AF37' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Total Capital Invested
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#D4AF37', margin: 0 }}>
-                        {formatCurrency(totalInvested, currency)}
-                      </h3>
-                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>{holdings.length} Positions</span>
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #10b981' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Total Yield Earned
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#10b981', margin: 0 }}>
-                        {formatCurrency(totalEarned, currency)}
-                      </h3>
-                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>● Lifetime Paid</span>
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #3b82f6' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Latest Dividend
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#60a5fa', margin: 0 }}>
-                        {yieldHistory.length > 0 ? formatCurrency(yieldHistory[yieldHistory.length - 1]?.payout || 0, currency) : formatCurrency(0, currency)}
-                      </h3>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                        {yieldHistory.length > 0 ? `${yieldHistory[yieldHistory.length - 1]?.month} Run` : 'No runs yet'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '3px solid #8b5cf6' }}>
-                    <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '0 0 0.4rem 0', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Portfolio Distribution
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#a78bfa', margin: 0 }}>
-                        {holdings.length} <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Outlets</span>
-                      </h3>
-                      <span style={{ fontSize: '0.7rem', color: '#10b981' }}>
-                        {holdings.length > 0 ? '100% Asset-Backed' : '0 Assets'}
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* 2-COLUMN MAIN WORKSPACE: CHART + ACTIVE HOLDINGS */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.3fr', gap: '1.5rem', alignItems: 'flex-start' }}>
-                  
-                  {/* PAYOUT HISTORY CHART */}
-                  <div className="glass-card" style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: '900', margin: 0, color: '#fff' }}>
-                          Monthly Payout Distributions
-                        </h3>
-                        <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                          Audited monthly yield disbursements on file
-                        </p>
-                      </div>
-                      <span style={{ fontSize: '0.7rem', background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', padding: '0.2rem 0.55rem', borderRadius: '6px', fontWeight: '700' }}>
-                        {yieldHistory.length} Month{yieldHistory.length !== 1 ? 's' : ''} Logged
-                      </span>
-                    </div>
-
-                    <div style={{ height: '280px', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#64748b' }}>
-                      {yieldHistory.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={yieldHistory}>
-                            <defs>
-                              <linearGradient id="colorPayout" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
-                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <XAxis dataKey="month" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `৳${val/1000}k`} />
-                            <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '8px', fontSize: '0.8rem' }} />
-                            <Area type="monotone" dataKey="payout" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPayout)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: '2rem' }}>
-                          <TrendingUp size={36} style={{ margin: '0 auto 0.5rem auto', color: '#334155' }} />
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontWeight: '700' }}>No dividend payout history recorded yet.</p>
-                          <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>Monthly disbursements will chart automatically here upon audit reconciliation.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* MY HOLDINGS LIST (PREMIUM CARDS) */}
-                  <div className="glass-card" style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: '900', margin: 0, color: '#fff' }}>
-                          Active Outlet Shares & Allocations
-                        </h3>
-                        <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                          Direct SPV equity & revenue-share investments
-                        </p>
-                      </div>
-                      <a href="/showcase" style={{ color: '#D4AF37', textDecoration: 'none', fontSize: '0.78rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        Deal Showcase <ArrowUpRight size={13} />
-                      </a>
-                    </div>
-                    
-                    {holdings.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: '#64748b' }}>
-                        <Building2 size={36} style={{ margin: '0 auto 0.5rem auto', color: '#334155' }} />
-                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#94a3b8' }}>No active investments in your portfolio</h4>
-                        <p style={{ margin: '0.3rem 0 1rem 0', fontSize: '0.78rem' }}>Explore live CapEx funding rounds and syndicate allocations in the deal room.</p>
-                        <a 
-                          href="/showcase" 
-                          style={{ 
-                            background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', 
-                            color: '#070a14', 
-                            padding: '0.5rem 1rem', 
-                            borderRadius: '6px', 
-                            fontWeight: '800', 
-                            fontSize: '0.78rem', 
-                            textDecoration: 'none',
-                            display: 'inline-block'
-                          }}
-                        >
-                          Explore Live Rounds →
-                        </a>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'grid', gap: '0.85rem' }}>
-                        {holdings.map((h) => {
-                          const statusColor = h.status === 'Active' || !h.status ? '#10b981' : h.status === 'Pending' ? '#f59e0b' : '#94a3b8';
-                          const statusLabel = h.status === 'Active' || !h.status ? '● Active Allocation' : h.status;
-                          const yieldOption = h.yield_option ? `Option ${h.yield_option}` : null;
-                          const dateStr = h.created_at ? new Date(h.created_at).toLocaleDateString() : null;
-
-                          return (
-                            <div 
-                              key={h.id || Math.random()} 
-                              style={{ 
-                                background: 'rgba(15,23,42,0.7)', 
-                                padding: '1.1rem 1.25rem', 
-                                borderRadius: '10px', 
-                                borderLeft: `4px solid ${statusColor}`,
-                                border: '1px solid rgba(255,255,255,0.06)',
-                                display: 'grid',
-                                gap: '0.65rem'
-                              }}
-                            >
-                              {/* TOP ROW */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                <div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
-                                    <span style={{ color: '#60a5fa', fontWeight: '800', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                      {h.funding_projects?.businesses?.brand_name || 'GRO10X Network'}
-                                    </span>
-                                    {yieldOption && (
-                                      <span style={{ background: 'rgba(240,180,41,0.15)', color: '#f0b429', border: '1px solid rgba(240,180,41,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700' }}>
-                                        {yieldOption}
-                                      </span>
-                                    )}
-                                    <span style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}35`, padding: '0.1rem 0.45rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '800' }}>
-                                      {statusLabel}
-                                    </span>
-                                  </div>
-                                  <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: '800', color: '#fff' }}>
-                                    {h.funding_projects?.project_title || 'Outlet Franchise SPV'}
-                                  </h4>
-                                </div>
-
-                                <div style={{ textAlign: 'right' }}>
-                                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Invested Capital</div>
-                                  <div style={{ fontSize: '1.15rem', fontWeight: '900', color: '#D4AF37' }}>
-                                    {formatCurrency(h.amount_invested_bdt, currency)}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* DETAIL & ACTION ROW */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '0.75rem', color: '#94a3b8', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                <div>
-                                  {h.funding_projects?.yield_model && (
-                                    <span style={{ color: '#cbd5e1' }}>Model: <strong style={{ color: '#f0b429' }}>{h.funding_projects.yield_model}</strong></span>
-                                  )}
-                                  {dateStr && <span style={{ marginLeft: '0.6rem', color: '#64748b' }}>Since: {dateStr}</span>}
-                                </div>
-
-                                <button 
-                                  onClick={() => {
-                                    if (kycLevel < 2) {
-                                      addToast('Level 2 Verification is required to access the Secondary Market.', 'error');
-                                      return;
-                                    }
-                                    setSelectedHolding(h);
-                                    setSellPrice(h.amount_invested_bdt);
-                                    setShowSellModal(true);
-                                  }}
-                                  style={{ 
-                                    background: 'rgba(212,175,55,0.12)', 
-                                    color: '#D4AF37', 
-                                    border: '1px solid rgba(212,175,55,0.3)', 
-                                    padding: '0.35rem 0.75rem', 
-                                    borderRadius: '6px', 
-                                    fontWeight: '800', 
-                                    cursor: 'pointer', 
-                                    fontSize: '0.72rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.3rem',
-                                    transition: 'all 0.15s ease'
-                                  }}
-                                >
-                                  List on Secondary Market →
-                                </button>
-                              </div>
-
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              </>
-            )}
-          </div>
+          <PortfolioTab 
+            holdings={holdings}
+            totalInvested={totalInvested}
+            totalEarned={totalEarned}
+            yieldHistory={yieldHistory}
+            pendingBookings={pendingBookings}
+            uploadBookingId={uploadBookingId}
+            setUploadBookingId={setUploadBookingId}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            transactionId={transactionId}
+            setTransactionId={setTransactionId}
+            setScreenshotFile={setScreenshotFile}
+            handlePaymentUpload={handlePaymentUpload}
+            isUploading={isUploading}
+            loadingData={loadingData}
+            kycLevel={kycLevel}
+            onOpenSellModal={handleOpenSellModal}
+          />
         )}
 
         {/* 2. PROGRESSIVE KYC TAB */}
         {activeTab === 'kyc' && (
-          <div style={{ maxWidth: '920px', margin: '0 auto', display: 'grid', gap: '1.75rem' }}>
-            
-            {/* TAB HEADER ROW */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
-                  Progressive Investor Profiling
-                </h2>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Complete verification tiers to unlock Secondary Market trading and Private Cash Concierge access
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ 
-                  background: 'rgba(16,185,129,0.15)', 
-                  color: '#10b981', 
-                  border: '1px solid rgba(16,185,129,0.3)', 
-                  padding: '0.25rem 0.75rem', 
-                  borderRadius: '20px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: '800' 
-                }}>
-                  ● Level {kycLevel} / 3 Active
-                </span>
-              </div>
-            </div>
-
-            {/* 3-STEP PROGRESS STEPPER */}
-            <div className="glass-card" style={{ padding: '1.25rem 1.5rem', background: 'rgba(15,23,42,0.6)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr auto 1fr', alignItems: 'center', gap: '0.75rem' }}>
-                
-                {/* STEP 1 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    background: 'rgba(16,185,129,0.2)', 
-                    border: '2px solid #10b981', 
-                    display: 'grid', 
-                    placeItems: 'center', 
-                    color: '#10b981', 
-                    fontWeight: '900',
-                    fontSize: '0.82rem'
-                  }}>
-                    ✓
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#fff' }}>Level 1: Basic</div>
-                    <div style={{ fontSize: '0.68rem', color: '#10b981', fontWeight: '700' }}>Active & Verified</div>
-                  </div>
-                </div>
-
-                <div style={{ height: '2px', background: kycLevel >= 2 ? '#10b981' : 'rgba(255,255,255,0.1)', width: '30px' }} />
-
-                {/* STEP 2 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    background: kycLevel >= 2 ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.15)', 
-                    border: `2px solid ${kycLevel >= 2 ? '#10b981' : '#3b82f6'}`, 
-                    display: 'grid', 
-                    placeItems: 'center', 
-                    color: kycLevel >= 2 ? '#10b981' : '#60a5fa', 
-                    fontWeight: '900',
-                    fontSize: '0.82rem'
-                  }}>
-                    {kycLevel >= 2 ? '✓' : '2'}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#fff' }}>Level 2: Identity</div>
-                    <div style={{ fontSize: '0.68rem', color: kycLevel >= 2 ? '#10b981' : '#60a5fa', fontWeight: '700' }}>
-                      {kycLevel >= 2 ? 'Active & Verified' : 'Secondary Trading'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ height: '2px', background: kycLevel >= 3 ? '#10b981' : 'rgba(255,255,255,0.1)', width: '30px' }} />
-
-                {/* STEP 3 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    background: kycLevel >= 3 ? 'rgba(16,185,129,0.2)' : 'rgba(212,175,55,0.15)', 
-                    border: `2px solid ${kycLevel >= 3 ? '#10b981' : '#D4AF37'}`, 
-                    display: 'grid', 
-                    placeItems: 'center', 
-                    color: kycLevel >= 3 ? '#10b981' : '#D4AF37', 
-                    fontWeight: '900',
-                    fontSize: '0.82rem'
-                  }}>
-                    {kycLevel >= 3 ? '✓' : '3'}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#fff' }}>Level 3: Accredited</div>
-                    <div style={{ fontSize: '0.68rem', color: kycLevel >= 3 ? '#10b981' : '#D4AF37', fontWeight: '700' }}>
-                      {kycLevel >= 3 ? 'Active & Verified' : 'VIP Cash Concierge'}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* LEVEL CARDS LIST */}
-            <div style={{ display: 'grid', gap: '1.25rem' }}>
-              
-              {/* LEVEL 1 CARD */}
-              <div className="glass-card" style={{ borderColor: 'rgba(16,185,129,0.4)', padding: '1.5rem', borderLeft: '4px solid #10b981' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                    <div style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', padding: '0.6rem 0.9rem', borderRadius: '8px', fontWeight: '900', fontSize: '1rem' }}>L1</div>
-                    <div>
-                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '800', color: '#fff' }}>Level 1: Basic Investor Registration</h3>
-                      <p style={{ margin: '0.2rem 0 0.6rem 0', fontSize: '0.82rem', color: '#94a3b8' }}>
-                        Default tier granted on email / phone onboarding.
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        <span style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● View Live Deals
-                        </span>
-                        <span style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● Calculate Projected Yields
-                        </span>
-                        <span style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● Public Round Access
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <span style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <CheckCircle size={15} /> Active Tier
-                  </span>
-                </div>
-              </div>
-
-              {/* LEVEL 2 CARD */}
-              <div className="glass-card" style={{ borderColor: kycLevel >= 2 ? 'rgba(16,185,129,0.4)' : 'rgba(59,130,246,0.3)', padding: '1.5rem', borderLeft: `4px solid ${kycLevel >= 2 ? '#10b981' : '#3b82f6'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: activeKycForm === 'L2' ? '1.25rem' : '0' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                    <div style={{ background: kycLevel >= 2 ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.2)', color: kycLevel >= 2 ? '#10b981' : '#60a5fa', padding: '0.6rem 0.9rem', borderRadius: '8px', fontWeight: '900', fontSize: '1rem' }}>L2</div>
-                    <div>
-                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '800', color: '#fff' }}>Level 2: NID / Passport Verification</h3>
-                      <p style={{ margin: '0.2rem 0 0.6rem 0', fontSize: '0.82rem', color: '#94a3b8' }}>
-                        Required for P2P secondary share transfer, OTC market exits, and cap table registration.
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        <span style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● Secondary P2P Market
-                        </span>
-                        <span style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● Share Listing Rights
-                        </span>
-                        <span style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● Live Orderbook Access
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {kycLevel >= 2 ? (
-                    <span style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <CheckCircle size={15} /> Verified
-                    </span>
-                  ) : (
-                    <button 
-                      onClick={() => setActiveKycForm(activeKycForm === 'L2' ? null : 'L2')} 
-                      style={{ 
-                        background: activeKycForm === 'L2' ? 'transparent' : 'linear-gradient(135deg, #10b981, #059669)', 
-                        color: activeKycForm === 'L2' ? '#94a3b8' : '#fff', 
-                        border: activeKycForm === 'L2' ? '1px solid #64748b' : 'none', 
-                        padding: '0.55rem 1.1rem', 
-                        borderRadius: '6px', 
-                        fontSize: '0.82rem', 
-                        fontWeight: '800', 
-                        cursor: 'pointer' 
-                      }}
-                    >
-                      {activeKycForm === 'L2' ? 'Cancel' : 'Submit NID / Passport →'}
-                    </button>
-                  )}
-                </div>
-                
-                {activeKycForm === 'L2' && kycLevel < 2 && (
-                  <form onSubmit={(e) => handleKycSubmit(e, 2)} style={{ background: 'rgba(7,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', padding: '1.25rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                    <div style={{ fontSize: '0.82rem', color: '#60a5fa', fontWeight: '800' }}>
-                      Upload Government-Issued Identity Document
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.35rem', fontWeight: '700' }}>NID / Passport Front *</label>
-                        <input type="file" accept="image/*" onChange={(e) => setNidFront(e.target.files[0])} className="form-input" style={{ fontSize: '0.78rem' }} required />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.35rem', fontWeight: '700' }}>NID / Passport Back *</label>
-                        <input type="file" accept="image/*" onChange={(e) => setNidBack(e.target.files[0])} className="form-input" style={{ fontSize: '0.78rem' }} required />
-                      </div>
-                    </div>
-                    <button type="submit" disabled={isSubmittingKyc} style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '6px', fontWeight: '800', fontSize: '0.82rem', cursor: isSubmittingKyc ? 'not-allowed' : 'pointer', opacity: isSubmittingKyc ? 0.6 : 1 }}>
-                      {isSubmittingKyc ? 'Uploading Documents...' : 'Submit Identity for Verification'}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* LEVEL 3 CARD */}
-              <div className="glass-card" style={{ borderColor: kycLevel >= 3 ? 'rgba(16,185,129,0.4)' : 'rgba(212,175,55,0.35)', padding: '1.5rem', borderLeft: `4px solid ${kycLevel >= 3 ? '#10b981' : '#D4AF37'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: activeKycForm === 'L3' ? '1.25rem' : '0' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                    <div style={{ background: kycLevel >= 3 ? 'rgba(16,185,129,0.2)' : 'rgba(212,175,55,0.2)', color: kycLevel >= 3 ? '#10b981' : '#D4AF37', padding: '0.6rem 0.9rem', borderRadius: '8px', fontWeight: '900', fontSize: '1rem' }}>L3</div>
-                    <div>
-                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '800', color: '#fff' }}>Level 3: Accredited HNI Tier</h3>
-                      <p style={{ margin: '0.2rem 0 0.6rem 0', fontSize: '0.82rem', color: '#94a3b8' }}>
-                        Unlocks physical Cash Concierge appointments, multi-crore ticket syndicates, and priority SPV allocations.
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        <span style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● Private Cash Concierge
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● BDT 50L+ Direct Rounds
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '700' }}>
-                          ● VIP Allocation Priority
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {kycLevel >= 3 ? (
-                    <span style={{ color: '#10b981', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.35rem 0.75rem', borderRadius: '6px', fontWeight: '800', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <CheckCircle size={15} /> Accredited HNI
-                    </span>
-                  ) : (
-                    <button 
-                      onClick={() => {
-                        if (kycLevel < 2) {
-                          addToast('You must complete Level 2 verification first.', 'error');
-                          return;
-                        }
-                        setActiveKycForm(activeKycForm === 'L3' ? null : 'L3');
-                      }} 
-                      style={{ 
-                        background: activeKycForm === 'L3' ? 'transparent' : 'linear-gradient(135deg, #D4AF37, #8A6D1B)', 
-                        color: activeKycForm === 'L3' ? '#94a3b8' : '#070a14', 
-                        border: activeKycForm === 'L3' ? '1px solid #64748b' : 'none', 
-                        padding: '0.55rem 1.1rem', 
-                        borderRadius: '6px', 
-                        fontSize: '0.82rem', 
-                        fontWeight: '800', 
-                        cursor: kycLevel < 2 ? 'not-allowed' : 'pointer', 
-                        opacity: kycLevel < 2 ? 0.5 : 1 
-                      }}
-                    >
-                      {activeKycForm === 'L3' ? 'Cancel' : 'Upgrade to L3 VIP →'}
-                    </button>
-                  )}
-                </div>
-                
-                {activeKycForm === 'L3' && kycLevel === 2 && (
-                  <form onSubmit={(e) => handleKycSubmit(e, 3)} style={{ background: 'rgba(7,10,20,0.6)', border: '1px solid rgba(255,255,255,0.08)', padding: '1.25rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.78rem', color: '#D4AF37', marginBottom: '0.35rem', fontWeight: '700' }}>
-                        Source of Funds Declaration *
-                      </label>
-                      <textarea 
-                        value={sourceOfFunds} 
-                        onChange={(e) => setSourceOfFunds(e.target.value)} 
-                        className="form-input" 
-                        placeholder="Please briefly explain your primary source of investment capital (e.g., Business Income from XYZ Corp, Salary, Remittance, Inheritance)..." 
-                        rows={3}
-                        required 
-                        style={{ fontSize: '0.82rem' }}
-                      />
-                    </div>
-                    <button type="submit" disabled={isSubmittingKyc} style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '6px', fontWeight: '800', fontSize: '0.82rem', cursor: isSubmittingKyc ? 'not-allowed' : 'pointer', opacity: isSubmittingKyc ? 0.6 : 1 }}>
-                      {isSubmittingKyc ? 'Submitting Declaration...' : 'Submit L3 Accreditation Request'}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-            </div>
-          </div>
+          <KycVerificationTab 
+            kycLevel={kycLevel}
+            activeKycForm={activeKycForm}
+            setActiveKycForm={setActiveKycForm}
+            setNidFront={setNidFront}
+            setNidBack={setNidBack}
+            sourceOfFunds={sourceOfFunds}
+            setSourceOfFunds={setSourceOfFunds}
+            isSubmittingKyc={isSubmittingKyc}
+            handleKycSubmit={handleKycSubmit}
+            addToast={addToast}
+          />
         )}
 
         {/* 3. DOCUMENT VAULT TAB */}
         {activeTab === 'vault' && (
-          <div style={{ maxWidth: '920px', margin: '0 auto', display: 'grid', gap: '1.75rem' }}>
-            
-            {/* TAB HEADER ROW */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
-                  Legal & Regulatory Document Vault
-                </h2>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Securely access your executed SPV Share Certificates, Subscription Agreements, and Tax Statements
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ 
-                  background: 'rgba(212,175,55,0.15)', 
-                  color: '#D4AF37', 
-                  border: '1px solid rgba(212,175,55,0.3)', 
-                  padding: '0.25rem 0.75rem', 
-                  borderRadius: '20px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: '800' 
-                }}>
-                  ● {legalDocuments.length} Document{legalDocuments.length !== 1 ? 's' : ''} Secured
-                </span>
-              </div>
-            </div>
-
-            {loadingData ? (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                <Skeleton width="100%" height="80px" borderRadius="12px" />
-                <Skeleton width="100%" height="80px" borderRadius="12px" />
-              </div>
-            ) : legalDocuments.length === 0 ? (
-              <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
-                <FileText size={44} style={{ color: '#334155', margin: '0 auto 0.75rem auto' }} />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', margin: '0 0 0.4rem 0', color: '#fff' }}>No Legal Documents Issued Yet</h3>
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '520px', margin: '0 auto 1.5rem auto', lineHeight: '1.5' }}>
-                  Your executed SPV Share Certificates, Subscription Agreements, and Tax Disclosures will appear here once your investments are fully cleared and minted by the GRO10X legal desk.
-                </p>
-                <a 
-                  href="/showcase" 
-                  style={{ 
-                    background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', 
-                    color: '#070a14', 
-                    padding: '0.55rem 1.25rem', 
-                    borderRadius: '6px', 
-                    fontWeight: '800', 
-                    fontSize: '0.82rem', 
-                    textDecoration: 'none',
-                    display: 'inline-block'
-                  }}
-                >
-                  Explore Live Rounds →
-                </a>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {legalDocuments.map(doc => {
-                  const isCert = doc.doc_type === 'Share_Certificate';
-                  const isSub = doc.doc_type === 'Subscription_Agreement';
-                  const docColor = isCert ? '#D4AF37' : isSub ? '#60a5fa' : '#10b981';
-                  const docBorder = isCert ? '#D4AF37' : isSub ? '#3b82f6' : '#10b981';
-                  const docBg = isCert ? 'rgba(212,175,55,0.15)' : isSub ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)';
-                  const docTitle = isCert ? 'SPV Share Certificate' : isSub ? 'Subscription Agreement' : 'Tax & Compliance Document';
-                  const docPillLabel = isCert ? 'Share Ownership' : isSub ? 'Legal Contract' : 'Compliance';
-
-                  return (
-                    <div 
-                      key={doc.id} 
-                      className="glass-card" 
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '1.25rem 1.5rem',
-                        borderLeft: `4px solid ${docBorder}`,
-                        flexWrap: 'wrap',
-                        gap: '1rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
-                        <div style={{ background: docBg, padding: '0.85rem', borderRadius: '10px', display: 'grid', placeItems: 'center' }}>
-                          <FileText size={24} style={{ color: docColor }} />
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                            <h4 style={{ fontWeight: '800', fontSize: '1rem', margin: 0, color: '#fff' }}>
-                              {docTitle}
-                            </h4>
-                            <span style={{ background: docBg, color: docColor, border: `1px solid ${docColor}40`, padding: '0.1rem 0.45rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '800' }}>
-                              {docPillLabel}
-                            </span>
-                          </div>
-                          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>
-                            <strong style={{ color: '#cbd5e1' }}>{doc.investments?.funding_projects?.project_title || 'General Account SPV'}</strong>
-                            <span style={{ margin: '0 0.4rem', color: '#475569' }}>•</span>
-                            Issued on {new Date(doc.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <a 
-                        href={doc.doc_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        style={{ 
-                          background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', 
-                          color: '#070a14', 
-                          padding: '0.55rem 1.15rem', 
-                          borderRadius: '6px', 
-                          fontSize: '0.82rem', 
-                          fontWeight: '800', 
-                          cursor: 'pointer', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.45rem', 
-                          textDecoration: 'none',
-                          boxShadow: '0 2px 10px rgba(212,175,55,0.2)'
-                        }}
-                      >
-                        <Download size={15} /> Download PDF
-                      </a>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <DocumentVaultTab 
+            legalDocuments={legalDocuments}
+            loadingData={loadingData}
+          />
         )}
 
         {/* 4. AI CONCIERGE TAB */}
         {activeTab === 'ai-concierge' && (
-          <div style={{ maxWidth: '920px', margin: '0 auto', display: 'grid', gap: '1.75rem' }}>
-            
-            {/* TAB HEADER ROW */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
-                  GRO10X AI Investment Concierge
-                </h2>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Simulated due diligence assistant trained on Master Growth Agreements & SPV structures
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ 
-                  background: 'rgba(212,175,55,0.15)', 
-                  color: '#D4AF37', 
-                  border: '1px solid rgba(212,175,55,0.3)', 
-                  padding: '0.25rem 0.75rem', 
-                  borderRadius: '20px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: '800' 
-                }}>
-                  ● Powered by GRO10X Intelligence
-                </span>
-              </div>
-            </div>
-
-            {/* UPGRADE TO FULL AI INTELLIGENCE DESK BANNER */}
-            <div 
-              className="glass-card" 
-              style={{ 
-                padding: '1.25rem 1.5rem', 
-                background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(15,23,42,0.85))', 
-                borderColor: 'rgba(212,175,55,0.35)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '1rem'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', background: 'rgba(212,175,55,0.2)', borderRadius: '10px', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
-                  <Sparkles size={22} />
-                </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>
-                    Enterprise AI Intelligence Desk Available
-                  </h4>
-                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
-                    Access multi-turn deep financial modeling, live deal evaluation, and predictive portfolio forecasting.
-                  </p>
-                </div>
-              </div>
-
-              <a 
-                href="/ai-assistant" 
-                style={{ 
-                  background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', 
-                  color: '#070a14', 
-                  padding: '0.5rem 1.15rem', 
-                  borderRadius: '6px', 
-                  fontWeight: '800', 
-                  fontSize: '0.8rem', 
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  boxShadow: '0 2px 8px rgba(212,175,55,0.2)'
-                }}
-              >
-                Open Full AI Desk <ArrowUpRight size={14} />
-              </a>
-            </div>
-
-            {/* CHAT CONTAINER */}
-            <div className="glass-card" style={{ padding: '1.5rem', display: 'grid', gap: '1.25rem' }}>
-              
-              {/* MESSAGES LOG */}
-              <div style={{ height: '320px', overflowY: 'auto', background: 'rgba(7,10,20,0.6)', padding: '1.25rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {messages.map((m, idx) => (
-                  <div key={idx} style={{ alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
-                    <div style={{ 
-                      background: m.sender === 'user' ? 'linear-gradient(135deg, #D4AF37, #B89025)' : 'rgba(15,23,42,0.95)', 
-                      color: m.sender === 'user' ? '#070a14' : '#f8fafc', 
-                      padding: '0.85rem 1.15rem', 
-                      borderRadius: '12px', 
-                      fontSize: '0.88rem',
-                      lineHeight: '1.5',
-                      fontWeight: m.sender === 'user' ? '700' : '400',
-                      border: m.sender === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)'
-                    }}>
-                      {m.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* QUICK PROMPT CHIPS */}
-              <div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.04em' }}>
-                  Recommended Questions
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {[
-                    "What is my expected monthly yield?",
-                    "How does the SPV structure protect me?",
-                    "What happens if a business underperforms?",
-                    "How do I list shares on secondary market?"
-                  ].map((chipText, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setInputQuery(chipText)}
-                      style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#cbd5e1',
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(212,175,55,0.4)';
-                        e.currentTarget.style.color = '#D4AF37';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                        e.currentTarget.style.color = '#cbd5e1';
-                      }}
-                    >
-                      {chipText}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* INPUT BAR */}
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <input 
-                  type="text" 
-                  placeholder="Ask any due diligence or structural investment question..." 
-                  value={inputQuery}
-                  onChange={(e) => setInputQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAiSend()}
-                  className="form-input"
-                  style={{ fontSize: '0.85rem' }}
-                />
-                <button onClick={() => handleAiSend()} className="btn-gold" style={{ padding: '0 1.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
-                  <Send size={16} /> Send
-                </button>
-              </div>
-
-            </div>
-          </div>
+          <AiConciergeTab 
+            messages={messages}
+            inputQuery={inputQuery}
+            setInputQuery={setInputQuery}
+            handleAiSend={handleAiSend}
+          />
         )}
 
         {/* 5. DUE DILIGENCE FAQ TAB */}
         {activeTab === 'faq' && (
-          <div style={{ maxWidth: '920px', margin: '0 auto', display: 'grid', gap: '1.75rem' }}>
-            
-            {/* TAB HEADER ROW */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, color: '#fff', letterSpacing: '-0.01em' }}>
-                  Investor Due Diligence FAQs
-                </h2>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Common structural, legal, and financial questions answered for prospective and active investors
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ 
-                  background: 'rgba(16,185,129,0.15)', 
-                  color: '#10b981', 
-                  border: '1px solid rgba(16,185,129,0.3)', 
-                  padding: '0.25rem 0.75rem', 
-                  borderRadius: '20px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: '800' 
-                }}>
-                  ● {dueDiligenceFAQs.length} Questions Answered
-                </span>
-              </div>
-            </div>
-
-            {/* ACCORDION LIST */}
-            <div style={{ display: 'grid', gap: '0.85rem' }}>
-              {dueDiligenceFAQs.map((faq, idx) => {
-                const isOpen = openFaq === idx;
-                return (
-                  <div 
-                    key={idx} 
-                    className="glass-card"
-                    style={{ 
-                      padding: 0,
-                      overflow: 'hidden',
-                      borderColor: isOpen ? 'rgba(212,175,55,0.4)' : 'rgba(255,255,255,0.08)',
-                      borderLeft: isOpen ? '4px solid #D4AF37' : '1px solid rgba(255,255,255,0.08)',
-                      transition: 'border-color 0.2s'
-                    }}
-                  >
-                    <button 
-                      onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      style={{ 
-                        width: '100%', 
-                        padding: '1.15rem 1.35rem', 
-                        background: 'transparent', 
-                        border: 'none', 
-                        color: isOpen ? '#D4AF37' : '#f8fafc', 
-                        fontWeight: '800', 
-                        fontSize: '0.92rem', 
-                        textAlign: 'left', 
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        gap: '1rem'
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <span style={{ color: '#64748b', fontSize: '0.78rem', fontWeight: '800' }}>#{idx + 1}</span>
-                        {faq.q}
-                      </span>
-                      {isOpen ? <ChevronUp size={18} style={{ color: '#D4AF37', flexShrink: 0 }} /> : <ChevronDown size={18} style={{ color: '#64748b', flexShrink: 0 }} />}
-                    </button>
-
-                    {isOpen && (
-                      <div style={{ 
-                        padding: '1rem 1.35rem 1.25rem 1.35rem', 
-                        color: '#cbd5e1', 
-                        fontSize: '0.85rem', 
-                        lineHeight: '1.6', 
-                        borderTop: '1px solid rgba(255,255,255,0.06)',
-                        background: 'rgba(7,10,20,0.4)'
-                      }}>
-                        {faq.a}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-          </div>
+          <FaqTab 
+            openFaq={openFaq}
+            setOpenFaq={setOpenFaq}
+          />
         )}
 
       </main>
 
       {/* SECONDARY MARKET SELL MODAL */}
-      {showSellModal && selectedHolding && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'grid', placeItems: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '450px', position: 'relative' }}>
-            <button 
-              onClick={() => {
-                setShowSellModal(false);
-                setSelectedHolding(null);
-              }}
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem' }}
-            >
-              &times;
-            </button>
-            <h3 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#D4AF37' }}>List on Secondary Market</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              You are listing your shares in <strong>{selectedHolding.funding_projects?.businesses?.brand_name}</strong>.
-            </p>
-            
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-              <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontSize: '0.85rem' }}>Original Investment</p>
-              <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>{formatCurrency(selectedHolding.amount_invested_bdt, currency)}</p>
-            </div>
-
-            <form onSubmit={handleListForSell} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#cbd5e1' }}>
-                  Listing Price (BDT)
-                </label>
-                <input 
-                  type="number" 
-                  value={sellPrice} 
-                  onChange={(e) => setSellPrice(e.target.value)} 
-                  className="form-input" 
-                  required 
-                />
-                <p style={{ color: '#10b981', fontSize: '0.75rem', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                  Anti-Speculation Rule: You can list this asset between {formatCurrency(Number(selectedHolding.amount_invested_bdt) * 0.90, currency)} (-10%) and {formatCurrency(Number(selectedHolding.amount_invested_bdt) * 1.10, currency)} (+10%).
-                </p>
-              </div>
-              
-              <button type="submit" disabled={isListing} style={{ background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14', border: 'none', padding: '0.85rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: isListing ? 0.7 : 1 }}>
-                {isListing ? 'Publishing Order...' : 'Confirm Listing'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <SecondarySellModal 
+        isOpen={showSellModal}
+        onClose={() => {
+          setShowSellModal(false);
+          setSelectedHolding(null);
+        }}
+        selectedHolding={selectedHolding}
+        sellPrice={sellPrice}
+        setSellPrice={setSellPrice}
+        isListing={isListing}
+        onSubmit={handleListForSell}
+      />
     </div>
   );
 }

@@ -73,6 +73,7 @@ export async function POST(request) {
 
     // 3. If referral code is provided, bridge lead into promoter_leads table
     if (referral_code) {
+      let promoterId = null;
       const { data: promoter } = await supabase
         .from('promoters')
         .select('id')
@@ -80,15 +81,34 @@ export async function POST(request) {
         .maybeSingle();
 
       if (promoter) {
-        await supabase.from('promoter_leads').insert([{
-          promoter_id: promoter.id,
-          name: leadName,
-          phone: leadPhone,
-          email: email || null,
-          category: 'Referral Prospect',
-          interest: budget,
-          status: 'New Lead'
-        }]);
+        promoterId = promoter.id;
+      } else {
+        // Fallback to modern team table where team_type = 'promoter'
+        const { data: teamPromoter } = await supabase
+          .from('team')
+          .select('id')
+          .eq('team_type', 'promoter')
+          .eq('referral_code', referral_code)
+          .maybeSingle();
+        if (teamPromoter) {
+          promoterId = teamPromoter.id;
+        }
+      }
+
+      if (promoterId) {
+        try {
+          await supabase.from('promoter_leads').insert([{
+            promoter_id: promoterId,
+            name: leadName,
+            phone: leadPhone,
+            email: email || null,
+            category: 'Referral Prospect',
+            interest: budget,
+            status: 'New Lead'
+          }]);
+        } catch (leadBridgeErr) {
+          console.warn('Non-fatal promoter_leads bridge error:', leadBridgeErr);
+        }
       }
     }
 

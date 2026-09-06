@@ -13,6 +13,14 @@ export default function CohortApplicationPage() {
   const [submittedApp, setSubmittedApp] = useState(null); // { ref_code, application_id }
   const [copiedRef, setCopiedRef] = useState(false);
 
+  // Smooth scroll to top on step transition
+  const goToStep = (targetStep) => {
+    setStep(targetStep);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 240, behavior: 'smooth' });
+    }
+  };
+
   // Form State
   const [form, setForm] = useState({
     // Step 1: Brand & Legal
@@ -269,6 +277,11 @@ within 48 hours for your physical audit scheduling.
           <p style={{ color: '#94a3b8', fontSize: '1.1rem', lineHeight: '1.6', margin: 0 }}>
             Structured financing for high-growth SME brands and franchise outlets in Bangladesh. Raise up to ৳5 Cr with zero personal guarantee.
           </p>
+          <div style={{ marginTop: '1.25rem' }}>
+            <a href="/apply/status" style={{ color: '#D4AF37', fontSize: '0.88rem', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(212,175,55,0.1)', padding: '0.4rem 1rem', borderRadius: '20px', border: '1px solid rgba(212,175,55,0.3)' }}>
+              Already submitted? Track your application status here →
+            </a>
+          </div>
         </div>
       </div>
 
@@ -299,17 +312,23 @@ within 48 hours for your physical audit scheduling.
               Please save your reference code. Your application has been logged into the GRO10X Master Command Center. An assigned Key Account Manager (KAM) will contact lead founder <strong>{form.lead_founder_name}</strong> at <strong>{form.lead_founder_phone}</strong> to schedule an on-site audit visit.
             </p>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <a 
+                href={`/apply/status?ref=${submittedApp.ref_code}`}
+                className="btn-gold" 
+                style={{ padding: '0.9rem 1.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Activity size={18} /> Track Application Status Live
+              </a>
               <button 
                 onClick={handleDownloadConfirmation}
-                className="btn-gold" 
-                style={{ padding: '0.9rem 2rem' }}
+                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '0.9rem 1.5rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                <Download size={18} /> Download Application Summary Card (.txt)
+                <Download size={18} /> Download Summary Card (.txt)
               </button>
               <a 
                 href="/showcase" 
-                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '0.9rem 1.5rem', borderRadius: '12px', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', padding: '0.9rem 1.25rem', borderRadius: '12px', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
               >
                 Explore Live Deals <ChevronRight size={18} />
               </a>
@@ -331,13 +350,13 @@ within 48 hours for your physical audit scheduling.
               ].map(s => (
                 <div 
                   key={s.num}
-                  onClick={() => s.num < step && setStep(s.num)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: s.num < step ? 'pointer' : 'default', opacity: step === s.num ? 1 : s.num < step ? 0.8 : 0.4 }}
+                  onClick={() => s.num < step && goToStep(s.num)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: s.num < step ? 'pointer' : 'default', opacity: step === s.num ? 1 : s.num < step ? 0.85 : 0.4 }}
                 >
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: step === s.num ? '#D4AF37' : s.num < step ? '#10b981' : 'rgba(255,255,255,0.1)', color: step === s.num ? '#000' : '#fff', fontWeight: 'bold', fontSize: '0.85rem', display: 'grid', placeItems: 'center' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: step === s.num ? '#D4AF37' : s.num < step ? '#10b981' : 'rgba(255,255,255,0.1)', color: step === s.num ? '#000' : '#fff', fontWeight: 'bold', fontSize: '0.85rem', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     {s.num < step ? '✓' : s.num}
                   </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: step === s.num ? 'bold' : 'normal', color: step === s.num ? '#D4AF37' : '#fff', display: 'none', minWidth: '0' }} className="step-label-responsive">
+                  <span style={{ fontSize: '0.82rem', fontWeight: step === s.num ? 'bold' : 'normal', color: step === s.num ? '#D4AF37' : '#cbd5e1' }} className="hide-mobile">
                     {s.label}
                   </span>
                 </div>
@@ -391,7 +410,7 @@ within 48 hours for your physical audit scheduling.
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-3">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Trade License / Reg No</label>
                       <input 
@@ -424,7 +443,7 @@ within 48 hours for your physical audit scheduling.
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-3">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Industry Sector *</label>
                       <select 
@@ -471,7 +490,7 @@ within 48 hours for your physical audit scheduling.
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-2">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Website URL</label>
                       <input 
@@ -499,7 +518,7 @@ within 48 hours for your physical audit scheduling.
                       type="button" 
                       onClick={() => {
                         if (!form.brand_name) return alert('Please enter your Brand Name.');
-                        setStep(2);
+                        goToStep(2);
                       }}
                       className="btn-gold"
                     >
@@ -521,7 +540,7 @@ within 48 hours for your physical audit scheduling.
                   <div style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(212,175,55,0.3)', padding: '1.5rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <span style={{ fontSize: '0.8rem', color: '#D4AF37', fontWeight: 'bold', textTransform: 'uppercase' }}>Primary Applicant / Lead Founder Contact</span>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2">
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Lead Founder Name *</label>
                         <input 
@@ -545,7 +564,7 @@ within 48 hours for your physical audit scheduling.
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2">
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Phone Number *</label>
                         <input 
@@ -570,56 +589,61 @@ within 48 hours for your physical audit scheduling.
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2">
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>LinkedIn Profile URL</label>
                         <input 
                           type="text" 
                           value={form.lead_founder_linkedin_url}
                           onChange={(e) => updateFormField('lead_founder_linkedin_url', e.target.value)}
-                          placeholder="https://linkedin.com/in/tanvir"
+                          placeholder="https://linkedin.com/in/tanvir-ahmed"
                           className="form-input" 
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>NID Number (Confidential Pre-KYC)</label>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>National ID (NID) Number</label>
                         <input 
                           type="text" 
                           value={form.lead_founder_nid_number}
                           onChange={(e) => updateFormField('lead_founder_nid_number', e.target.value)}
-                          placeholder="e.g. 198294810294"
+                          placeholder="e.g. 19902692510000123"
                           className="form-input" 
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* ADDITIONAL STAKEHOLDERS MULTI-ROW TABLE */}
-                  <div>
+                  {/* CO-FOUNDERS & STAKEHOLDERS LIST */}
+                  <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', padding: '1.5rem', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <h4 style={{ fontSize: '1rem', fontWeight: 'bold', margin: 0 }}>Additional Co-Founders & C-Suite Execs</h4>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 'bold' }}>Additional Stakeholders & Cap Table</h4>
+                        <p style={{ margin: '0.2rem 0 0 0', color: '#64748b', fontSize: '0.8rem' }}>
+                          Remaining estimated lead founder equity: <strong style={{ color: '#D4AF37' }}>{leadEquityEst}%</strong>
+                        </p>
+                      </div>
                       <button 
                         type="button" 
                         onClick={handleAddStakeholder}
-                        style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                       >
-                        <Plus size={14} /> Add Co-Founder / Team Member
+                        <Plus size={14} /> Add Co-Founder
                       </button>
                     </div>
 
                     {form.stakeholders.length === 0 ? (
-                      <p style={{ color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                        No additional team members added. Click "+ Add Co-Founder" if your business has multiple equity partners.
+                      <p style={{ color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic', margin: 0 }}>
+                        No additional co-founders added. Lead founder assumed 100% equity holder.
                       </p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {form.stakeholders.map((s, idx) => (
-                          <div key={idx} style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 0.8fr auto', gap: '0.75rem', alignItems: 'center' }}>
+                          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1.2fr 0.8fr auto', gap: '0.5rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px' }}>
                             <input 
                               type="text" 
                               placeholder="Full Name" 
                               value={s.full_name} 
-                              onChange={(e) => handleUpdateStakeholder(idx, 'full_name', e.target.value)}
+                              onChange={(e) => handleUpdateStakeholder(idx, 'full_name', e.target.value)} 
                               className="form-input"
                               style={{ padding: '0.5rem' }}
                             />
@@ -627,7 +651,7 @@ within 48 hours for your physical audit scheduling.
                               type="text" 
                               placeholder="Role (e.g. CFO)" 
                               value={s.role_title} 
-                              onChange={(e) => handleUpdateStakeholder(idx, 'role_title', e.target.value)}
+                              onChange={(e) => handleUpdateStakeholder(idx, 'role_title', e.target.value)} 
                               className="form-input"
                               style={{ padding: '0.5rem' }}
                             />
@@ -635,7 +659,7 @@ within 48 hours for your physical audit scheduling.
                               type="text" 
                               placeholder="Phone / Email" 
                               value={s.phone} 
-                              onChange={(e) => handleUpdateStakeholder(idx, 'phone', e.target.value)}
+                              onChange={(e) => handleUpdateStakeholder(idx, 'phone', e.target.value)} 
                               className="form-input"
                               style={{ padding: '0.5rem' }}
                             />
@@ -643,7 +667,7 @@ within 48 hours for your physical audit scheduling.
                               type="number" 
                               placeholder="Equity %" 
                               value={s.equity_ownership_pct} 
-                              onChange={(e) => handleUpdateStakeholder(idx, 'equity_ownership_pct', e.target.value)}
+                              onChange={(e) => handleUpdateStakeholder(idx, 'equity_ownership_pct', e.target.value)} 
                               className="form-input"
                               style={{ padding: '0.5rem' }}
                             />
@@ -661,7 +685,7 @@ within 48 hours for your physical audit scheduling.
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <button type="button" onClick={() => setStep(1)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button type="button" onClick={() => goToStep(1)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
                       <ChevronLeft size={18} /> Back
                     </button>
                     <button 
@@ -670,7 +694,7 @@ within 48 hours for your physical audit scheduling.
                         if (!form.lead_founder_name || !form.lead_founder_phone || !form.lead_founder_email) {
                           return alert('Please complete the Lead Founder contact details.');
                         }
-                        setStep(3);
+                        goToStep(3);
                       }}
                       className="btn-gold"
                     >
@@ -685,7 +709,7 @@ within 48 hours for your physical audit scheduling.
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#D4AF37', margin: 0 }}>Step 3: Financial Performance & Capital Ask</h3>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-2">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Monthly Gross Revenue (BDT) *</label>
                       <input 
@@ -717,7 +741,7 @@ within 48 hours for your physical audit scheduling.
                     </div>
                   )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-3">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Outstanding Debt (BDT)</label>
                       <input 
@@ -753,7 +777,7 @@ within 48 hours for your physical audit scheduling.
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-2">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Requested Funding Ask (BDT) *</label>
                       <input 
@@ -782,7 +806,7 @@ within 48 hours for your physical audit scheduling.
                   {/* USE OF FUNDS BREAKDOWN SLIDERS */}
                   <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '10px', border: '1px solid rgba(212,175,55,0.2)' }}>
                     <h4 style={{ fontSize: '0.95rem', color: '#D4AF37', marginBottom: '1rem' }}>Use of Funds Allocation (% Split)</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="responsive-grid-2">
                       <div>
                         <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Civil Fit-out & Interior ({form.use_of_funds_fitout}%)</label>
                         <input type="range" min="0" max="100" value={form.use_of_funds_fitout} onChange={(e) => updateFormField('use_of_funds_fitout', Number(e.target.value))} style={{ width: '100%' }} />
@@ -803,7 +827,7 @@ within 48 hours for your physical audit scheduling.
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <button type="button" onClick={() => setStep(2)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button type="button" onClick={() => goToStep(2)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
                       <ChevronLeft size={18} /> Back
                     </button>
                     <button 
@@ -812,7 +836,7 @@ within 48 hours for your physical audit scheduling.
                         if (!form.monthly_gross_revenue_bdt || !form.monthly_net_profit_bdt) {
                           return alert('Please fill in your monthly gross revenue and net profit.');
                         }
-                        setStep(4);
+                        goToStep(4);
                       }}
                       className="btn-gold"
                     >
@@ -839,7 +863,7 @@ within 48 hours for your physical audit scheduling.
                   </div>
 
                   {/* DOCUMENT UPLOAD TILES */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-2">
                     <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '10px' }}>
                       <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>Pitch Deck (PDF)</p>
                       <p style={{ color: '#64748b', fontSize: '0.75rem', margin: '0.2rem 0 0.75rem 0' }}>Presentation slides or business plan</p>
@@ -865,7 +889,7 @@ within 48 hours for your physical audit scheduling.
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="responsive-grid-2">
                     <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '10px' }}>
                       <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem' }}>Financial Audit / P&L (1 Yr)</p>
                       <p style={{ color: '#64748b', fontSize: '0.75rem', margin: '0.2rem 0 0.75rem 0' }}>Audited P&L statement or bank report</p>
@@ -892,10 +916,10 @@ within 48 hours for your physical audit scheduling.
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <button type="button" onClick={() => setStep(3)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button type="button" onClick={() => goToStep(3)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
                       <ChevronLeft size={18} /> Back
                     </button>
-                    <button type="button" onClick={() => setStep(5)} className="btn-gold">
+                    <button type="button" onClick={() => goToStep(5)} className="btn-gold">
                       Review & Submit <ChevronRight size={18} />
                     </button>
                   </div>
@@ -939,7 +963,7 @@ within 48 hours for your physical audit scheduling.
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <button type="button" onClick={() => setStep(4)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button type="button" onClick={() => goToStep(4)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
                       <ChevronLeft size={18} /> Back
                     </button>
                     <button 

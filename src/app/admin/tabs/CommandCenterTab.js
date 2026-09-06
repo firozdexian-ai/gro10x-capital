@@ -44,6 +44,7 @@ export default function CommandCenterTab({
   pendingPaymentsCount = 0,
   pendingLeadsCount = 0,
   pendingCashTicketsCount = 0,
+  pendingSecondaryCount = 0,
   projects = [],
   allKams = [],
   recentNotifications = [],
@@ -395,6 +396,27 @@ export default function CommandCenterTab({
                 <div>
                   <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: '#fff' }}>Cash Concierge Tickets</p>
                   <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8' }}>{pendingCashTicketsCount} confidential inquiries</p>
+                </div>
+              </div>
+              <ChevronRight size={16} style={{ color: '#64748b' }} />
+            </div>
+          </div>
+
+          {/* Alert 5: Secondary Market Clearances */}
+          <div 
+            onClick={() => setActiveTab('secondary-clearance')}
+            style={{ 
+              background: pendingSecondaryCount > 0 ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)', 
+              border: pendingSecondaryCount > 0 ? '1px solid rgba(212,175,55,0.35)' : '1px solid rgba(255,255,255,0.08)', 
+              borderRadius: '12px', padding: '1.1rem', cursor: 'pointer', transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {pendingSecondaryCount > 0 ? <span className="activity-dot" style={{ background: '#D4AF37' }}></span> : <CheckCircle2 size={18} style={{ color: '#10b981' }} />}
+                <div>
+                  <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.9rem', color: '#fff' }}>Secondary Market Escrow</p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8' }}>{pendingSecondaryCount} share transfers awaiting clearance</p>
                 </div>
               </div>
               <ChevronRight size={16} style={{ color: '#64748b' }} />

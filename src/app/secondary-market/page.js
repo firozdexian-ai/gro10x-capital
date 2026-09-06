@@ -8,6 +8,7 @@ import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../components/AuthProvider';
 import { useToast } from '../../components/Toast';
+import { useRealtimeSubscription } from '../../hooks';
 
 export default function SecondaryMarketplace() {
   const { user } = useAuth();
@@ -37,6 +38,27 @@ export default function SecondaryMarketplace() {
   useEffect(() => {
     fetchOrderbook();
   }, []);
+
+  // Live orderbook real-time synchronization
+  useRealtimeSubscription({
+    table: 'secondary_orders',
+    event: '*',
+    onEvent: () => {
+      fetchOrderbook();
+    }
+  });
+
+  // Keyboard accessibility for modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showSellModal) setShowSellModal(false);
+        if (selectedListing) setSelectedListing(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSellModal, selectedListing]);
 
   const fetchOrderbook = async () => {
     try {
@@ -194,11 +216,20 @@ export default function SecondaryMarketplace() {
         
       if (bookingErr) throw bookingErr;
       
-      // 3. Mark the secondary order as pending clearance and link booking
-      await supabase
+      // 3. Mark the secondary order as pending clearance with atomic concurrency lock
+      const { data: updatedOrder, error: updateErr } = await supabase
         .from('secondary_orders')
         .update({ status: 'Pending_Clearance', buyer_booking_id: newBooking.id })
-        .eq('id', selectedListing.id);
+        .eq('id', selectedListing.id)
+        .eq('status', 'Active')
+        .select()
+        .single();
+
+      if (updateErr || !updatedOrder) {
+        // Rollback booking if order was already acquired by someone else
+        await supabase.from('investment_bookings').delete().eq('id', newBooking.id);
+        throw new Error('This listing was already acquired by another buyer.');
+      }
 
       // Notify Admin of secondary acquisition intent
       try {
@@ -213,6 +244,24 @@ export default function SecondaryMarketplace() {
         });
       } catch (e) {
         console.warn('Failed to dispatch admin notification:', e);
+      }
+
+      // Notify Seller that their listing was matched
+      if (selectedListing.seller_investor_id) {
+        try {
+          await fetch('/api/telegram-notify-investor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              investorId: selectedListing.seller_investor_id,
+              title: '🤝 Secondary Share Matched!',
+              message: `A buyer has matched your listing for ${selectedListing.investments?.funding_projects?.project_title || 'your deal'} at ৳${Number(selectedListing.seller_price_bdt).toLocaleString()} BDT.\n\nGRO10X Escrow clearance is now underway.`,
+              actionUrl: `${window.location.origin}/secondary-market`
+            })
+          });
+        } catch (e) {
+          console.warn('Failed to notify seller:', e);
+        }
       }
         
       setBuySuccess(true);
@@ -242,7 +291,7 @@ export default function SecondaryMarketplace() {
       <main className="container" style={{ padding: '2.5rem 2rem' }}>
         
         {/* TOP BANNER */}
-        <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '20px', padding: '2rem', marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '20px', padding: '2rem', marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div>
             <div className="badge-gold" style={{ marginBottom: '0.5rem' }}>
               <RefreshCw size={14} /> Anonymized & Platform-Mediated
@@ -377,8 +426,20 @@ export default function SecondaryMarketplace() {
 
       {/* CREATE LISTING MODAL WITH CORRIDOR VALIDATOR */}
       {showSellModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
-          <div className="glass-card" style={{ maxWidth: '520px', width: '92%', borderColor: '#D4AF37' }}>
+        <div 
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSellModal(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '1rem' }}
+        >
+          <div className="glass-card" style={{ maxWidth: '520px', width: '92%', borderColor: '#D4AF37', position: 'relative' }}>
+            <button
+              onClick={() => setShowSellModal(false)}
+              aria-label="Close dialog"
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#94a3b8', cursor: 'pointer', borderRadius: '50%', width: '32px', height: '32px', display: 'grid', placeItems: 'center' }}
+            >
+              ✕
+            </button>
             <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>List Share for Sale</h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
               Your listing will be published under your secure alias to protect your identity.
@@ -451,8 +512,20 @@ export default function SecondaryMarketplace() {
 
       {/* ACQUIRE SHARE CONFIRMATION MODAL */}
       {selectedListing && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000 }}>
-          <div className="glass-card" style={{ maxWidth: '480px', width: '92%', borderColor: '#10b981' }}>
+        <div 
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedListing(null); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '1rem' }}
+        >
+          <div className="glass-card" style={{ maxWidth: '480px', width: '92%', borderColor: '#10b981', position: 'relative' }}>
+            <button
+              onClick={() => setSelectedListing(null)}
+              aria-label="Close dialog"
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#94a3b8', cursor: 'pointer', borderRadius: '50%', width: '32px', height: '32px', display: 'grid', placeItems: 'center' }}
+            >
+              ✕
+            </button>
             <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>Acquire Pre-Seasoned Share</h3>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
               Buying from <strong>{selectedListing.investors?.alias_name || 'Anonymous Investor'}</strong> via GRO10X SPV Ltd.

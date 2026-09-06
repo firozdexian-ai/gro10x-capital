@@ -504,33 +504,53 @@ CREATE TABLE IF NOT EXISTS public.team (
 CREATE TABLE IF NOT EXISTS public.telegram_auth_pins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    chat_id TEXT NOT NULL,
-    pin TEXT NOT NULL,
+    chat_id TEXT,
+    telegram_chat_id TEXT,
+    pin TEXT,
+    temp_pin TEXT,
     role TEXT,
+    user_role TEXT,
     user_identifier TEXT,
-    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (now() + INTERVAL '10 minutes'),
-    used BOOLEAN DEFAULT false
+    phone_number TEXT,
+    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (now() + INTERVAL '15 minutes'),
+    pin_expires_at TIMESTAMP WITH TIME ZONE DEFAULT (now() + INTERVAL '15 minutes'),
+    used BOOLEAN DEFAULT false,
+    is_verified BOOLEAN DEFAULT false,
+    linked_entity_id UUID
 );
 
 -- 7. SME Business Cohort Applications (Fundraising Form /apply)
 CREATE TABLE IF NOT EXISTS public.business_cohort_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    reference_code TEXT UNIQUE NOT NULL,
+    ref_code TEXT UNIQUE,
+    reference_code TEXT UNIQUE,
     brand_name TEXT NOT NULL,
+    company_legal_name TEXT,
+    company_type TEXT DEFAULT 'Pvt Ltd',
     legal_entity TEXT,
     industry_sector TEXT,
     founding_year INTEGER,
+    year_established INTEGER,
     operational_months INTEGER DEFAULT 0,
     headquarters TEXT,
+    headquarters_address TEXT,
     monthly_revenue_bdt NUMERIC,
+    monthly_gross_revenue_bdt NUMERIC,
     monthly_net_profit_bdt NUMERIC,
     use_of_funds TEXT,
     funding_amount_requested_bdt NUMERIC,
     pitch_deck_url TEXT,
     financial_doc_url TEXT,
     founder_phone TEXT,
-    status TEXT DEFAULT 'Submitted' CHECK (status IN ('Submitted', 'Under Review', 'Approved', 'Rejected'))
+    lead_founder_name TEXT,
+    lead_founder_phone TEXT,
+    lead_founder_email TEXT,
+    lead_founder_designation TEXT,
+    status TEXT DEFAULT 'New_Submission',
+    application_status TEXT DEFAULT 'New_Submission',
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    reviewer_notes TEXT
 );
 
 -- 8. Business Stakeholders Table (Founding Team for Cohort Applications)
@@ -561,6 +581,7 @@ CREATE TABLE IF NOT EXISTS public.investor_pre_profiles (
 -- Schema Column Synchronizations
 ALTER TABLE public.funding_projects ADD COLUMN IF NOT EXISTS show_on_showcase BOOLEAN DEFAULT false;
 ALTER TABLE public.funding_projects ADD COLUMN IF NOT EXISTS booked_amount_bdt NUMERIC DEFAULT 0;
+ALTER TABLE public.investments ADD COLUMN IF NOT EXISTS amount_bdt NUMERIC;
 
 ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.investors ADD COLUMN IF NOT EXISTS phone TEXT;

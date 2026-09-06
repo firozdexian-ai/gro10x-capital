@@ -25,11 +25,53 @@
   --pink: #ec4899;
   --pink-bg: rgba(236, 72, 153, 0.12);
 
-  /* Layout Variables */
+  /* Layout & Inset Tokens */
   --sidebar-expanded-width: 260px;
   --sidebar-collapsed-width: 72px;
   --sidebar-bg: rgba(8, 12, 26, 0.98);
-  --header-height: 72px;
+  --header-height: 62px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Safe Area Insets & Layout Collision Utilities */
+.safe-bottom-padding {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.portal-sub-header {
+  position: sticky;
+  top: 62px;
+  z-index: 20;
+}
+
+/* LeadBot bottom offset when sticky mobile CTA bar is present */
+.leadbot-floating-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+}
+
+@media (max-width: 768px) {
+  body:has(.mobile-cta-bar) .leadbot-floating-btn {
+    bottom: 84px !important;
+  }
+}
+
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 * {

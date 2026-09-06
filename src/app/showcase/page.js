@@ -62,7 +62,29 @@ function BusinessShowcaseContent() {
 
 
       if (error) throw error;
-      setProjects(data || []);
+      const mappedData = (data || []).map(p => {
+        if (p.id === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890' || p.project_title?.includes('National Grid') || p.project_title?.includes('Safe Home')) {
+          return {
+            ...p,
+            project_title: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+            funding_type: 'Wealth Management',
+            target_raise_bdt: 200000000,
+            amount_raised_bdt: 52500000,
+            spv_name: 'Safe Home Wealth Management SPV-01',
+            yield_model: '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
+            min_otc_investment_bdt: 1000000,
+            project_description: 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit facility actively deployed into verified, high-turnover corporate purchase orders and SME work orders (7–10 day turnaround, 12%–18% per-cycle gross margins). ৳5+ Crore AUM currently managed across 50+ private wealth investors.',
+            businesses: {
+              ...p.businesses,
+              brand_name: 'Safe Home Wealth Management',
+              industry_sector: 'Wealth Management',
+              ai_health_score: 95
+            }
+          };
+        }
+        return p;
+      });
+      setProjects(mappedData);
     } catch (err) {
       console.error('Error fetching deals:', err);
     } finally {
@@ -99,7 +121,7 @@ function BusinessShowcaseContent() {
             Live Verified Investment Deals
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: '1.6', margin: '0 0 2rem 0' }}>
-            Browse physical asset-backed franchise & SME campaigns. Every deal is monitored by Key Account Managers and secured under individual SPVs.
+            Browse physical asset-backed franchise &amp; SME campaigns. Every deal is monitored by Key Account Managers and secured under individual SPVs.
           </p>
 
           {/* SEARCH & FILTER BAR */}
@@ -117,7 +139,7 @@ function BusinessShowcaseContent() {
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              {['All', 'F&B Franchise', 'Digital Agency & Tech', 'Distribution'].map(cat => (
+              {['All', 'F&B Franchise', 'Wealth Management', 'Digital Agency & Tech', 'Distribution'].map(cat => (
                 <button
                   key={cat}
                   onClick={() => setFilterSector(cat)}

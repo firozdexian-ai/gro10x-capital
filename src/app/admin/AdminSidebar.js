@@ -3,7 +3,7 @@ import React from 'react';
 import {
   Activity, Layers, Building2, Users, TrendingUp, ArrowUpRight, Calculator,
   Award, MessageSquare, FileText, BarChart2, Bot, Sparkles, Wallet, Settings,
-  LogOut, ChevronLeft, ChevronRight
+  LogOut, ChevronLeft, ChevronRight, Briefcase
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/currency';
 
@@ -20,7 +20,7 @@ import { formatCurrency } from '../../lib/currency';
  *   currency               (string)   — active currency code
  *   totalFeeSpreadCaptured (number)   — dynamic deal spread total in BDT (driven by dealSpreadPct × project targets)
  *   dealSpreadPct          (number)   — deal spread percentage from platform_settings (default: 5)
- *   pendingCounts          (object)   — { kycPayments, cohort, leads }
+ *   pendingCounts          (object)   — { kycPayments, cohort, leads, secondaryClearance, workOrders }
  */
 export default function AdminSidebar({
   activeTab,
@@ -34,7 +34,7 @@ export default function AdminSidebar({
   dealSpreadPct = 5,
   pendingCounts = {},
 }) {
-  const { kycPayments = 0, cohort = 0, leads = 0 } = pendingCounts;
+  const { kycPayments = 0, cohort = 0, leads = 0, secondaryClearance = 0, workOrders = 0 } = pendingCounts;
 
   /** Simple nav button factory for single-badge-free tabs */
   const NavBtn = ({ tabKey, label, Icon }) => (
@@ -141,6 +141,19 @@ export default function AdminSidebar({
               <Calculator size={18} />
               <span className="sidebar-hide-on-collapse">Valuation Model</span>
             </button>
+            <button
+              onClick={() => setActiveTab('work-orders')}
+              className={`admin-nav-btn ${activeTab === 'work-orders' ? 'active' : ''}`}
+              title="Work-Order Financing Desk"
+            >
+              <Briefcase size={18} />
+              <span className="sidebar-hide-on-collapse">Work-Order Desk</span>
+              {workOrders > 0 && (
+                <span className="status-badge status-badge--gold sidebar-hide-on-collapse" style={{ marginLeft: 'auto' }}>
+                  {workOrders}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -163,6 +176,19 @@ export default function AdminSidebar({
             </button>
             <NavBtn tabKey="dividend" label="Yield Engine" Icon={TrendingUp} />
             <NavBtn tabKey="cash-pipeline" label="Cash Concierge" Icon={Wallet} />
+            <button
+              onClick={() => setActiveTab('secondary-clearance')}
+              className={`admin-nav-btn ${activeTab === 'secondary-clearance' ? 'active' : ''}`}
+              title="Secondary Market Clearance"
+            >
+              <ArrowUpRight size={18} />
+              <span className="sidebar-hide-on-collapse">Secondary Clearance</span>
+              {secondaryClearance > 0 && (
+                <span className="status-badge status-badge--gold sidebar-hide-on-collapse" style={{ marginLeft: 'auto' }}>
+                  {secondaryClearance}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 

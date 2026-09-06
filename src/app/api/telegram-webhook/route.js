@@ -61,6 +61,24 @@ export async function POST(request) {
     if (botKey === 'investor') botToken = process.env.TELEGRAM_INVESTOR_BOT_TOKEN;
     if (botKey === 'client') botToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
 
+    // Dynamic database fallback from bot_configurations table
+    if (!botToken) {
+      try {
+        const dbBotKey = botKey === 'client' ? 'client_bot' : botKey === 'investor' ? 'investor_bot' : 'team_bot';
+        const { data: dbBot } = await supabase
+          .from('bot_configurations')
+          .select('bot_token')
+          .eq('bot_key', dbBotKey)
+          .maybeSingle();
+
+        if (dbBot?.bot_token && !dbBot.bot_token.includes('•')) {
+          botToken = dbBot.bot_token;
+        }
+      } catch (dbErr) {
+        console.warn('Bot config DB fallback warning:', dbErr);
+      }
+    }
+
     if (!botToken) {
       return NextResponse.json({ ok: true });
     }

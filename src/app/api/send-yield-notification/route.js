@@ -16,7 +16,7 @@ export async function POST(request) {
         *,
         funding_projects (
           project_title,
-          businesses ( brand_name )
+          businesses ( brand_name, founder_id )
         )
       `)
       .eq('id', disbursement_id)
@@ -32,6 +32,8 @@ export async function POST(request) {
       .select(`
         *,
         investors (
+          id,
+          user_id,
           alias_name,
           telegram_chat_id,
           phone,
@@ -64,6 +66,21 @@ export async function POST(request) {
         `💰 *Yield Credited:* ৳${amount} BDT\n\n` +
         `Your yield distribution has been calculated and finalised. Funds are credited to your registered account according to your Option ${item.yield_option || 1} agreement.`;
 
+      // 1. In-app notification for web investor portal
+      if (item.investors?.user_id) {
+        try {
+          await supabase.from('notifications').insert([{
+            user_id: item.investors.user_id,
+            title: `Dividend Credited: ৳${amount} BDT`,
+            message: `Monthly yield for ${brandName} (${period}) has been credited to your portfolio.`,
+            type: 'Yield_Credited'
+          }]);
+        } catch (nErr) {
+          console.warn('Non-fatal in-app yield notification warning:', nErr);
+        }
+      }
+
+      // 2. Telegram message
       if (botToken && chatID) {
         try {
           const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -86,7 +103,26 @@ export async function POST(request) {
           logs.push({ investor: investorName, status: 'Network Failed', detail: err.message });
         }
       } else {
-        logs.push({ investor: investorName, status: 'No Telegram Chat ID Registered' });
+        logs.push({ investor: investorName, status: 'No Telegram Chat ID Registered (In-App Notified)' });
+      }
+    }
+
+    // 3. Cross-stakeholder notification to the business founder
+    if (disb.funding_projects?.businesses?.founder_id) {
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        fetch(`${appUrl}/api/telegram-notify-founder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            founderId: disb.funding_projects.businesses.founder_id,
+            title: '📊 Monthly Yield Distribution Finalised',
+            message: `Monthly dividend distribution for ${brandName} (${period}) has been credited to ${yields?.length || 0} cap table investors.\nTotal Disbursed: ৳${Number(disb.amount_bdt || 0).toLocaleString()} BDT.`,
+            actionUrl: `${appUrl}/business`
+          })
+        }).catch(err => console.warn('Non-fatal founder notification warning:', err));
+      } catch (fErr) {
+        console.warn('Non-fatal founder yield notification error:', fErr);
       }
     }
 

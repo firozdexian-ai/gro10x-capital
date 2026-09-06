@@ -40,12 +40,11 @@ export default function CashConciergePortal() {
       // Fetch Investor Profile
       const { data: profile, error: profErr } = await supabase
         .from('investors')
-        .select('*, kams(full_name)')
+        .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
         
-      if (profErr) {
-        if (profErr.code !== 'PGRST116') throw profErr;
+      if (profErr || !profile) {
         setLoading(false);
         return; // Not an investor
       }
@@ -58,7 +57,7 @@ export default function CashConciergePortal() {
         .eq('status', 'Approved')
         .order('target_level', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
         
       const kycLevel = kycData ? kycData.target_level : 1;
       profile.kycLevel = kycLevel;
@@ -70,7 +69,7 @@ export default function CashConciergePortal() {
         const { data: projData, error: projErr } = await supabase
           .from('funding_projects')
           .select('*, businesses(brand_name)')
-          .in('status', ['Origination', 'Trading']);
+          .in('status', ['Origination', 'Trading', 'Active Capital Raise', 'Active', 'Fundraising']);
           
         if (projErr) throw projErr;
         setProjects(projData || []);
@@ -135,7 +134,7 @@ export default function CashConciergePortal() {
       setTicketAmount('');
       setMeetingTime('');
       
-      // Send notification to Admin & KAM
+      // Send notification to Admin
       try {
         await fetch('/api/telegram-notify-admin', {
           method: 'POST',
@@ -143,11 +142,30 @@ export default function CashConciergePortal() {
           body: JSON.stringify({
             title: '💼 New OTC Cash Concierge Ticket',
             message: `Investor submitted Block Trade Ticket.\nAmount: ৳${Number(ticketAmount).toLocaleString()} BDT\nProject: ${data?.funding_projects?.project_title || 'CapEx Deal'}\nMeeting Time: ${meetingTime}\nAssigned KAM: ${data?.kams?.full_name || 'Unassigned'}`,
-            actionUrl: `${window.location.origin}/kam-dashboard`
+            action_url: `${window.location.origin}/admin`
           })
         });
       } catch (e) {
         console.warn('Failed to notify team of cash ticket:', e);
+      }
+
+      // Send direct notification to assigned KAM via @gro10xmanbot
+      if (data?.kam_id || investorProfile?.assigned_kam_id) {
+        try {
+          await fetch('/api/telegram-notify-kam', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kamId: data?.kam_id || investorProfile?.assigned_kam_id,
+              title: '💼 New Cash Concierge Ticket Assigned',
+              message: `An investor has submitted an OTC Block Trade request.\nAmount: ৳${Number(ticketAmount).toLocaleString()} BDT\nProject: ${data?.funding_projects?.project_title || 'CapEx Deal'}\nPreferred Time: ${meetingTime}`,
+              priority: 'urgent',
+              actionUrl: `${window.location.origin}/kam-dashboard`
+            })
+          });
+        } catch (e) {
+          console.warn('Failed to notify assigned KAM of cash ticket:', e);
+        }
       }
 
       await supabase.from('notifications').insert([{
@@ -183,7 +201,9 @@ export default function CashConciergePortal() {
               <ShieldCheck size={18} color="#10b981" /> <strong>Level 3 Requirement:</strong> Verified Source of Funds Declaration.
             </p>
           </div>
-          <Link href="/investor" className="btn-gold" style={{ display: 'inline-block', textDecoration: 'none' }}>Go to Portfolio to Upgrade</Link>
+          <Link href="/investor?tab=kyc#tier3" className="btn-gold" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+            Complete KYC Level 3 Verification →
+          </Link>
         </div>
       </div>
     );
@@ -193,7 +213,7 @@ export default function CashConciergePortal() {
     <div style={{ background: '#05070a', color: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>
       
       {/* HEADER */}
-      <header style={{ background: 'rgba(5,7,10,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(212,175,55,0.1)', position: 'sticky', top: 0, zIndex: 10 }}>
+      <header style={{ background: 'rgba(5,7,10,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(212,175,55,0.1)', position: 'sticky', top: '62px', zIndex: 10 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '1px solid #D4AF37', borderRadius: '8px', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>

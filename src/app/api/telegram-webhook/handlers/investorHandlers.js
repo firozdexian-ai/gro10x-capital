@@ -200,11 +200,11 @@ export async function handleInvestorPortfolio(botToken, chatId, appUrl) {
   // Fetch investments
   const { data: investments } = await supabase
     .from('investments')
-    .select('amount_invested_bdt, status, funding_projects(project_title)')
+    .select('amount_invested_bdt, amount_bdt, status, funding_projects(project_title)')
     .eq('investor_id', investor.id)
     .eq('status', 'Active');
 
-  const totalInvested = (investments || []).reduce((s, i) => s + Number(i.amount_invested_bdt || 0), 0);
+  const totalInvested = (investments || []).reduce((s, i) => s + Number(i.amount_invested_bdt || i.amount_bdt || 0), 0);
 
   // Fetch total yields earned
   const { data: yields } = await supabase
@@ -215,7 +215,7 @@ export async function handleInvestorPortfolio(botToken, chatId, appUrl) {
   const totalYields = (yields || []).reduce((s, y) => s + Number(y.amount_bdt || 0), 0);
 
   const projectLines = (investments || [])
-    .map(i => `  ▸ ${i.funding_projects?.project_title || 'Active Deal'} — ৳${Number(i.amount_invested_bdt || 0).toLocaleString()}`)
+    .map(i => `  ▸ ${i.funding_projects?.project_title || 'Active Deal'} — ৳${Number(i.amount_invested_bdt || i.amount_bdt || 0).toLocaleString()}`)
     .join('\n') || '  ▸ No active investments yet';
 
   await sendMsg(botToken, chatId,

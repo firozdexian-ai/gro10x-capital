@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Building2, Users, PlusCircle, CheckCircle, Clock, ShieldAlert, 
   TrendingUp, DollarSign, Upload, FileText, ArrowUpRight, ChevronRight, Wallet,
@@ -27,6 +28,13 @@ import AnalyticsTab from './tabs/AnalyticsTab';
 import InquiryLeadsTab from './tabs/InquiryLeadsTab';
 import BotManagementTab from './tabs/BotManagementTab';
 import AdminSettingsTab from './tabs/AdminSettingsTab';
+import SecondaryClearanceTab from './tabs/SecondaryClearanceTab';
+import WorkOrdersTab from './tabs/WorkOrdersTab';
+import { getWorkOrders } from '../../lib/workOrders';
+import CohortInspectionDrawer from './modals/CohortInspectionDrawer';
+import InvestorDetailDrawer from './modals/InvestorDetailDrawer';
+import ProjectFormModal from './modals/ProjectFormModal';
+import BusinessFormModal from './modals/BusinessFormModal';
 
 const kanbanStages = [
   { id: 'Origination', title: '1. Origination & Pitch Review' },
@@ -38,6 +46,18 @@ const kanbanStages = [
 
 export default function AdminPortal() {
   const { user, role, loading: authLoading, signOut } = useAuth();
+  const router = useRouter();
+
+  // Role Guard: Redirect unauthenticated or non-Admin users
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/auth');
+      } else if (role && role !== 'admin') {
+        router.push('/');
+      }
+    }
+  }, [user, role, authLoading, router]);
   const [currency, setCurrency] = useState('BDT');
   const [activeTab, setActiveTab] = useState('dashboard'); // Default landing: Command Center
   const [investorSubTab, setInvestorSubTab] = useState('all-investors'); // 'all-investors' | 'kyc' | 'payments'
@@ -61,8 +81,11 @@ export default function AdminPortal() {
   const [recentNotifications, setRecentNotifications] = useState([]);
   const [yieldDisbursements, setYieldDisbursements] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
+  const [secondaryOrders, setSecondaryOrders] = useState([]);
+  const [isClearingSecondary, setIsClearingSecondary] = useState(false);
   const [allInvestorNotes, setAllInvestorNotes] = useState([]);
   const [platformSettings, setPlatformSettings] = useState({});
+  const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
 
@@ -304,6 +327,13 @@ export default function AdminPortal() {
         .order('created_at', { ascending: false });
       setAllBookings(bookingsData || []);
 
+      // Fetch Secondary Orders
+      const { data: secOrdersData } = await supabase
+        .from('secondary_orders')
+        .select(`*, investments(*, funding_projects(id, project_title, businesses(brand_name)))`)
+        .order('created_at', { ascending: false });
+      setSecondaryOrders(secOrdersData || []);
+
       // Fetch Cash Tickets
       const { data: cashData } = await supabase
         .from('cash_tickets')
@@ -401,6 +431,12 @@ export default function AdminPortal() {
         setPlatformSettings(sMap);
       }
 
+      // Fetch Work Orders (Safe Home Fund / Maats Cottage)
+      try {
+        const woData = await getWorkOrders();
+        setWorkOrders(woData || []);
+      } catch (e) {}
+
     } catch (err) {
       console.error('Error fetching admin data:', err);
     } finally {
@@ -415,6 +451,22 @@ export default function AdminPortal() {
       setLoading(false);
     }
   }, [role, authLoading]);
+
+  // Global Escape key dismiss handler for all modals and slide-over drawers
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowProjectModal(false);
+        setShowNewBusinessModal(false);
+        setShowAddInvestorModal(false);
+        setSelectedInvestor(null);
+        setSelectedApplication(null);
+        setSelectedProjectForInvestors(null);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Stage Advance Handler
   const logPlatformActivity = async (title, message, type = 'info') => {
@@ -862,6 +914,104 @@ export default function AdminPortal() {
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Payment review failed', 'error');
+    }
+  };
+
+  // Secondary Order Clearance Handler
+  const handleClearSecondaryOrder = async (order, approve) => {
+    setIsClearingSecondary(true);
+    try {
+      if (approve) {
+        // Resolve buyer from linked booking
+        const buyerBooking = allBookings.find(b => b.id === order.buyer_booking_id);
+        const buyerInvestorId = buyerBooking?.investor_id;
+        if (!buyerInvestorId) {
+          throw new Error('No matched buyer booking found for this secondary order.');
+        }
+
+        // 1. Update secondary_orders status to Transferred
+        const { error: secErr } = await supabase
+          .from('secondary_orders')
+          .update({ status: 'Transferred' })
+          .eq('id', order.id);
+        if (secErr) throw secErr;
+
+        // 2. Transfer ownership in investments table to buyer
+        const { error: invErr } = await supabase
+          .from('investments')
+          .update({ investor_id: buyerInvestorId })
+          .eq('id', order.investment_id);
+        if (invErr) throw invErr;
+
+        // 3. Mark buyer booking as Approved
+        if (order.buyer_booking_id) {
+          await supabase
+            .from('investment_bookings')
+            .update({ status: 'Approved' })
+            .eq('id', order.buyer_booking_id);
+        }
+
+        const projectTitle = order.investments?.funding_projects?.project_title || 'Syndicate Deal';
+        const dealAmount = Number(order.seller_price_bdt).toLocaleString();
+
+        // 4. Notify Buyer via Telegram
+        try {
+          await fetch('/api/telegram-notify-investor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              investorId: buyerInvestorId,
+              title: '🎉 Secondary Share Ownership Transferred!',
+              message: `Your acquisition of secondary shares in ${projectTitle} for ৳${dealAmount} BDT has been officially cleared by GRO10X Admin.\n\nOwnership is now active in your Portfolio, and upcoming yield disbursements will be credited directly to you.`,
+              actionUrl: `${window.location.origin}/investor`
+            })
+          });
+        } catch (e) {
+          console.warn('Failed to notify buyer of secondary transfer:', e);
+        }
+
+        // 5. Notify Seller via Telegram
+        try {
+          await fetch('/api/telegram-notify-investor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              investorId: order.seller_investor_id,
+              title: '💰 Secondary Share Proceeds Settled!',
+              message: `Your secondary sale of shares in ${projectTitle} for ৳${dealAmount} BDT has been settled and approved by GRO10X Admin.\n\nThe net proceeds have been cleared for disbursement.`,
+              actionUrl: `${window.location.origin}/investor`
+            })
+          });
+        } catch (e) {
+          console.warn('Failed to notify seller of secondary clearance:', e);
+        }
+
+        addToast('Secondary share transfer approved and settled!', 'success');
+        logPlatformActivity('Secondary Transfer Cleared', `Share in ${projectTitle} transferred from seller to buyer.`, 'success');
+      } else {
+        // Reject / Cancel order
+        await supabase
+          .from('secondary_orders')
+          .update({ status: 'Cancelled' })
+          .eq('id', order.id);
+
+        if (order.buyer_booking_id) {
+          await supabase
+            .from('investment_bookings')
+            .update({ status: 'Rejected' })
+            .eq('id', order.buyer_booking_id);
+        }
+
+        addToast('Secondary order rejected / cancelled.', 'info');
+        logPlatformActivity('Secondary Order Rejected', `Order #${order.id.slice(0, 8)} rejected.`, 'warning');
+      }
+
+      fetchAdminData();
+    } catch (err) {
+      console.error('Error clearing secondary order:', err);
+      addToast(err.message || 'Failed to process secondary transfer.', 'error');
+    } finally {
+      setIsClearingSecondary(false);
     }
   };
 
@@ -2109,6 +2259,26 @@ export default function AdminPortal() {
         `${targetKam ? targetKam.full_name : 'Unassigned'} assigned to ${appName}`,
         'info'
       );
+
+      // Dispatch real-time Telegram alert to assigned KAM
+      if (kamId) {
+        try {
+          const appUrl = window.location.origin;
+          fetch('/api/telegram-notify-kam', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kamId,
+              title: `📑 Cohort Diligence Assigned: ${appName}`,
+              message: `You have been assigned to conduct physical site diligence on "${appName}".\nRef: ${targetApp?.ref_code || ''}\nFounder: ${targetApp?.lead_founder_name || ''} (${targetApp?.lead_founder_phone || ''})`,
+              actionUrl: `${appUrl}/kam-dashboard`
+            })
+          }).catch(err => console.warn('Non-fatal KAM diligence dispatch error:', err));
+        } catch (e) {
+          console.warn('Non-fatal KAM assignment alert error:', e);
+        }
+      }
+
       fetchAdminData();
     } catch (err) {
       addToast(err.message || 'Failed to assign KAM', 'error');
@@ -2273,6 +2443,46 @@ export default function AdminPortal() {
         `"${app.brand_name}" provisioned into Deal Pipeline at Origination stage`,
         'success'
       );
+
+      // 6. Cross-stakeholder notification to the Founder via @gro10xbizbot
+      if (fData?.id || app.lead_founder_phone) {
+        try {
+          const appUrl = window.location.origin;
+          fetch('/api/telegram-notify-founder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              founderId: fData?.id,
+              phone: app.lead_founder_phone,
+              title: '🎉 Application Approved — Deal Originated',
+              message: `Congratulations! "${app.brand_name}" has been officially approved and provisioned into the GRO10X Deal Pipeline.\n\nProject: ${projData.project_title}\nTarget Capital Ask: ৳${Number(projData.target_raise_bdt).toLocaleString()} BDT.`,
+              actionUrl: `${appUrl}/business`
+            })
+          }).catch(err => console.warn('Non-fatal founder onboarding alert warning:', err));
+        } catch (fErr) {
+          console.warn('Non-fatal founder alert error:', fErr);
+        }
+      }
+
+      // 7. Notification to assigned KAM via @gro10xmanbot
+      if (app.assigned_kam_id) {
+        try {
+          const appUrl = window.location.origin;
+          fetch('/api/telegram-notify-kam', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kamId: app.assigned_kam_id,
+              title: '🚀 Cohort Deal Onboarded to Pipeline',
+              message: `"${app.brand_name}" has successfully converted from Cohort Application to Deal Pipeline at Origination stage.\nTarget: ৳${Number(projData.target_raise_bdt).toLocaleString()} BDT.`,
+              actionUrl: `${appUrl}/kam-dashboard`
+            })
+          }).catch(err => console.warn('Non-fatal KAM onboarding alert warning:', err));
+        } catch (kErr) {
+          console.warn('Non-fatal KAM alert error:', kErr);
+        }
+      }
+
       setConvertingAppId(null);
       setSelectedApplication(null);
       fetchAdminData();
@@ -2322,6 +2532,7 @@ export default function AdminPortal() {
   const pendingLeadsCount = inquiryLeads.filter(l => l.status === 'New').length;
   const pendingCashTicketsCount = cashTickets.filter(t => t.status === 'Pending_Review').length;
   const pendingCohortCount = cohortApplications.filter(a => ['New_Submission', 'Under_Director_Review', 'KAM_Assigned', 'Diligence_In_Progress'].includes(a.status)).length;
+  const pendingSecondaryCount = secondaryOrders.filter(o => o.status === 'Pending_Clearance').length;
 
   // Synthesize rich Activity Stream from real records + logged events
   const synthesizedActivityStream = [
@@ -2377,6 +2588,37 @@ export default function AdminPortal() {
     ...inquiryLeads.filter(l => (l.name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (l.phone || '').includes(globalSearchQuery)).slice(0, 3).map(l => ({ type: 'Lead', title: l.name, sub: l.phone || 'Inquiry Lead', tab: 'leads-marketing', item: l }))
   ];
 
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <Loader2 className="animate-spin" size={36} />
+          <div style={{ fontWeight: '700', fontSize: '0.9rem', letterSpacing: '0.05em' }}>AUTHENTICATING ADMIN PRIVILEGES...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || (role && role !== 'admin')) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#f8fafc' }}>
+        <div style={{ textAlign: 'center', padding: '2.5rem', maxWidth: '420px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
+          <ShieldAlert size={52} style={{ color: '#ef4444', margin: '0 auto 1rem auto' }} />
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '0.5rem' }}>Restricted Command Center</h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+            Administrative security clearance required. Redirecting to authentication portal...
+          </p>
+          <button 
+            onClick={() => router.push('/auth')} 
+            style={{ background: '#D4AF37', color: '#000', fontWeight: '800', padding: '0.65rem 1.4rem', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+          >
+            Authenticate via Web PIN
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-shell">
 
@@ -2395,6 +2637,8 @@ export default function AdminPortal() {
           kycPayments: pendingKycCount + pendingPaymentsCount,
           cohort: pendingCohortCount,
           leads: pendingLeadsCount,
+          secondaryClearance: secondaryOrders.filter(o => o.status === 'Pending_Clearance').length,
+          workOrders: workOrders.filter(o => o.status === 'Pending_Approval').length,
         }}
       />
 
@@ -2425,6 +2669,7 @@ export default function AdminPortal() {
             pendingPaymentsCount={pendingPaymentsCount}
             pendingLeadsCount={pendingLeadsCount}
             pendingCashTicketsCount={pendingCashTicketsCount}
+            pendingSecondaryCount={pendingSecondaryCount}
             projects={projects}
             allKams={allKams}
             recentNotifications={synthesizedActivityStream}
@@ -2486,6 +2731,15 @@ export default function AdminPortal() {
             addToast={addToast}
             logPlatformActivity={logPlatformActivity}
             fetchAdminData={fetchAdminData}
+          />
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB 3.6: WORK ORDERS DESK (work-orders) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === 'work-orders' && (
+          <WorkOrdersTab
+            currency={currency}
           />
         )}
 
@@ -2610,6 +2864,21 @@ export default function AdminPortal() {
         )}
 
         {/* ---------------------------------------------------- */}
+        {/* TAB: SECONDARY MARKET CLEARANCE DESK */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === 'secondary-clearance' && (
+          <SecondaryClearanceTab
+            secondaryOrders={secondaryOrders}
+            allBookings={allBookings}
+            allInvestors={allInvestors}
+            currency={currency}
+            onClearOrder={handleClearSecondaryOrder}
+            onRefresh={fetchAdminData}
+            isClearing={isClearingSecondary}
+          />
+        )}
+
+        {/* ---------------------------------------------------- */}
         {/* TAB 7: TEAM & PROMOTERS */}
         {/* ---------------------------------------------------- */}
         {activeTab === 'team-promoters' && (
@@ -2701,323 +2970,26 @@ export default function AdminPortal() {
 
       {/* ---------------------------------------------------- */}
       {/* COHORT APPLICATION INSPECTION DRAWER */}
-      {/* ---------------------------------------------------- */}
-      {selectedApplication && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: '640px', background: '#0f172a', borderLeft: '1px solid rgba(212,175,55,0.3)', padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
-            {/* DRAWER HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#D4AF37', fontWeight: 'bold' }}>{selectedApplication.ref_code}</span>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#fff', margin: '0.2rem 0 0.3rem 0' }}>{selectedApplication.brand_name}</h3>
-                <span style={{ fontSize: '0.75rem', background: 'rgba(212,175,55,0.15)', color: '#D4AF37', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 'bold' }}>
-                  {selectedApplication.status.replace(/_/g, ' ')}
-                </span>
-              </div>
-              <button onClick={() => setSelectedApplication(null)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            {/* DRAWER SUB-TABS (5 SUB-TABS) */}
-            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(7,10,20,0.6)', borderRadius: '8px', padding: '0.25rem' }}>
-              {['brand', 'team', 'financials', 'documents', 'audit'].map(subTab => (
-                <button
-                  key={subTab}
-                  onClick={() => setAppDrawerSubTab(subTab)}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem',
-                    background: appDrawerSubTab === subTab ? '#D4AF37' : 'transparent',
-                    color: appDrawerSubTab === subTab ? '#000' : '#94a3b8',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontWeight: 'bold',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    textTransform: 'capitalize'
-                  }}
-                >
-                  {subTab === 'brand' ? 'Brand Identity' : subTab === 'team' ? 'Team Roster' : subTab === 'audit' ? 'Audit & Onboard' : subTab}
-                </button>
-              ))}
-            </div>
-
-            {/* SUB-TAB 1: BRAND IDENTITY & LEGAL */}
-            {appDrawerSubTab === 'brand' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <p style={{ margin: 0 }}>Company Legal Name: <strong style={{ color: '#fff' }}>{selectedApplication.company_legal_name || 'N/A'}</strong></p>
-                  <p style={{ margin: 0 }}>Company Entity Type: <strong style={{ color: '#fff' }}>{selectedApplication.company_type}</strong></p>
-                  <p style={{ margin: 0 }}>Trade License / Reg No: <strong style={{ color: '#D4AF37' }}>{selectedApplication.company_registration_number || 'N/A'}</strong></p>
-                  <p style={{ margin: 0 }}>TIN Number: <strong style={{ color: '#fff' }}>{selectedApplication.tin_number || 'N/A'}</strong></p>
-                  <p style={{ margin: 0 }}>BIN Number (VAT): <strong style={{ color: '#fff' }}>{selectedApplication.bin_number || 'N/A'}</strong></p>
-                </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <p style={{ margin: 0 }}>Industry Sector: <strong style={{ color: '#3b82f6' }}>{selectedApplication.industry_sector}</strong></p>
-                  <p style={{ margin: 0 }}>Operating Outlets: <strong style={{ color: '#fff' }}>{selectedApplication.outlet_count} active hubs</strong></p>
-                  <p style={{ margin: 0 }}>HQ Address: <strong style={{ color: '#fff' }}>{selectedApplication.headquarters_address || 'Unlisted'}</strong></p>
-                  {selectedApplication.website_url && (
-                    <p style={{ margin: 0 }}>Website: <a href={selectedApplication.website_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>{selectedApplication.website_url}</a></p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* SUB-TAB 2: FOUNDING TEAM & STAKEHOLDERS */}
-            {appDrawerSubTab === 'team' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
-                <div style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', padding: '1rem', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: 'bold' }}>Lead Applicant Contact</span>
-                  <h4 style={{ margin: '0.2rem 0', color: '#fff', fontSize: '1rem' }}>{selectedApplication.lead_founder_name}</h4>
-                  <p style={{ margin: 0, color: '#94a3b8' }}>{selectedApplication.lead_founder_title} | Phone: {selectedApplication.lead_founder_phone}</p>
-                  <p style={{ margin: '0.2rem 0 0 0', color: '#94a3b8' }}>Email: {selectedApplication.lead_founder_email}</p>
-                  {selectedApplication.lead_founder_linkedin_url && (
-                    <a href={selectedApplication.lead_founder_linkedin_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontSize: '0.8rem', display: 'inline-block', marginTop: '0.3rem' }}>
-                      View LinkedIn Profile ↗
-                    </a>
-                  )}
-                </div>
-
-                <h4 style={{ margin: 0, fontSize: '0.95rem' }}>All Registered Business Stakeholders</h4>
-                {allAppStakeholders.filter(s => s.application_id === selectedApplication.id).length === 0 ? (
-                  <p style={{ color: '#64748b', fontSize: '0.8rem' }}>No co-founders registered in multi-stakeholder table.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {allAppStakeholders.filter(s => s.application_id === selectedApplication.id).map(stk => (
-                      <div key={stk.id} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <p style={{ fontWeight: 'bold', margin: 0 }}>{stk.full_name}</p>
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{stk.role_title} | {stk.phone || stk.email || 'No contact'}</span>
-                        </div>
-                        <span style={{ fontWeight: 'bold', color: '#10b981' }}>{stk.equity_ownership_pct}% Equity</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-
-            {/* SUB-TAB 3: FINANCIALS & UNIT ECONOMICS */}
-            {appDrawerSubTab === 'financials' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
-                <div style={{ background: 'rgba(7,10,20,0.8)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Monthly Gross Sales</span>
-                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.1rem', color: '#fff' }}>{formatCurrency(selectedApplication.monthly_gross_revenue_bdt, currency)}</p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Monthly Net Profit</span>
-                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.1rem', color: '#10b981' }}>{formatCurrency(selectedApplication.monthly_net_profit_bdt, currency)}</p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Capital Ask</span>
-                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.1rem', color: '#D4AF37' }}>{formatCurrency(selectedApplication.requested_funding_bdt, currency)}</p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>POS Software</span>
-                    <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem', color: '#fff' }}>{selectedApplication.pos_system_name || 'N/A'}</p>
-                  </div>
-                </div>
-
-                {selectedApplication.pitch_text && (
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 'bold' }}>Founder Value Proposition / Pitch</span>
-                    <p style={{ margin: '0.3rem 0 0 0', lineHeight: '1.5', fontStyle: 'italic' }}>"{selectedApplication.pitch_text}"</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SUB-TAB 4: DOCUMENT VAULT */}
-            {appDrawerSubTab === 'documents' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.85rem', borderRadius: '8px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>Pitch Deck PDF</span>
-                    {selectedApplication.pitch_deck_url ? (
-                      <a href={selectedApplication.pitch_deck_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontWeight: 'bold', textDecoration: 'none' }}>View Pitch Deck PDF ↗</a>
-                    ) : (
-                      <span style={{ color: '#64748b' }}>Not Uploaded</span>
-                    )}
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.85rem', borderRadius: '8px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>Trade License Scan</span>
-                    {selectedApplication.trade_license_url ? (
-                      <a href={selectedApplication.trade_license_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontWeight: 'bold', textDecoration: 'none' }}>View Trade License ↗</a>
-                    ) : (
-                      <span style={{ color: '#64748b' }}>Not Uploaded</span>
-                    )}
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.85rem', borderRadius: '8px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>Financial Audit (1 Yr)</span>
-                    {selectedApplication.financial_audit_url ? (
-                      <a href={selectedApplication.financial_audit_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontWeight: 'bold', textDecoration: 'none' }}>View Audit Document ↗</a>
-                    ) : (
-                      <span style={{ color: '#64748b' }}>Not Uploaded</span>
-                    )}
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.85rem', borderRadius: '8px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block' }}>TIN Certificate</span>
-                    {selectedApplication.tin_certificate_url ? (
-                      <a href={selectedApplication.tin_certificate_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', fontWeight: 'bold', textDecoration: 'none' }}>View TIN Certificate ↗</a>
-                    ) : (
-                      <span style={{ color: '#64748b' }}>Not Uploaded</span>
-                    )}
-                  </div>
-                </div>
-
-                {Array.isArray(selectedApplication.outlet_photos) && selectedApplication.outlet_photos.length > 0 && (
-                  <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Uploaded Outlet Media</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                      {selectedApplication.outlet_photos.map((url, idx) => (
-                        <a key={idx} href={url} target="_blank" rel="noreferrer" style={{ height: '80px', borderRadius: '6px', overflow: 'hidden', display: 'block' }}>
-                          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SUB-TAB 5: KAM AUDIT & DIRECTOR CONSOLE */}
-            {appDrawerSubTab === 'audit' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.85rem' }}>
-                
-                {/* KAM ASSIGNMENT */}
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Assigned Key Account Manager (KAM)</label>
-                  <select 
-                    value={selectedApplication.assigned_kam_id || ''}
-                    onChange={(e) => handleAssignKamToApp(selectedApplication.id, e.target.value)}
-                    style={{ width: '100%', padding: '0.6rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                  >
-                    <option value="">-- Unassigned --</option>
-                    {allKams.map(k => (
-                      <option key={k.id} value={k.id}>{k.full_name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* KAM ON-SITE AUDIT FORM */}
-                <form onSubmit={(e) => handleSaveKamAudit(e, selectedApplication.id)} style={{ background: '#0f172a', border: '1px solid rgba(212,175,55,0.2)', padding: '1.25rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  <h4 style={{ margin: 0, color: '#D4AF37', fontSize: '0.95rem' }}>KAM On-Site Audit Findings</h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Location Score (1-5 Stars)</label>
-                      <input 
-                        type="number" min="1" max="5" 
-                        value={kamAuditForm.kam_location_score} 
-                        onChange={(e) => setKamAuditForm({ ...kamAuditForm, kam_location_score: e.target.value })} 
-                        className="form-input" style={{ padding: '0.5rem' }} 
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equipment Score (1-5 Stars)</label>
-                      <input 
-                        type="number" min="1" max="5" 
-                        value={kamAuditForm.kam_equipment_score} 
-                        onChange={(e) => setKamAuditForm({ ...kamAuditForm, kam_equipment_score: e.target.value })} 
-                        className="form-input" style={{ padding: '0.5rem' }} 
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>POS Financial Cross-Check</label>
-                      <select 
-                        value={kamAuditForm.kam_financial_verification}
-                        onChange={(e) => setKamAuditForm({ ...kamAuditForm, kam_financial_verification: e.target.value })}
-                        style={{ width: '100%', padding: '0.5rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                      >
-                        <option value="Pass">Pass (Verified 100%)</option>
-                        <option value="Partial">Partial Match</option>
-                        <option value="Fail">Fail / Discrepancy</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Legal Document Audit</label>
-                      <select 
-                        value={kamAuditForm.kam_legal_doc_status}
-                        onChange={(e) => setKamAuditForm({ ...kamAuditForm, kam_legal_doc_status: e.target.value })}
-                        style={{ width: '100%', padding: '0.5rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                      >
-                        <option value="Verified">Verified Authentic</option>
-                        <option value="Pending">Pending Audit</option>
-                        <option value="Unverified">Unverified / Suspect</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>KAM Notes & Field Report</label>
-                    <textarea 
-                      rows={2} 
-                      value={kamAuditForm.kam_notes} 
-                      onChange={(e) => setKamAuditForm({ ...kamAuditForm, kam_notes: e.target.value })} 
-                      placeholder="On-site findings, daily footfall observed, machinery condition..." 
-                      className="form-input" style={{ padding: '0.5rem' }} 
-                    />
-                  </div>
-
-                  <button type="submit" style={{ background: '#D4AF37', color: '#000', border: 'none', padding: '0.6rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    Save Audit & Compute AI Health Score
-                  </button>
-                </form>
-
-                {/* REJECTION ACTION */}
-                {rejectingAppId === selectedApplication.id ? (
-                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 'bold' }}>Rejection Reason</label>
-                    <textarea 
-                      rows={2} 
-                      value={rejectionReasonInput} 
-                      onChange={(e) => setRejectionReasonInput(e.target.value)} 
-                      placeholder="e.g. Discrepancy in stated sales vs physical POS audit" 
-                      className="form-input" 
-                    />
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => setRejectingAppId(null)} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.5rem', borderRadius: '6px', fontWeight: 'bold' }}>Cancel</button>
-                      <button onClick={() => handleRejectApp(selectedApplication.id)} style={{ flex: 1, background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem', borderRadius: '6px', fontWeight: 'bold' }}>Confirm Reject</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => setRejectingAppId(selectedApplication.id)} style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', padding: '0.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    Reject Application
-                  </button>
-                )}
-
-                {/* 1-CLICK DEAL PIPELINE CONVERSION ACTION */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(16,185,129,0.15))', border: '1px solid #D4AF37', padding: '1.25rem', borderRadius: '10px', textAlign: 'center' }}>
-                  <h4 style={{ margin: '0 0 0.3rem 0', color: '#D4AF37', fontSize: '1.05rem' }}>🚀 Onboard to Deal Pipeline</h4>
-                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 1rem 0' }}>
-                    Auto-provisions Founder, Business, Stakeholders & Deal Campaign at "Origination" stage.
-                  </p>
-
-                  <button 
-                    onClick={() => handleConvertCohortToDeal(selectedApplication)}
-                    disabled={convertingAppId === selectedApplication.id || selectedApplication.status === 'Onboarded_To_Pipeline'}
-                    className="btn-gold" 
-                    style={{ width: '100%', justifyContent: 'center', padding: '0.85rem' }}
-                  >
-                    {convertingAppId === selectedApplication.id ? 'Converting...' : selectedApplication.status === 'Onboarded_To_Pipeline' ? 'Already Onboarded ✓' : 'Approve & Onboard to Deal Pipeline'}
-                  </button>
-                </div>
-
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
+      <CohortInspectionDrawer
+        selectedApplication={selectedApplication}
+        onClose={() => setSelectedApplication(null)}
+        appDrawerSubTab={appDrawerSubTab}
+        setAppDrawerSubTab={setAppDrawerSubTab}
+        allAppStakeholders={allAppStakeholders}
+        currency={currency}
+        allKams={allKams}
+        handleAssignKamToApp={handleAssignKamToApp}
+        kamAuditForm={kamAuditForm}
+        setKamAuditForm={setKamAuditForm}
+        handleSaveKamAudit={handleSaveKamAudit}
+        rejectingAppId={rejectingAppId}
+        setRejectingAppId={setRejectingAppId}
+        rejectionReasonInput={rejectionReasonInput}
+        setRejectionReasonInput={setRejectionReasonInput}
+        handleRejectApp={handleRejectApp}
+        handleConvertCohortToDeal={handleConvertCohortToDeal}
+        convertingAppId={convertingAppId}
+      />
 
       {/* ---------------------------------------------------- */}
       {/* INVESTOR PORTFOLIO DRAWER */}
@@ -3025,311 +2997,36 @@ export default function AdminPortal() {
 
       {/* ---------------------------------------------------- */}
       {/* 5-TAB INVESTOR INSPECTION DRAWER */}
-      {/* ---------------------------------------------------- */}
-      {selectedInvestor && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: '580px', background: '#0f172a', borderLeft: '1px solid rgba(212,175,55,0.3)', padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
-            {/* DRAWER HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                  <span style={{ fontSize: '0.75rem', background: 'rgba(212,175,55,0.15)', color: '#D4AF37', padding: '0.1rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
-                    {selectedInvestor.investor_category || 'HNI'}
-                  </span>
-                  {selectedInvestor.requires_anonymity && (
-                    <span style={{ fontSize: '0.75rem', background: 'rgba(139,92,246,0.2)', color: '#a78bfa', padding: '0.1rem 0.5rem', borderRadius: '4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <Lock size={12} /> Privacy Coverage
-                    </span>
-                  )}
-                </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{selectedInvestor.alias_name}</h3>
-              </div>
-              <button onClick={() => setSelectedInvestor(null)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            {/* 5 SUB-TABS */}
-            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.2rem' }}>
-              {[
-                { id: 'profile', label: 'Profile' },
-                { id: 'investments', label: 'Investments' },
-                { id: 'yield', label: 'Yield History' },
-                { id: 'kyc-docs', label: 'KYC & Docs' },
-                { id: 'notes', label: 'KAM Notes' }
-              ].map(tab => (
-                <button 
-                  key={tab.id}
-                  onClick={() => setInvestorDrawerTab(tab.id)}
-                  style={{
-                    flex: 1,
-                    padding: '0.65rem 0.4rem',
-                    background: investorDrawerTab === tab.id ? 'rgba(212,175,55,0.2)' : 'transparent',
-                    color: investorDrawerTab === tab.id ? '#D4AF37' : '#94a3b8',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontWeight: 'bold',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* TAB 1: PROFILE */}
-            {investorDrawerTab === 'profile' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.85rem' }}>
-                
-                {/* Status Override */}
-                <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '1rem' }}>
-                  <label style={{ color: '#D4AF37', fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>Lifecycle Onboarding Status</label>
-                  <select 
-                    value={selectedInvestor.onboarding_status || (selectedInvestor.kyc_verified ? 'Active' : 'Invited')}
-                    onChange={(e) => handleUpdateInvestorStatus(selectedInvestor.id, e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontWeight: 'bold' }}
-                  >
-                    <option value="Invited">Invited (Telegram Pending)</option>
-                    <option value="Telegram_Verified">Telegram Verified</option>
-                    <option value="KYC_L1">KYC Level 1 (Alias Set)</option>
-                    <option value="KYC_L2">KYC Level 2 (NID Verified)</option>
-                    <option value="KYC_L3">KYC Level 3 (Funds Source Verified)</option>
-                    <option value="Active">Active Investor</option>
-                    <option value="VIP">VIP Investor (High Volume)</option>
-                  </select>
-                </div>
-
-                {/* Privacy Toggle */}
-                <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '10px', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 'bold', color: '#a78bfa' }}>Privacy & Anonymity Coverage</p>
-                    <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>When active, phone and email are masked across all table views and public exports.</p>
-                  </div>
-                  <button 
-                    onClick={() => handleToggleAnonymity(selectedInvestor.id, selectedInvestor.requires_anonymity)}
-                    style={{
-                      background: selectedInvestor.requires_anonymity ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '0.5rem 0.85rem',
-                      borderRadius: '6px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem'
-                    }}
-                  >
-                    {selectedInvestor.requires_anonymity ? 'Active 🔒' : 'Off'}
-                  </button>
-                </div>
-
-                {/* Detailed Metadata Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px' }}>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Phone Number</span>
-                    <p style={{ margin: '0.2rem 0 0 0', fontWeight: 'bold', color: '#fff' }}>{selectedInvestor.phone || 'Not Provided'}</p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Email Address</span>
-                    <p style={{ margin: '0.2rem 0 0 0', fontWeight: 'bold', color: '#fff' }}>{selectedInvestor.email || 'Not Provided'}</p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Origin Source</span>
-                    <p style={{ margin: '0.2rem 0 0 0', fontWeight: 'bold', color: '#f59e0b' }}>
-                      {selectedInvestor.origin_source || 'Admin Direct'}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Tagged Promoter</span>
-                    <p style={{ margin: '0.2rem 0 0 0', fontWeight: 'bold', color: '#fff' }}>
-                      {selectedInvestor.promoters?.alias_name || selectedInvestor.promoters?.full_name || 'None'}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Assigned KAM</span>
-                    <select 
-                      value={selectedInvestor.assigned_kam_id || ''} 
-                      onChange={(e) => handleAssignKamToInvestor(selectedInvestor.id, e.target.value)}
-                      style={{ width: '100%', marginTop: '0.2rem', background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}
-                    >
-                      <option value="">-- Unassigned --</option>
-                      {allKams.map(k => (
-                        <option key={k.id} value={k.id}>{k.full_name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Joined Platform</span>
-                    <p style={{ margin: '0.2rem 0 0 0', fontWeight: 'bold', color: '#94a3b8' }}>
-                      {new Date(selectedInvestor.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-            )}
-
-            {/* TAB 2: INVESTMENTS */}
-            {investorDrawerTab === 'investments' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {activeInvestments.filter(i => i.investor_id === selectedInvestor.id).length === 0 ? (
-                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No active settled investments recorded for this investor.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {activeInvestments.filter(i => i.investor_id === selectedInvestor.id).map(inv => (
-                      <div key={inv.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '1rem', fontSize: '0.85rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                          <p style={{ fontWeight: 'bold', margin: 0, color: '#fff' }}>{inv.funding_projects?.project_title}</p>
-                          <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.1rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                            {inv.status || 'Active'}
-                          </span>
-                        </div>
-                        <p style={{ color: '#10b981', fontWeight: 'bold', margin: 0, fontSize: '1.05rem' }}>
-                          {formatCurrency(inv.amount_invested_bdt, currency)}
-                        </p>
-                        <p style={{ color: '#64748b', fontSize: '0.75rem', margin: '0.3rem 0 0 0' }}>
-                          Yield Option {inv.yield_option} | Settled {new Date(inv.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 3: YIELD HISTORY */}
-            {investorDrawerTab === 'yield' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', padding: '1rem', borderRadius: '8px' }}>
-                  <p style={{ color: '#D4AF37', fontSize: '0.8rem', margin: 0, fontWeight: 'bold' }}>Yield Payout Engine Summary</p>
-                  <p style={{ fontSize: '0.85rem', color: '#cbd5e1', margin: '0.2rem 0 0 0' }}>
-                    Automated monthly disbursements derived from campaign gross/net POS reports.
-                  </p>
-                </div>
-                {yieldDisbursements.length === 0 ? (
-                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>No yield disbursements recorded yet.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {yieldDisbursements.map(yd => (
-                      <div key={yd.id} style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', padding: '0.85rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: 'bold', color: '#fff' }}>{yd.funding_projects?.project_title}</p>
-                          <p style={{ margin: '0.1rem 0 0 0', color: '#94a3b8' }}>Disbursement Batch: {yd.disbursement_month || 'Monthly'}</p>
-                        </div>
-                        <span style={{ color: '#10b981', fontWeight: 'bold' }}>{formatCurrency(yd.total_disbursed_bdt || 0, currency)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB 4: KYC & DOCS */}
-            {investorDrawerTab === 'kyc-docs' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.85rem' }}>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '8px' }}>
-                  <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: 0 }}>Current Clearance</p>
-                  <h4 style={{ margin: '0.2rem 0 0 0', color: '#D4AF37' }}>KYC Level {selectedInvestor.kyc_level || 1} Verified</h4>
-                </div>
-
-                <h4 style={{ margin: 0, color: '#fff' }}>KYC Submissions History</h4>
-                {kycSubmissions.filter(k => k.investor_id === selectedInvestor.id).length === 0 ? (
-                  <p style={{ color: '#64748b' }}>No individual KYC submissions recorded.</p>
-                ) : (
-                  kycSubmissions.filter(k => k.investor_id === selectedInvestor.id).map(sub => (
-                    <div key={sub.id} style={{ background: '#070a14', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ fontWeight: 'bold', color: '#D4AF37' }}>Level {sub.target_level} Submission</span>
-                        <span style={{ color: sub.status === 'Approved' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>{sub.status}</span>
-                      </div>
-                      {sub.target_level === 2 && (
-                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem' }}>
-                          {sub.nid_front_url && <a href={sub.nid_front_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>View NID Front</a>}
-                          {sub.nid_back_url && <a href={sub.nid_back_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>View NID Back</a>}
-                        </div>
-                      )}
-                      {sub.target_level === 3 && sub.source_of_funds && (
-                        <p style={{ fontStyle: 'italic', color: '#cbd5e1', margin: '0.3rem 0 0 0' }}>"{sub.source_of_funds}"</p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* TAB 5: KAM NOTES */}
-            {investorDrawerTab === 'notes' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.85rem' }}>
-                
-                {/* Notes Feed */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto' }}>
-                  {allInvestorNotes.filter(n => n.investor_id === selectedInvestor.id).length === 0 ? (
-                    <p style={{ color: '#64748b' }}>No communication notes logged for this investor yet.</p>
-                  ) : (
-                    allInvestorNotes.filter(n => n.investor_id === selectedInvestor.id).map(n => (
-                      <div key={n.id} style={{ background: '#070a14', border: '1px solid rgba(255,255,255,0.08)', padding: '0.85rem', borderRadius: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                          <span style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                            {n.note_type || 'General'}
-                          </span>
-                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                            {new Date(n.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                        <p style={{ margin: 0, color: '#f8fafc', lineHeight: '1.4' }}>{n.content}</p>
-                        <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.7rem', color: '#64748b' }}>
-                          By: <strong style={{ color: '#94a3b8' }}>{n.kams?.full_name || 'Admin'}</strong>
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Add Note Form */}
-                <form onSubmit={(e) => handleSaveInvestorNote(e, selectedInvestor.id)} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px' }}>
-                  <label style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '0.8rem' }}>+ Log KAM / Admin Communication Note</label>
-                  
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <select 
-                      value={newNoteForm.note_type}
-                      onChange={(e) => setNewNoteForm({ ...newNoteForm, note_type: e.target.value })}
-                      style={{ background: '#070a14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.5rem', borderRadius: '6px', fontSize: '0.8rem' }}
-                    >
-                      <option value="General">General Note</option>
-                      <option value="Call">Phone Call</option>
-                      <option value="Meeting">In-Person Meeting</option>
-                      <option value="Warning">Compliance / Warning</option>
-                      <option value="Milestone">Investment Milestone</option>
-                    </select>
-                  </div>
-
-                  <textarea 
-                    rows={3}
-                    placeholder="Record conversation summary, commitments made, or follow-up notes..."
-                    value={newNoteForm.content}
-                    onChange={(e) => setNewNoteForm({ ...newNoteForm, content: e.target.value })}
-                    className="form-input"
-                    style={{ fontSize: '0.8rem' }}
-                    required
-                  />
-
-                  <button type="submit" disabled={savingNote} className="btn-gold" style={{ padding: '0.65rem', justifyContent: 'center', fontSize: '0.85rem' }}>
-                    {savingNote ? 'Logging Note...' : 'Save Note to Timeline'}
-                  </button>
-                </form>
-
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
+      <InvestorDetailDrawer
+        selectedInvestor={selectedInvestor}
+        onClose={() => setSelectedInvestor(null)}
+        investorDrawerTab={investorDrawerTab}
+        setInvestorDrawerTab={setInvestorDrawerTab}
+        handleUpdateInvestorStatus={handleUpdateInvestorStatus}
+        handleToggleAnonymity={handleToggleAnonymity}
+        handleAssignKamToInvestor={handleAssignKamToInvestor}
+        allKams={allKams}
+        activeInvestments={activeInvestments}
+        currency={currency}
+        yieldDisbursements={yieldDisbursements}
+        kycSubmissions={kycSubmissions}
+        allInvestorNotes={allInvestorNotes}
+        newNoteForm={newNoteForm}
+        setNewNoteForm={setNewNoteForm}
+        handleSaveInvestorNote={handleSaveInvestorNote}
+        savingNote={savingNote}
+      />
 
       {/* ---------------------------------------------------- */}
       {/* MANUAL ADD INVESTOR SUB-MODAL */}
       {/* ---------------------------------------------------- */}
       {showAddInvestorModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1100, display: 'grid', placeItems: 'center', padding: '2rem' }}>
+        <div 
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddInvestorModal(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1100, display: 'grid', placeItems: 'center', padding: '2rem' }}
+        >
           <div className="glass-card" style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#D4AF37', margin: 0 }}>Onboard New Investor</h3>
@@ -3564,523 +3261,37 @@ export default function AdminPortal() {
 
       {/* ---------------------------------------------------- */}
       {/* FULL PROJECT CREATE / EDIT MODAL (6 TABS) */}
-      {/* ---------------------------------------------------- */}
-      {showProjectModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'grid', placeItems: 'center', padding: '2rem' }}>
-          <div className="glass-card" style={{ maxWidth: '800px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            
-            {/* MODAL HEADER */}
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', margin: 0, color: '#D4AF37' }}>
-                {editingProjectId ? '✏ Edit Project Campaign' : '🚀 Onboard New Project Campaign'}
-              </h3>
-              <button onClick={() => setShowProjectModal(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            {/* MODAL TABS (6 TABS) */}
-            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>
-              {['basics', 'financials', 'spv', 'content', 'gallery', 'summary'].map(tab => (
-                <button 
-                  key={tab}
-                  onClick={() => setProjectModalTab(tab)}
-                  style={{ flex: 1, padding: '0.75rem', background: 'transparent', border: 'none', borderBottom: projectModalTab === tab ? '2px solid #D4AF37' : '2px solid transparent', color: projectModalTab === tab ? '#D4AF37' : '#94a3b8', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer', textTransform: 'capitalize' }}
-                >
-                  {tab === 'spv' ? 'SPV & Legal' : tab}
-                </button>
-              ))}
-            </div>
-
-            {/* MODAL BODY FORM */}
-            <form onSubmit={handleSaveProject} style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              
-              {/* TAB 1: BASICS */}
-              {projectModalTab === 'basics' && (
-                <>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Project Title</label>
-                    <input 
-                      type="text" 
-                      value={projectForm.project_title}
-                      onChange={(e) => setProjectForm({ ...projectForm, project_title: e.target.value })}
-                      placeholder="e.g. ORO Roasters Hub 4 - Gulshan 2"
-                      className="form-input" 
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                      <label style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>Linked Business Brand</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setShowNewBusinessModal(true)}
-                        style={{ background: 'transparent', border: 'none', color: '#D4AF37', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                      >
-                        + Create New Business Brand
-                      </button>
-                    </div>
-                    <select 
-                      value={projectForm.business_id}
-                      onChange={(e) => setProjectForm({ ...projectForm, business_id: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                    >
-                      {businesses.map(b => (
-                        <option key={b.id} value={b.id}>{b.brand_name} ({b.company_legal_name || 'Standard'})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Physical Outlet Location Address</label>
-                    <input 
-                      type="text" 
-                      value={projectForm.location_address}
-                      onChange={(e) => setProjectForm({ ...projectForm, location_address: e.target.value })}
-                      placeholder="e.g. Shop 4A, Road 11, Gulshan 2, Dhaka"
-                      className="form-input" 
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Funding Type</label>
-                      <select 
-                        value={projectForm.funding_type}
-                        onChange={(e) => setProjectForm({ ...projectForm, funding_type: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                      >
-                        <option value="Franchise">Franchise Expansion</option>
-                        <option value="Distribution">Distribution Hub</option>
-                        <option value="Equity">Equity SPV</option>
-                        <option value="Short-Term Debt">Short-Term Debt</option>
-                      </select>
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Initial Pipeline Stage</label>
-                      <select 
-                        value={projectForm.status}
-                        onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                      >
-                        {kanbanStages.map(s => (
-                          <option key={s.id} value={s.id}>{s.title}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Assigned Key Account Manager (KAM)</label>
-                    <select 
-                      value={projectForm.kam_id}
-                      onChange={(e) => setProjectForm({ ...projectForm, kam_id: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                    >
-                      <option value="">-- Unassigned --</option>
-                      {allKams.map(k => (
-                        <option key={k.id} value={k.id}>{k.full_name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* TAB 2: FINANCIALS & YIELD RATES */}
-              {projectModalTab === 'financials' && (
-                <>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Target CapEx Raise (BDT)</label>
-                      <input 
-                        type="number" 
-                        value={projectForm.target_raise_bdt}
-                        onChange={(e) => setProjectForm({ ...projectForm, target_raise_bdt: e.target.value })}
-                        className="form-input" 
-                        required
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Min OTC Ticket Size (BDT)</label>
-                      <input 
-                        type="number" 
-                        value={projectForm.min_otc_investment_bdt}
-                        onChange={(e) => setProjectForm({ ...projectForm, min_otc_investment_bdt: e.target.value })}
-                        className="form-input" 
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Booked / Reserved Capital (BDT)</label>
-                      <input 
-                        type="number" 
-                        value={projectForm.booked_amount_bdt}
-                        onChange={(e) => setProjectForm({ ...projectForm, booked_amount_bdt: e.target.value })}
-                        placeholder="Includes 10% GRO10X stake + lead bookings"
-                        className="form-input" 
-                      />
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Includes GRO10X 10% co-invest stake + active lead intent bookings</span>
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Expected Close Date</label>
-                      <input 
-                        type="date" 
-                        value={projectForm.expected_close_date}
-                        onChange={(e) => setProjectForm({ ...projectForm, expected_close_date: e.target.value })}
-                        className="form-input" 
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Buildout Timeline (Months)</label>
-                      <input 
-                        type="number" 
-                        value={projectForm.buildout_timeline_months}
-                        onChange={(e) => setProjectForm({ ...projectForm, buildout_timeline_months: e.target.value })}
-                        className="form-input" 
-                      />
-                    </div>
-                  </div>
-
-                  {/* YIELD RATES CONFIGURATION */}
-                  <div style={{ background: '#0f172a', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(212,175,55,0.2)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#D4AF37', fontWeight: 'bold' }}>Per-Project Structured Yield Option Rates (%):</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Option 1 (Fixed Gross)</label>
-                        <input 
-                          type="number" 
-                          value={projectForm.yield_option_1_rate} 
-                          onChange={(e) => setProjectForm({ ...projectForm, yield_option_1_rate: e.target.value })} 
-                          className="form-input"
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Option 2 (Growth Gross)</label>
-                        <input 
-                          type="number" 
-                          value={projectForm.yield_option_2_rate} 
-                          onChange={(e) => setProjectForm({ ...projectForm, yield_option_2_rate: e.target.value })} 
-                          className="form-input"
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Option 3 (Net Profit)</label>
-                        <input 
-                          type="number" 
-                          value={projectForm.yield_option_3_rate} 
-                          onChange={(e) => setProjectForm({ ...projectForm, yield_option_3_rate: e.target.value })} 
-                          className="form-input"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* TAB 3: SPV & LEGAL */}
-              {projectModalTab === 'spv' && (
-                <>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>SPV Legal Entity Name</label>
-                    <input 
-                      type="text" 
-                      value={projectForm.spv_name}
-                      onChange={(e) => setProjectForm({ ...projectForm, spv_name: e.target.value })}
-                      placeholder="e.g. ORO SPV4 Gulshan Ltd."
-                      className="form-input" 
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>SPV Registration / CJS Number</label>
-                    <input 
-                      type="text" 
-                      value={projectForm.spv_reg_number}
-                      onChange={(e) => setProjectForm({ ...projectForm, spv_reg_number: e.target.value })}
-                      placeholder="e.g. C-198234/2026"
-                      className="form-input" 
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>SPV Entity Type</label>
-                    <select 
-                      value={projectForm.spv_entity_type}
-                      onChange={(e) => setProjectForm({ ...projectForm, spv_entity_type: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                    >
-                      <option value="Pvt Ltd">Private Limited Company (Pvt Ltd)</option>
-                      <option value="LLP">Limited Liability Partnership (LLP)</option>
-                      <option value="Trust">Special Purpose Trust</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* TAB 4: CONTENT */}
-              {projectModalTab === 'content' && (
-                <>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Project Description (Public Profile)</label>
-                    <textarea 
-                      rows={3}
-                      value={projectForm.description}
-                      onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
-                      placeholder="Describe the opportunity, hub location, unit economics, etc."
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Project Highlights (One per line)</label>
-                    <textarea 
-                      rows={3}
-                      value={projectForm.project_highlights}
-                      onChange={(e) => setProjectForm({ ...projectForm, project_highlights: e.target.value })}
-                      placeholder="Built in 45 days&#10;500 sqft prime footfall location&#10;150+ active daily customers"
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Cover Image</label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input 
-                        type="text" 
-                        value={projectForm.cover_image_url}
-                        onChange={(e) => setProjectForm({ ...projectForm, cover_image_url: e.target.value })}
-                        placeholder="https://..."
-                        className="form-input"
-                        style={{ flex: 1 }}
-                      />
-                      <label style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '0.6rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                        {uploadingCover ? 'Uploading...' : 'Upload File'}
-                        <input type="file" accept="image/*" onChange={handleUploadCoverImage} style={{ display: 'none' }} />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Video Embed URL (YouTube/Facebook)</label>
-                    <input 
-                      type="text" 
-                      value={projectForm.video_url}
-                      onChange={(e) => setProjectForm({ ...projectForm, video_url: e.target.value })}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      className="form-input"
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Verified Monthly Gross Sales (BDT)</label>
-                      <input 
-                        type="number" 
-                        value={projectForm.avg_monthly_gross_sales}
-                        onChange={(e) => setProjectForm({ ...projectForm, avg_monthly_gross_sales: e.target.value })}
-                        placeholder="e.g. 3160000"
-                        className="form-input"
-                      />
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Used for Investor ROI Calculator (Option 1 & 2)</span>
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Verified Monthly Net Profit (BDT)</label>
-                      <input 
-                        type="number" 
-                        value={projectForm.avg_monthly_net_profit}
-                        onChange={(e) => setProjectForm({ ...projectForm, avg_monthly_net_profit: e.target.value })}
-                        placeholder="e.g. 534000"
-                        className="form-input"
-                      />
-                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Used for Option 3 Partnership Net Profit calculation</span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <input 
-                      type="checkbox" 
-                      id="showcase_toggle"
-                      checked={projectForm.show_on_showcase}
-                      onChange={(e) => setProjectForm({ ...projectForm, show_on_showcase: e.target.checked })}
-                    />
-                    <label htmlFor="showcase_toggle" style={{ fontSize: '0.85rem', color: '#fff', cursor: 'pointer' }}>
-                      Publish on Public Deal Showcase Page (`/showcase`)
-                    </label>
-                  </div>
-                </>
-              )}
-
-              {/* TAB 5: GALLERY */}
-              {projectModalTab === 'gallery' && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ fontSize: '0.95rem', margin: 0 }}>Project Photos & Media</h4>
-                    <label style={{ background: '#D4AF37', color: '#000', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                      {uploadingGallery ? 'Uploading...' : '+ Add Photos'}
-                      <input type="file" accept="image/*" multiple onChange={handleUploadGalleryImage} style={{ display: 'none' }} />
-                    </label>
-                  </div>
-
-                  {projectForm.media_list.length === 0 ? (
-                    <div style={{ border: '2px dashed rgba(255,255,255,0.1)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: '#64748b' }}>
-                      No photo assets uploaded yet.
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                      {projectForm.media_list.map((m, idx) => (
-                        <div key={idx} style={{ position: 'relative', height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                          <img src={m.media_url || m.url} alt="Project Media" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button 
-                            type="button" 
-                            onClick={() => handleDeleteGalleryMedia(idx)}
-                            style={{ position: 'absolute', top: '5px', right: '5px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '0.8rem', display: 'grid', placeItems: 'center' }}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* TAB 6: SUMMARY */}
-              {projectModalTab === 'summary' && (
-                <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
-                  <h4 style={{ margin: 0, color: '#D4AF37' }}>Campaign Validation Checklist</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: projectForm.project_title ? '#10b981' : '#ef4444' }}>
-                    <CheckCircle2 size={16} /> Title: {projectForm.project_title || 'Missing'}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: projectForm.target_raise_bdt ? '#10b981' : '#ef4444' }}>
-                    <CheckCircle2 size={16} /> CapEx Target: {formatCurrency(projectForm.target_raise_bdt, currency)}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: projectForm.spv_name ? '#10b981' : '#f59e0b' }}>
-                    <CheckCircle2 size={16} /> SPV Entity: {projectForm.spv_name || 'Not Configured'}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: projectForm.cover_image_url ? '#10b981' : '#f59e0b' }}>
-                    <CheckCircle2 size={16} /> Cover Image: {projectForm.cover_image_url ? 'Provided' : 'Default Fallback'}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981' }}>
-                    <CheckCircle2 size={16} /> Gallery Photos: {projectForm.media_list.length} assets
-                  </div>
-                </div>
-              )}
-
-              {/* MODAL FOOTER */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-                <button type="button" onClick={() => setShowProjectModal(false)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-gold" style={{ padding: '0.75rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  {editingProjectId ? 'Save Changes' : 'Publish Campaign'}
-                </button>
-              </div>
-
-            </form>
-
-          </div>
-        </div>
-      )}
+      <ProjectFormModal
+        showProjectModal={showProjectModal}
+        setShowProjectModal={setShowProjectModal}
+        editingProjectId={editingProjectId}
+        projectModalTab={projectModalTab}
+        setProjectModalTab={setProjectModalTab}
+        projectForm={projectForm}
+        setProjectForm={setProjectForm}
+        handleSaveProject={handleSaveProject}
+        setShowNewBusinessModal={setShowNewBusinessModal}
+        businesses={businesses}
+        kanbanStages={kanbanStages}
+        allKams={allKams}
+        currency={currency}
+        uploadingCover={uploadingCover}
+        handleUploadCoverImage={handleUploadCoverImage}
+        uploadingGallery={uploadingGallery}
+        handleUploadGalleryImage={handleUploadGalleryImage}
+        handleDeleteGalleryMedia={handleDeleteGalleryMedia}
+      />
 
       {/* ---------------------------------------------------- */}
       {/* INLINE NEW BUSINESS SUB-MODAL */}
-      {/* ---------------------------------------------------- */}
-      {showNewBusinessModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1100, display: 'grid', placeItems: 'center', padding: '2rem' }}>
-          <div className="glass-card" style={{ maxWidth: '520px', width: '100%', padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#D4AF37', margin: 0 }}>Create New Business Brand</h3>
-              <button onClick={() => setShowNewBusinessModal(false)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            <form onSubmit={handleSaveNewBusiness} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Brand Name</label>
-                <input 
-                  type="text" 
-                  value={newBusinessForm.brand_name} 
-                  onChange={(e) => setNewBusinessForm({ ...newBusinessForm, brand_name: e.target.value })} 
-                  placeholder="e.g. ORO Roasters" 
-                  className="form-input" 
-                  required 
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Company Legal Name</label>
-                <input 
-                  type="text" 
-                  value={newBusinessForm.company_legal_name} 
-                  onChange={(e) => setNewBusinessForm({ ...newBusinessForm, company_legal_name: e.target.value })} 
-                  placeholder="e.g. ORO Bangladesh Pvt Ltd" 
-                  className="form-input" 
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Industry Sector</label>
-                  <select 
-                    value={newBusinessForm.industry_sector}
-                    onChange={(e) => setNewBusinessForm({ ...newBusinessForm, industry_sector: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }}
-                  >
-                    <option value="F&B Franchise">F&B Franchise</option>
-                    <option value="Retail Distribution">Retail Distribution</option>
-                    <option value="Services">Services</option>
-                    <option value="Tech & Logistics">Tech & Logistics</option>
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Operational Months</label>
-                  <input 
-                    type="number" 
-                    value={newBusinessForm.operational_months} 
-                    onChange={(e) => setNewBusinessForm({ ...newBusinessForm, operational_months: e.target.value })} 
-                    className="form-input" 
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Founder Full Name</label>
-                <input 
-                  type="text" 
-                  value={newBusinessForm.founder_name} 
-                  onChange={(e) => setNewBusinessForm({ ...newBusinessForm, founder_name: e.target.value })} 
-                  placeholder="e.g. Tanvir Ahmed" 
-                  className="form-input" 
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Founder LinkedIn Profile URL</label>
-                <input 
-                  type="text" 
-                  value={newBusinessForm.founder_linkedin_url} 
-                  onChange={(e) => setNewBusinessForm({ ...newBusinessForm, founder_linkedin_url: e.target.value })} 
-                  placeholder="https://linkedin.com/in/..." 
-                  className="form-input" 
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setShowNewBusinessModal(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={savingBusiness} className="btn-gold" style={{ flex: 1, padding: '0.75rem', justifyContent: 'center' }}>
-                  {savingBusiness ? 'Saving...' : 'Save & Select Brand'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <BusinessFormModal
+        showNewBusinessModal={showNewBusinessModal}
+        setShowNewBusinessModal={setShowNewBusinessModal}
+        newBusinessForm={newBusinessForm}
+        setNewBusinessForm={setNewBusinessForm}
+        handleSaveNewBusiness={handleSaveNewBusiness}
+        savingBusiness={savingBusiness}
+      />
 
     </div>
   );

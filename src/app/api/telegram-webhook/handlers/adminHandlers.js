@@ -20,14 +20,14 @@ export async function handleKpisCommand(botToken, chatId, appUrl) {
     const [{ count: activeProjectsCount }, { count: activeInvestorsCount }, { data: investmentsData }, { data: leadsData }, { data: kycData }, { data: payData }, { data: payoutData }] = await Promise.all([
       supabase.from('funding_projects').select('*', { count: 'exact', head: true }),
       supabase.from('investors').select('*', { count: 'exact', head: true }),
-      supabase.from('investments').select('amount_bdt'),
+      supabase.from('investments').select('amount_invested_bdt, amount_bdt'),
       supabase.from('inquiry_leads').select('status'),
       supabase.from('kyc_submissions').select('*').eq('status', 'Pending'),
-      supabase.from('payment_submissions').select('*').eq('status', 'Pending'),
+      supabase.from('payment_submissions').select('*'),
       supabase.from('payout_requests').select('*').in('status', ['Pending', 'Pending Verification'])
     ]);
 
-    const totalAum = (investmentsData || []).reduce((sum, i) => sum + Number(i.amount_bdt || 0), 0);
+    const totalAum = (investmentsData || []).reduce((sum, i) => sum + Number(i.amount_invested_bdt || i.amount_bdt || 0), 0);
     const newLeadsCount = (leadsData || []).filter(l => l.status === 'New').length;
     const pendingKycCount = (kycData || []).length;
     const pendingPayCount = (payData || []).length;
@@ -59,7 +59,7 @@ export async function handleAlertsCommand(botToken, chatId, appUrl) {
   try {
     const [{ data: pendingKyc }, { data: pendingPayments }, { data: unworkedLeads }, { data: pendingPayouts }, { data: pendingCohorts }] = await Promise.all([
       supabase.from('kyc_submissions').select('id, full_name, created_at').eq('status', 'Pending').limit(5),
-      supabase.from('payment_submissions').select('id, amount_bdt, created_at').eq('status', 'Pending').limit(5),
+      supabase.from('payment_submissions').select('id, created_at').limit(5),
       supabase.from('inquiry_leads').select('id, name, investment_range').eq('status', 'New').limit(5),
       supabase.from('payout_requests').select('id, amount_bdt, promoter_id').in('status', ['Pending', 'Pending Verification']).limit(5),
       supabase.from('business_cohort_applications').select('id, brand_name, requested_funding_bdt').in('status', ['New_Submission', 'Under_Review']).limit(5)

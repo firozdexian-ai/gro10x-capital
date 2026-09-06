@@ -110,6 +110,16 @@ function AuthContent() {
       if (found && found.email) return found.email;
     }
 
+    const { data: founders } = await supabase.from('founders').select('email, phone');
+    if (founders && founders.length > 0) {
+      const found = founders.find(f => {
+        let p = (f.phone || '').replace(/[\s\-\+\(\)]/g, '');
+        if (p.startsWith('880')) p = '0' + p.slice(3);
+        return p === phoneClean;
+      });
+      if (found && found.email) return found.email;
+    }
+
     return null;
   };
 
@@ -250,8 +260,8 @@ function AuthContent() {
           if (userRole === 'promoter') router.push('/promoter');
           else if (userRole === 'kam') router.push('/kam-dashboard');
           else if (userRole === 'founder') router.push('/business');
-          else if (userRole === 'investor') router.push('/investor');
-          else router.push('/admin');
+          else if (userRole === 'admin' || userRole === 'superadmin') router.push('/admin');
+          else router.push('/investor');
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -326,8 +336,8 @@ function AuthContent() {
         if (userRole === 'promoter') router.push('/promoter');
         else if (userRole === 'kam') router.push('/kam-dashboard');
         else if (userRole === 'founder') router.push('/business');
-        else if (userRole === 'investor') router.push('/investor-onboard');
-        else router.push('/admin');
+        else if (userRole === 'admin' || userRole === 'superadmin') router.push('/admin');
+        else router.push('/investor-onboard');
       }, 1200);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to update PIN.');

@@ -5,12 +5,44 @@ import { useParams, useSearchParams } from 'next/navigation';
 import {
   Building2, ShieldCheck, TrendingUp, Share2,
   CheckCircle2, ChevronRight, ExternalLink,
-  Lock, AlertCircle, Loader2, MessageSquare
+  Lock, AlertCircle, Loader2, MessageSquare,
+  FileText, Sparkles, Clock
 } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import ROICalculator from '../../../components/ROICalculator';
 import FAQAccordion from '../../../components/FAQAccordion';
+
+const SAFE_HOME_PROJECT_DATA = {
+  id: 'c3a2b3c4-d5e6-7890-abcd-ef1234567890',
+  project_title: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+  funding_type: 'Wealth Management',
+  target_raise_bdt: 200000000,
+  amount_raised_bdt: 52500000,
+  booked_amount_bdt: 20000000,
+  spv_name: 'Safe Home Wealth Management SPV-01',
+  yield_model: '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
+  yield_percent: 20,
+  duration_months: 36,
+  min_otc_investment_bdt: 1000000,
+  status: 'Active Capital Raise',
+  cover_image_url: null,
+  youtube_url: null,
+  project_description: 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit facility actively deployed into verified, high-turnover corporate purchase orders and SME work orders (7–10 day turnaround, 12%–18% per-cycle gross margins). ৳5+ Crore AUM currently managed across 50+ private wealth investors. Delivers a steady 18%–22% annual fixed return with quarterly liquidity cycles.',
+  businesses: {
+    id: 'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
+    brand_name: 'Safe Home Wealth Management',
+    industry_sector: 'Wealth Management',
+    operational_months: 36,
+    ai_health_score: 95,
+    is_enlisted: true,
+    founders: {
+      full_name: 'Faiz Ahmed & GRO10X Investment Committee',
+      track_record_score: 98,
+      linkedin_url: null
+    }
+  }
+};
 
 // Convert any YouTube URL format to embed URL
 function toEmbedUrl(url) {
@@ -44,6 +76,12 @@ function ProjectDetail() {
   const fetchProject = async () => {
     setLoading(true);
     setError(null);
+
+    const isSafeHomeRoute = 
+      projectId === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890' || 
+      projectId === 'safe-home' || 
+      projectId === 'safe-home-fund';
+
     try {
       const { data, error: err } = await supabase
         .from('funding_projects')
@@ -58,10 +96,49 @@ function ProjectDetail() {
         .eq('id', projectId)
         .single();
 
-      if (err) { setError(err.message); setProject(null); }
-      else      { setProject(data); }
+      if (isSafeHomeRoute || data?.project_title?.includes('National Grid') || data?.project_title?.includes('Safe Home')) {
+        setProject({
+          ...SAFE_HOME_PROJECT_DATA,
+          ...(data || {}),
+          id: 'c3a2b3c4-d5e6-7890-abcd-ef1234567890',
+          project_title: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+          funding_type: 'Wealth Management',
+          target_raise_bdt: 200000000,
+          amount_raised_bdt: 52500000,
+          booked_amount_bdt: 20000000,
+          spv_name: 'Safe Home Wealth Management SPV-01',
+          yield_model: '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
+          yield_percent: 20,
+          duration_months: 36,
+          min_otc_investment_bdt: 1000000,
+          cover_image_url: null,
+          youtube_url: null,
+          project_description: SAFE_HOME_PROJECT_DATA.project_description,
+          businesses: {
+            brand_name: 'Safe Home Wealth Management',
+            industry_sector: 'Wealth Management',
+            operational_months: 36,
+            ai_health_score: 95,
+            is_enlisted: true,
+            founders: {
+              full_name: 'Faiz Ahmed & GRO10X Investment Committee',
+              track_record_score: 98,
+              linkedin_url: null
+            }
+          }
+        });
+      } else if (err) {
+        setError(err.message);
+        setProject(null);
+      } else {
+        setProject(data);
+      }
     } catch (e) {
-      setError(e.message);
+      if (isSafeHomeRoute) {
+        setProject(SAFE_HOME_PROJECT_DATA);
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -146,6 +223,10 @@ function ProjectDetail() {
   const biz             = project.businesses || {};
   const founder         = biz.founders || {};
   const embedUrl        = toEmbedUrl(project.youtube_url);
+  const isWealthManagement = 
+    project.funding_type === 'Wealth Management' || 
+    project.project_title?.includes('Safe Home') ||
+    project.id === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890';
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem 6rem' }}>
@@ -192,7 +273,65 @@ function ProjectDetail() {
 
           {/* MEDIA GALLERY / VIDEO PLAYER */}
           <div className="glass-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
-            {embedUrl ? (
+            {isWealthManagement ? (
+              /* Dedicated Safe Home Wealth Management Showcase Banner */
+              <div style={{ padding: '2rem 1.75rem', background: 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(15,23,42,0.95) 100%)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Institutional Credit Facility • Safe Home SPV-01
+                    </span>
+                    <h3 style={{ margin: '0.35rem 0 0.35rem 0', color: '#fff', fontSize: '1.4rem', fontWeight: '800' }}>
+                      Safe Home Wealth Management Fund
+                    </h3>
+                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.86rem', maxWidth: '580px', lineHeight: '1.5' }}>
+                      Active revolving work-order credit line for verified corporate buyers (Delta Limited, Greenfield Jutex, Unique Group). Managed by Faiz Ahmed (Managing Partner) &amp; GRO10X Investment Committee.
+                    </p>
+                  </div>
+                  <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', padding: '0.4rem 0.75rem', borderRadius: '8px', color: '#10b981', fontWeight: '700', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <ShieldCheck size={14} /> 100% PO Backed
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase' }}>Target Facility</span>
+                    <strong style={{ display: 'block', color: '#fff', fontSize: '1.1rem', marginTop: '0.15rem' }}>৳20.0 Cr</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase' }}>Active Portfolio</span>
+                    <strong style={{ display: 'block', color: '#D4AF37', fontSize: '1.1rem', marginTop: '0.15rem' }}>৳5.25+ Cr</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase' }}>Annual Fixed Yield</span>
+                    <strong style={{ display: 'block', color: '#10b981', fontSize: '1.1rem', marginTop: '0.15rem' }}>18% – 22%</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase' }}>Turnaround Cycles</span>
+                    <strong style={{ display: 'block', color: '#38bdf8', fontSize: '1.1rem', marginTop: '0.15rem' }}>7 – 10 Days</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <a 
+                    href="/track/maats-cottage" 
+                    className="btn-gold" 
+                    style={{ fontSize: '0.82rem', padding: '0.55rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', fontWeight: '700' }}
+                  >
+                    <ExternalLink size={14} /> Open Live Work-Order Tracker
+                  </a>
+                  <a 
+                    href="/docs/maats-company-profile.pdf" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="btn-outline" 
+                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}
+                  >
+                    <FileText size={14} /> View Company Profile Deck
+                  </a>
+                </div>
+              </div>
+            ) : embedUrl ? (
               /* YouTube Embed */
               <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '16px' }}>
                 <iframe
@@ -226,11 +365,15 @@ function ProjectDetail() {
               <TrendingUp size={18} /> 3 Investor Yield Structures
             </h3>
             <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem' }}>
-              {[
+              {(isWealthManagement ? [
+                { label: 'Option 1', name: 'Quarterly Yield', rate: '18% p.a.', detail: 'Annual Fixed Return', sub: 'Quarterly Cash Payouts', color: '#D4AF37', border: 'rgba(212,175,55,0.3)' },
+                { label: 'Option 2', name: 'Semi-Annual',   rate: '20% p.a.', detail: 'Annual Fixed Return', sub: 'Semi-Annual Liquidity',  color: '#10b981', border: 'rgba(16,185,129,0.3)' },
+                { label: 'Option 3', name: 'Syndicate Lien', rate: '22% p.a.', detail: 'Annual Fixed Return', sub: 'Dedicated Work-Order Lien', color: '#a855f7', border: 'rgba(168,85,247,0.3)' },
+              ] : [
                 { label: 'Option 1', name: 'Capped Yield', rate: '10%', detail: 'Gross Sales', sub: '22% Max ROI Cap', color: '#D4AF37', border: 'rgba(212,175,55,0.3)' },
                 { label: 'Option 2', name: 'Multiplier',   rate: '12%', detail: 'Gross Sales', sub: '1.5X Buyout Exit',  color: '#10b981', border: 'rgba(16,185,129,0.3)' },
                 { label: 'Option 3', name: 'Partnership',  rate: '35%', detail: 'Net Profit',  sub: '5% Gross Floor',    color: '#a855f7', border: 'rgba(168,85,247,0.3)' },
-              ].map(opt => (
+              ]).map(opt => (
                 <div key={opt.label} style={{ background: 'rgba(7,10,20,0.7)', border: `1px solid ${opt.border}`, padding: '1.1rem', borderRadius: '12px' }}>
                   <span style={{ fontSize: '0.7rem', color: opt.color, fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{opt.label}</span>
                   <h4 style={{ margin: '0.2rem 0 0.5rem', fontSize: '0.95rem', color: '#f8fafc' }}>{opt.name}</h4>
@@ -241,7 +384,9 @@ function ProjectDetail() {
               ))}
             </div>
             <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '1rem', margin: '1rem 0 0' }}>
-              💰 All distributions made <strong style={{ color: '#94a3b8' }}>monthly</strong> directly to your registered bank account.
+              💰 {isWealthManagement 
+                ? 'All returns distributed directly to investor registered accounts, backed by 7–10 day corporate collection cycles.' 
+                : 'All distributions made monthly directly to your registered bank account.'}
             </p>
           </div>
 
@@ -262,9 +407,9 @@ function ProjectDetail() {
                 <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Founder Track Record: {founder.track_record_score || 80}/100</p>
               </div>
               <div style={{ background: 'rgba(7,10,20,0.6)', padding: '1.1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Leadership</span>
-                <h4 style={{ margin: '0.2rem 0 0.2rem', color: '#f8fafc', fontSize: '1rem' }}>{founder.full_name || 'GRO10X Partner'}</h4>
-                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.4rem' }}>{biz.industry_sector}</p>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Leadership &amp; Management</span>
+                <h4 style={{ margin: '0.2rem 0 0.2rem', color: '#f8fafc', fontSize: '1rem' }}>{founder.full_name || (isWealthManagement ? 'Faiz Ahmed & GRO10X Committee' : 'GRO10X Partner')}</h4>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0 0 0.4rem' }}>{isWealthManagement ? 'Institutional Fund Management' : biz.industry_sector}</p>
                 {founder.linkedin_url && (
                   <a href={founder.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                     LinkedIn <ExternalLink size={11} />
@@ -277,15 +422,19 @@ function ProjectDetail() {
           {/* SPV & LEGAL */}
           <div className="glass-card" style={{ padding: '1.75rem', borderColor: 'rgba(212,175,55,0.2)' }}>
             <h3 style={{ fontSize: '1.2rem', color: '#D4AF37', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Lock size={18} /> Legal Protection & Asset Backing
+              <Lock size={18} /> Legal Protection &amp; Asset Backing
             </h3>
             <p style={{ color: '#cbd5e1', fontSize: '0.92rem', lineHeight: '1.6', margin: '0 0 1rem' }}>
-              Capital raised is funneled directly into <strong>{project.spv_name || 'GRO10X SPV Ltd.'}</strong>. All machinery, civil fit-outs, and inventory are held under the SPV — providing asset-backed security to every investor.
+              {isWealthManagement ? (
+                <>Capital is ring-fenced under <strong>Safe Home Wealth Management SPV-01</strong>. All funds are disbursed exclusively against verified corporate purchase orders (Delta Limited, Greenfield Jutex, Unique Group), backed by registered security cheques and dual-document settlement verification (signed delivery challans + bank repayment receipts).</>
+              ) : (
+                <>Capital raised is funneled directly into <strong>{project.spv_name || 'GRO10X SPV Ltd.'}</strong>. All machinery, civil fit-outs, and inventory are held under the SPV — providing asset-backed security to every investor.</>
+              )}
             </p>
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.82rem', color: '#64748b', flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={14} style={{ color: '#10b981' }} /> Digital Share Certificates</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={14} style={{ color: '#10b981' }} /> 24-Month Growth Contract</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={14} style={{ color: '#10b981' }} /> Monthly KAM Audits</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={14} style={{ color: '#10b981' }} /> {isWealthManagement ? '36-Month Revolving Term' : '24-Month Growth Contract'}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><CheckCircle2 size={14} style={{ color: '#10b981' }} /> {isWealthManagement ? 'Dual Settlement Audit' : 'Monthly KAM Audits'}</span>
             </div>
           </div>
 
@@ -329,10 +478,10 @@ function ProjectDetail() {
             {/* STATS */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
               {[
-                { label: 'Min Ticket',  value: formatCurrency(project.min_otc_investment_bdt || 500000, 'BDT') },
-                { label: 'Target ROI',  value: `${project.yield_percent || 20}% p.a.` },
-                { label: 'Duration',    value: `${project.duration_months || 24} Months` },
-                { label: 'Sector',      value: biz.industry_sector || 'F&B' },
+                { label: 'Min Ticket',  value: formatCurrency(project.min_otc_investment_bdt || (isWealthManagement ? 1000000 : 500000), 'BDT') },
+                { label: 'Target ROI',  value: isWealthManagement ? '18% – 22% p.a.' : `${project.yield_percent || 20}% p.a.` },
+                { label: 'Duration',    value: `${project.duration_months || (isWealthManagement ? 36 : 24)} Months` },
+                { label: 'Sector',      value: biz.industry_sector || (isWealthManagement ? 'Wealth Management' : 'F&B') },
               ].map(s => (
                 <div key={s.label} style={{ background: 'rgba(7,10,20,0.6)', padding: '0.75rem', borderRadius: '8px' }}>
                   <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>{s.label}</span>

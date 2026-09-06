@@ -102,6 +102,18 @@ export default function ProjectCard({ project, currency = 'BDT' }) {
 
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '70px', background: 'linear-gradient(to bottom, transparent, rgba(17,24,39,0.95))' }} />
         </div>
+      ) : (project.funding_type === 'Wealth Management' || project.project_title?.includes('Safe Home')) ? (
+        <div style={{ height: '140px', background: 'linear-gradient(135deg, rgba(212,175,55,0.18) 0%, rgba(15,23,42,0.95) 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: '1rem', borderBottom: '1px solid rgba(212,175,55,0.2)' }}>
+          <span style={{ fontSize: '0.68rem', color: '#D4AF37', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>
+            Institutional Credit Facility
+          </span>
+          <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#fff', textAlign: 'center' }}>
+            Safe Home SPV-01
+          </span>
+          <span style={{ fontSize: '0.72rem', color: '#10b981', marginTop: '0.25rem', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: '700' }}>
+            18% – 22% Fixed Annual Yield
+          </span>
+        </div>
       ) : (
         <div style={{ height: '140px', background: 'linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(7,10,20,0.85) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Building2 size={36} style={{ color: 'rgba(212,175,55,0.4)' }} />

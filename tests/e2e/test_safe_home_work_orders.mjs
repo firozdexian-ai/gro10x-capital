@@ -203,16 +203,15 @@ async function runSafeHomeTests() {
     const toastText = await desktopPage.content();
     assert(toastText.includes('MSP-TEST') || toastText.includes('logged'), 'New order MSP-TEST logged successfully');
 
-    // 2.3 Approve a Pending Order
+    // 2.3 Verify Pending Order shows read-only approval status and NO approve button
     await desktopPage.click('button:has-text("Pending Approvals")');
     await desktopPage.waitForTimeout(500);
-    const approveBtn = await desktopPage.locator('button:has-text("Approve & Disburse")').first();
-    if (await approveBtn.isVisible()) {
-      await approveBtn.click();
-      await desktopPage.waitForTimeout(1000);
-      const postApproveText = await desktopPage.content();
-      assert(postApproveText.includes('approved') && postApproveText.includes('marked as Disbursed'), 'Order successfully approved and disbursed');
-    }
+    const pendingStatusBadge = await desktopPage.locator('text=Awaiting Partner Sign-off').first();
+    assert(await pendingStatusBadge.isVisible(), 'Pending orders show read-only Awaiting Partner Sign-off badge');
+    
+    // Ensure Approve & Disburse button is NOT present in the public display tracker
+    const publicApproveBtn = await desktopPage.locator('button:has-text("Approve & Disburse")').first();
+    assert(!(await publicApproveBtn.isVisible()), 'Approve & Disburse button is hidden from public display page');
 
     await desktopContext.close();
 
@@ -290,6 +289,20 @@ async function runSafeHomeTests() {
 
     await showcasePage.screenshot({ path: path.join(ARTIFACTS_DIR, '07_showcase_safe_home_fund.png') });
     console.log('  📸 Captured 07_showcase_safe_home_fund.png');
+
+    // Test View Deal Room for Safe Home Wealth Management Fund
+    await showcasePage.goto(`${BASE_URL}/projects/c3a2b3c4-d5e6-7890-abcd-ef1234567890`, { waitUntil: 'networkidle' });
+    await showcasePage.waitForTimeout(1200);
+
+    const dealRoomContent = await showcasePage.content();
+    assert(dealRoomContent.includes('Safe Home Wealth Management Fund'), 'Deal room displays Safe Home Wealth Management Fund title');
+    assert(!dealRoomContent.includes('National Grid'), 'Deal room does NOT display National Grid');
+    assert(dealRoomContent.includes('Safe Home SPV-01') || dealRoomContent.includes('Safe Home Wealth Management SPV-01'), 'Deal room displays Safe Home SPV');
+    assert(dealRoomContent.includes('Open Live Work-Order Tracker'), 'Deal room displays live work-order tracker link');
+    assert(dealRoomContent.includes('18%') || dealRoomContent.includes('20%'), 'Deal room displays Wealth Management yield structures');
+
+    await showcasePage.screenshot({ path: path.join(ARTIFACTS_DIR, '08_deal_room_safe_home_fund.png') });
+    console.log('  📸 Captured 08_deal_room_safe_home_fund.png');
 
     await showcaseContext.close();
 

@@ -715,9 +715,9 @@ export default function MaatsCottageTrackerPage() {
         {/* ── TAB 2: PENDING APPROVALS ── */}
         {activeTab === 'pending' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>
-                <strong>{pendingOrders.length}</strong> new purchase order requests submitted by Maats Cottage awaiting partner clearance.
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)', padding: '0.75rem 1rem', borderRadius: '8px' }}>
+              <p style={{ color: '#cbd5e1', fontSize: '0.82rem', margin: 0, lineHeight: '1.5' }}>
+                <strong style={{ color: '#eab308' }}>{pendingOrders.length} Work Orders Awaiting Partner Clearance</strong> — Clearances and fund disbursements are managed by Faiz Ahmed &amp; GRO10X Investment Committee via the Institutional Admin Desk or Telegram Bot.
               </p>
             </div>
 
@@ -741,13 +741,26 @@ export default function MaatsCottageTrackerPage() {
                         </p>
                       </div>
 
-                      <button 
-                        onClick={() => handleApprove(order.order_code)}
-                        className="btn-gold"
-                        style={{ fontSize: '0.82rem', padding: '0.45rem 0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: '700' }}
-                      >
-                        <Check size={14} /> Approve &amp; Disburse
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                        <div style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '0.4rem', 
+                          background: 'rgba(234,179,8,0.12)', 
+                          border: '1px solid rgba(234,179,8,0.35)', 
+                          padding: '0.35rem 0.75rem', 
+                          borderRadius: '8px',
+                          color: '#eab308',
+                          fontSize: '0.78rem',
+                          fontWeight: '700'
+                        }}>
+                          <Clock size={13} />
+                          <span>Status: Awaiting Partner Sign-off</span>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                          Authorized via Admin Desk &amp; Telegram
+                        </span>
+                      </div>
                     </div>
 
                     <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.75rem 1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>

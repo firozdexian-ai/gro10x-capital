@@ -18,6 +18,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
   const opt3Rate = parseAmount(project?.yield_option_3_rate) || 35; // 35% Net Profit
 
   const durationMonths = parseAmount(project?.duration_months) || 24;
+  const isWealth = project?.funding_type === 'Wealth Management' || project?.project_title?.includes('Safe Home');
 
   // Local interactive state
   const [investment, setInvestment] = useState(Math.max(minTicket, 1000000)); // Default 10L
@@ -26,18 +27,29 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
   // Mathematical returns calculation
   const poolShare = targetRaise > 0 ? investment / targetRaise : 0;
 
-  // Option 1: Capped Yield (10% Gross)
+  // Wealth Management returns (Fixed 18%, 20%, 22% annual returns backed by work orders)
+  const wmOpt1Annual = investment * 0.18;
+  const wmOpt1Monthly = wmOpt1Annual / 12;
+  const wmOpt1Maturity = investment + (wmOpt1Annual * (durationMonths / 12));
+
+  const wmOpt2Annual = investment * 0.20;
+  const wmOpt2Monthly = wmOpt2Annual / 12;
+  const wmOpt2Maturity = investment + (wmOpt2Annual * (durationMonths / 12));
+
+  const wmOpt3Annual = investment * 0.22;
+  const wmOpt3Monthly = wmOpt3Annual / 12;
+  const wmOpt3Maturity = investment + (wmOpt3Annual * (durationMonths / 12));
+
+  // Franchise returns
   const opt1Monthly = poolShare * (avgGross * (opt1Rate / 100));
   const opt1Annual = opt1Monthly * 12;
   const opt1Cap = investment * 1.22; // 22% ROI cap total return
   const opt1Maturity = Math.min(opt1Monthly * durationMonths + investment, opt1Cap + investment);
 
-  // Option 2: Multiplier (12% Gross)
   const opt2Monthly = poolShare * (avgGross * (opt2Rate / 100));
   const opt2Annual = opt2Monthly * 12;
   const opt2Maturity = investment * 1.5; // 1.5X Buyout exit
 
-  // Option 3: Partnership (35% Net Profit Share, 5% Gross floor)
   const opt3GrossFloor = poolShare * (avgGross * 0.05);
   const opt3NetShare = poolShare * (avgNet * (opt3Rate / 100));
   const opt3Monthly = Math.max(opt3GrossFloor, opt3NetShare);
@@ -45,21 +57,42 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
   const opt3Maturity = investment + (opt3Annual * (durationMonths / 12));
 
   // Determine current active option outputs
-  let currentMonthly = opt2Monthly;
-  let currentAnnual = opt2Annual;
-  let currentMaturity = opt2Maturity;
-  let currentSubLabel = '1.5X Guaranteed Buyout Exit';
+  let currentMonthly, currentAnnual, currentMaturity, currentSubLabel;
 
-  if (selectedOption === 1) {
-    currentMonthly = opt1Monthly;
-    currentAnnual = opt1Annual;
-    currentMaturity = opt1Cap;
-    currentSubLabel = 'Capped at 22% Total ROI';
-  } else if (selectedOption === 3) {
-    currentMonthly = opt3Monthly;
-    currentAnnual = opt3Annual;
-    currentMaturity = opt3Maturity;
-    currentSubLabel = 'Net Profit Share + 5% Floor';
+  if (isWealth) {
+    if (selectedOption === 1) {
+      currentMonthly = wmOpt1Monthly;
+      currentAnnual = wmOpt1Annual;
+      currentMaturity = wmOpt1Maturity;
+      currentSubLabel = '18% Annual Fixed Yield (Quarterly Payouts)';
+    } else if (selectedOption === 3) {
+      currentMonthly = wmOpt3Monthly;
+      currentAnnual = wmOpt3Annual;
+      currentMaturity = wmOpt3Maturity;
+      currentSubLabel = '22% Annual Fixed Yield (Syndicate Lien)';
+    } else {
+      currentMonthly = wmOpt2Monthly;
+      currentAnnual = wmOpt2Annual;
+      currentMaturity = wmOpt2Maturity;
+      currentSubLabel = '20% Annual Fixed Yield (Semi-Annual)';
+    }
+  } else {
+    if (selectedOption === 1) {
+      currentMonthly = opt1Monthly;
+      currentAnnual = opt1Annual;
+      currentMaturity = opt1Cap;
+      currentSubLabel = 'Capped at 22% Total ROI';
+    } else if (selectedOption === 3) {
+      currentMonthly = opt3Monthly;
+      currentAnnual = opt3Annual;
+      currentMaturity = opt3Maturity;
+      currentSubLabel = 'Net Profit Share + 5% Floor';
+    } else {
+      currentMonthly = opt2Monthly;
+      currentAnnual = opt2Annual;
+      currentMaturity = opt2Maturity;
+      currentSubLabel = '1.5X Guaranteed Buyout Exit';
+    }
   }
 
   // Preset ticket size buttons
@@ -197,11 +230,15 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
           Select Return Model:
         </label>
         <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-          {[
+          {(isWealth ? [
+            { id: 1, label: 'Option 1', title: 'Quarterly Yield', rate: '18% p.a.', desc: 'Annual Fixed Return', sub: 'Quarterly Cash Payouts', color: '#D4AF37' },
+            { id: 2, label: 'Option 2', title: 'Semi-Annual', rate: '20% p.a.', desc: 'Annual Fixed Return', sub: 'Semi-Annual Liquidity', color: '#10b981' },
+            { id: 3, label: 'Option 3', title: 'Syndicate Lien', rate: '22% p.a.', desc: 'Annual Fixed Return', sub: 'Dedicated Work-Order Lien', color: '#a855f7' },
+          ] : [
             { id: 1, label: 'Option 1', title: 'Capped Yield', rate: `${opt1Rate}%`, desc: 'Gross Sales Share', sub: '22% Total ROI Cap', color: '#D4AF37' },
             { id: 2, label: 'Option 2', title: 'Multiplier', rate: `${opt2Rate}%`, desc: 'Gross Sales Share', sub: '1.5X Buyout Exit', color: '#10b981' },
             { id: 3, label: 'Option 3', title: 'Partnership', rate: `${opt3Rate}%`, desc: 'Net Profit Share', sub: '5% Gross Floor', color: '#a855f7' },
-          ].map(opt => {
+          ]).map(opt => {
             const isSelected = selectedOption === opt.id;
             return (
               <button

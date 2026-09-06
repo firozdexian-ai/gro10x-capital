@@ -130,8 +130,8 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
       order.disbursement_transfers.forEach((t) => {
         list.push({
           id: `tranche-${t.tranche_no}`,
-          badge: `Tranche ${t.tranche_no}`,
-          title: `Tranche #${t.tranche_no} — ${fmtLakhs(t.amount_bdt)}`,
+          badge: t.is_combined ? 'Combined Transfer' : `Tranche ${t.tranche_no}`,
+          title: t.is_combined ? `Combined Transfer Slip (${fmtLakhs(t.amount_bdt)})` : `Tranche #${t.tranche_no} — ${fmtLakhs(t.amount_bdt)}`,
           url: t.receipt_url,
           meta: `${t.method} • Ref: ${t.ref_no}`,
           note: t.note || `Date: ${t.date} • Sent to ${MAATS_COTTAGE_PROFILE.accountName} (${MAATS_COTTAGE_PROFILE.accountNumber})`

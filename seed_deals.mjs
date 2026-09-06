@@ -226,23 +226,45 @@ async function run() {
     },
     {
       order_code: 'MSP-003',
-      corporate_client: 'Greenfield',
-      item_description: 'Institutional Supplies (Order 1)',
+      corporate_client: 'Greenfield Jutex',
+      po_ref_number: 'GFJ/09/2026/212',
+      po_date: '2026-09-02',
+      po_value_bdt: 292500,
+      item_description: 'Travel Kit Bag (650 pcs)',
       investment_amount_bdt: 230000,
       return_amount_bdt: 264500,
       profit_bdt: 34500,
       duration_days: 8,
-      start_date: '2026-09-01',
-      due_date: '2026-09-09',
+      start_date: '2026-09-02',
+      due_date: '2026-09-10',
       status: 'Disbursed_Active',
-      payment_mode: 'EFT/NPSB',
+      payment_mode: 'City Bank Transfer (CityTouch)',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Greenfield corporate supply batch 1.'
+      notes: 'PO Ref: GFJ/09/2026/212 (৳2,92,500 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026.',
+      disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
+      po_document_url: '/docs/msp-003-greenfield-po.png',
+      po_document_pdf: '/docs/msp-003-greenfield-po.pdf',
+      due_note: 'Due Sep 10 (4 days left)',
+      tranche_info: 'Single Combined Tranche: ৳2.30L (Part of ৳3.75L transfer)',
+      disbursement_transfers: [
+        {
+          tranche_no: 1,
+          amount_bdt: 230000,
+          date: '02 Sep 2026, 05:00 PM',
+          ref_no: '100010172846',
+          method: 'City Bank Transfer (CityTouch)',
+          receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
+          note: 'Disbursed in combined ৳3,75,000 single transfer with MSP-004 (2.3L + 1.45L) by Faiz Ahmed to Aysha Siddika'
+        }
+      ]
     },
     {
       order_code: 'MSP-004',
-      corporate_client: 'Delta Life Insurance',
-      item_description: 'Corporate Merchandise (Order 3)',
+      corporate_client: 'Delta Limited',
+      po_ref_number: 'DL/Key Ring/2026/1016(September)',
+      po_date: '2026-09-02',
+      po_value_bdt: 194625,
+      item_description: 'Leather Key Ring with ID Hook (2,250 pcs)',
       investment_amount_bdt: 145000,
       return_amount_bdt: 166750,
       profit_bdt: 21750,
@@ -250,9 +272,25 @@ async function run() {
       start_date: '2026-09-02',
       due_date: '2026-09-09',
       status: 'Disbursed_Active',
-      payment_mode: 'EFT/NPSB',
+      payment_mode: 'City Bank Transfer (CityTouch)',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Delta Life Order 3 — Finishing & packaging.'
+      notes: 'PO Ref: DL/Key Ring/2026/1016(September) (৳1,94,625 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026.',
+      disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
+      po_document_url: '/docs/msp-004-delta-po.png',
+      po_document_pdf: '/docs/msp-004-delta-po.pdf',
+      due_note: 'Due Sep 9 (3 days left)',
+      tranche_info: 'Single Combined Tranche: ৳1.45L (Part of ৳3.75L transfer)',
+      disbursement_transfers: [
+        {
+          tranche_no: 1,
+          amount_bdt: 145000,
+          date: '02 Sep 2026, 05:00 PM',
+          ref_no: '100010172846',
+          method: 'City Bank Transfer (CityTouch)',
+          receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
+          note: 'Disbursed in combined ৳3,75,000 single transfer with MSP-003 (2.3L + 1.45L) by Faiz Ahmed to Aysha Siddika'
+        }
+      ]
     },
     {
       order_code: 'MSP-005',

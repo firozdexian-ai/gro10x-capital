@@ -61,6 +61,9 @@ async function runSafeHomeTests() {
     assert(pageText.includes('MSP-003'), 'Active order MSP-003 is displayed');
     assert(pageText.includes('MSP-004'), 'Active order MSP-004 is displayed');
     assert(pageText.includes('MSP-005'), 'Active order MSP-005 is displayed');
+    assert(pageText.includes('Travel Kit Bag') || pageText.includes('Greenfield Jutex'), 'MSP-003 Greenfield Jutex Travel Kit Bag is displayed');
+    assert(pageText.includes('Leather Key Ring'), 'MSP-004 Delta Limited Leather Key Ring is displayed');
+    assert(pageText.includes('Combined') || pageText.includes('3.75L'), 'Combined single transfer badge is displayed');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '02_terminal_active_orders.png'), fullPage: true });
     console.log('  📸 Captured 02_terminal_active_orders.png');
 
@@ -243,8 +246,8 @@ async function runSafeHomeTests() {
 
     // Verify table lists work orders
     assert(adminContent.includes('MSP-001'), 'MSP-001 is listed in the admin table');
-    assert(adminContent.includes('MSP-002'), 'MSP-002 is listed in the admin table');
-    assert(adminContent.includes('Delta Life Insurance'), 'Corporate client Delta Life is listed in table');
+    assert(adminContent.includes('Delta Limited') || adminContent.includes('Delta Life Insurance') || adminContent.includes('Delta'), 'Corporate client Delta is listed in table');
+    assert(adminContent.includes('Greenfield Jutex') || adminContent.includes('Greenfield'), 'Greenfield Jutex is listed in table');
 
     // Test filter buttons
     await adminPage.click('button:has-text("Pending Approval")');

@@ -121,8 +121,8 @@ export default function MaatsCottageTrackerPage() {
       order.disbursement_transfers.forEach((t) => {
         list.push({
           id: `tranche-${t.tranche_no}`,
-          badge: `Tranche ${t.tranche_no}`,
-          title: `Tranche #${t.tranche_no} — ${fmtLakhs(t.amount_bdt)}`,
+          badge: t.is_combined ? 'Combined Transfer' : `Tranche ${t.tranche_no}`,
+          title: t.is_combined ? `Combined Transfer Slip (${fmtLakhs(t.amount_bdt)})` : `Tranche #${t.tranche_no} — ${fmtLakhs(t.amount_bdt)}`,
           url: t.receipt_url,
           meta: `${t.method} • Ref: ${t.ref_no}`,
           note: t.note || `Date: ${t.date} • Sent to ${MAATS_COTTAGE_PROFILE.accountName} (${MAATS_COTTAGE_PROFILE.accountNumber})`
@@ -638,8 +638,10 @@ export default function MaatsCottageTrackerPage() {
                     {order.disbursement_transfers && order.disbursement_transfers.length > 0 && (
                       <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '8px', fontSize: '0.78rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.3rem' }}>
-                          <span style={{ color: '#38bdf8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.72rem' }}>
-                            Disbursed in {order.disbursement_transfers.length} Tranches
+                          <span style={{ color: order.is_combined_disbursement ? '#a855f7' : '#38bdf8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.72rem' }}>
+                            {order.disbursement_transfers.length === 1 
+                              ? (order.is_combined_disbursement ? 'Single Combined Transfer (৳3.75L Total)' : 'Single Tranche Disbursed') 
+                              : `Disbursed in ${order.disbursement_transfers.length} Tranches`}
                           </span>
                           {order.po_ref_number && (
                             <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
@@ -657,16 +659,16 @@ export default function MaatsCottageTrackerPage() {
                               onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc', fontWeight: '700' }}>
-                                <span>Tranche #{t.tranche_no}: {fmtLakhs(t.amount_bdt)}</span>
-                                <span style={{ fontSize: '0.68rem', color: t.ref_no?.startsWith('CASH') ? '#eab308' : '#38bdf8', background: t.ref_no?.startsWith('CASH') ? 'rgba(234,179,8,0.15)' : 'rgba(56,189,248,0.15)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
-                                  {t.ref_no?.startsWith('CASH') ? 'Cash Handover' : 'CityTouch'}
+                                <span>{t.is_combined ? `Combined: ${fmtLakhs(t.amount_bdt)}` : `Tranche #${t.tranche_no}: ${fmtLakhs(t.amount_bdt)}`}</span>
+                                <span style={{ fontSize: '0.68rem', color: t.ref_no?.startsWith('CASH') ? '#eab308' : (t.is_combined ? '#a855f7' : '#38bdf8'), background: t.ref_no?.startsWith('CASH') ? 'rgba(234,179,8,0.15)' : (t.is_combined ? 'rgba(168,85,247,0.15)' : 'rgba(56,189,248,0.15)'), padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                                  {t.ref_no?.startsWith('CASH') ? 'Cash Handover' : (t.is_combined ? 'Combined CityTouch' : 'CityTouch')}
                                 </span>
                               </div>
                               <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.2rem' }}>
                                 {t.date} • Ref: {t.ref_no}
                               </div>
                               {t.note && (
-                                <div style={{ color: '#eab308', fontSize: '0.68rem', fontStyle: 'italic', marginTop: '0.15rem' }}>
+                                <div style={{ color: t.is_combined ? '#c084fc' : '#eab308', fontSize: '0.68rem', fontStyle: 'italic', marginTop: '0.15rem' }}>
                                   {t.note}
                                 </div>
                               )}

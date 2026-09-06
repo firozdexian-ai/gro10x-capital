@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, HelpCircle, ShieldCheck } from 'lucide-react';
 
-const FAQS = [
+const FRANCHISE_FAQS = [
   {
     q: 'Is GRO10X Capital independent from the businesses it features?',
     a: "Yes. GRO10X Capital is independently owned and operated. No founders or directors of Oro Roasters or any featured business hold equity or management roles in GRO10X Capital. We operate at arm's length with a formal due diligence and SPV governance process."
@@ -30,8 +30,36 @@ const FAQS = [
   }
 ];
 
-export default function FAQAccordion() {
+const WEALTH_MANAGEMENT_FAQS = [
+  {
+    q: 'What is the Safe Home Wealth Management Fund and how is capital deployed?',
+    a: 'The Safe Home Wealth Management Fund is a ৳20 Crore institutional credit & private equity facility. Capital is diversified across high-turnover SME Work-Order Financing (revolving 7–10 day cash-flow cycles for verified corporate purchase orders), Franchise & Retail Expansion, and Strategic Equity Investments.'
+  },
+  {
+    q: 'How do the 3 return structures work (Monthly 18%, Semi-Annual 20%, Annual 22%)?',
+    a: 'Investors can choose their preferred liquidity schedule: (1) 18% p.a. with regular Monthly Cash Payouts directly into your bank account, (2) 20% p.a. with Semi-Annual Distributions every 6 months, or (3) 22% p.a. with Annual Compounded Returns at maturity.'
+  },
+  {
+    q: 'How is investor principal secured and protected against default?',
+    a: 'Deployments are ring-fenced under Safe Home Wealth Management SPV-01. In work-order financing, funds are disbursed exclusively against verified corporate buyer contracts (e.g. Delta Limited, Greenfield Jutex, Unique Group), backed by undated signed security cheques, director CIB clearances, and dual-document settlement verification (signed delivery challans + bank repayment proof).'
+  },
+  {
+    q: 'Can the fund invest in businesses beyond work orders?',
+    a: 'Yes. The fund is a multi-vehicle private wealth vehicle. While short-term work-order financing provides rapid turnover and continuous liquidity, capital is also allocated into profitable franchise outlets and growth equity financing.'
+  },
+  {
+    q: 'What is the minimum investment and lock-in period?',
+    a: 'The minimum subscription ticket is ৳10,00,000 (৳10 Lakh). Facility terms range from 12 to 36 months, with liquidity distribution options tailored to monthly, semi-annual, or annual payout intervals.'
+  },
+  {
+    q: 'Who manages the fund and due diligence?',
+    a: 'The fund is jointly overseen by Managing Partner Faiz Ahmed (01784397960) and the GRO10X Capital Investment Committee. All corporate counterparties undergo strict 5-point due diligence including Trade License, e-TIN, BIN/VAT, CIB credit scoring, and facility utilization audits.'
+  }
+];
+
+export default function FAQAccordion({ type = 'franchise' }) {
   const [openIndex, setOpenIndex] = useState(null);
+  const faqs = type === 'wealth_management' ? WEALTH_MANAGEMENT_FAQS : FRANCHISE_FAQS;
 
   const toggle = (idx) => {
     setOpenIndex(openIndex === idx ? null : idx);
@@ -46,13 +74,15 @@ export default function FAQAccordion() {
             Frequently Asked Investor Questions
           </h3>
           <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '0.15rem 0 0 0' }}>
-            Transparent answers regarding SPV ownership, asset backing, and revenue verification.
+            {type === 'wealth_management' 
+              ? 'Institutional due diligence, asset allocation, payout schedules, and security mechanisms.'
+              : 'Transparent answers regarding SPV ownership, asset backing, and revenue verification.'}
           </p>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {FAQS.map((faq, idx) => {
+        {faqs.map((faq, idx) => {
           const isOpen = openIndex === idx;
           return (
             <div

@@ -71,9 +71,9 @@ function BusinessShowcaseContent() {
             target_raise_bdt: 200000000,
             amount_raised_bdt: 52500000,
             spv_name: 'Safe Home Wealth Management SPV-01',
-            yield_model: '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
+            yield_model: '18% p.a. (Monthly) · 20% p.a. (Semi-Annual) · 22% p.a. (Annual) Fixed Returns. Multi-Asset SME Deployments.',
             min_otc_investment_bdt: 1000000,
-            project_description: 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit facility actively deployed into verified, high-turnover corporate purchase orders and SME work orders (7–10 day turnaround, 12%–18% per-cycle gross margins). ৳5+ Crore AUM currently managed across 50+ private wealth investors.',
+            project_description: 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit & private equity facility actively deployed into verified SME work orders, franchise expansion, and collateral-backed credit lines. ৳5+ Crore AUM managed across 50+ private wealth investors.',
             businesses: {
               ...p.businesses,
               brand_name: 'Safe Home Wealth Management',

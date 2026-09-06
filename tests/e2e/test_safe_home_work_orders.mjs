@@ -298,8 +298,13 @@ async function runSafeHomeTests() {
     assert(dealRoomContent.includes('Safe Home Wealth Management Fund'), 'Deal room displays Safe Home Wealth Management Fund title');
     assert(!dealRoomContent.includes('National Grid'), 'Deal room does NOT display National Grid');
     assert(dealRoomContent.includes('Safe Home SPV-01') || dealRoomContent.includes('Safe Home Wealth Management SPV-01'), 'Deal room displays Safe Home SPV');
-    assert(dealRoomContent.includes('Open Live Work-Order Tracker'), 'Deal room displays live work-order tracker link');
-    assert(dealRoomContent.includes('18%') || dealRoomContent.includes('20%'), 'Deal room displays Wealth Management yield structures');
+    assert(!dealRoomContent.includes('Open Live Work-Order Tracker'), 'Open Live Work-Order Tracker is removed from public deal room');
+    assert(dealRoomContent.includes('Active Portfolio Deployments'), 'Deal room displays Portfolio Deployments section');
+    assert(dealRoomContent.includes('Maats Cottage Ltd'), 'Deal room displays Maats Cottage in portfolio deployments');
+    assert(dealRoomContent.includes('Monthly Return'), 'Deal room displays Monthly Return (Option 1)');
+    assert(dealRoomContent.includes('Semi-Annual'), 'Deal room displays Semi-Annual (Option 2)');
+    assert(dealRoomContent.includes('Annual Return'), 'Deal room displays Annual Return (Option 3)');
+    assert(dealRoomContent.includes('Frequently Asked Investor Questions'), 'Deal room displays FAQ Accordion');
 
     await showcasePage.screenshot({ path: path.join(ARTIFACTS_DIR, '08_deal_room_safe_home_fund.png') });
     console.log('  📸 Captured 08_deal_room_safe_home_fund.png');

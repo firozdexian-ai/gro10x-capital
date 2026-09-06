@@ -64,17 +64,17 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
       currentMonthly = wmOpt1Monthly;
       currentAnnual = wmOpt1Annual;
       currentMaturity = wmOpt1Maturity;
-      currentSubLabel = '18% Annual Fixed Yield (Quarterly Payouts)';
+      currentSubLabel = '18% Annual Fixed Yield (Monthly Cash Payouts)';
     } else if (selectedOption === 3) {
       currentMonthly = wmOpt3Monthly;
       currentAnnual = wmOpt3Annual;
       currentMaturity = wmOpt3Maturity;
-      currentSubLabel = '22% Annual Fixed Yield (Syndicate Lien)';
+      currentSubLabel = '22% Annual Fixed Yield (Annual Maturity Payout)';
     } else {
       currentMonthly = wmOpt2Monthly;
       currentAnnual = wmOpt2Annual;
       currentMaturity = wmOpt2Maturity;
-      currentSubLabel = '20% Annual Fixed Yield (Semi-Annual)';
+      currentSubLabel = '20% Annual Fixed Yield (Semi-Annual Distribution)';
     }
   } else {
     if (selectedOption === 1) {
@@ -231,9 +231,9 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
         </label>
         <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
           {(isWealth ? [
-            { id: 1, label: 'Option 1', title: 'Quarterly Yield', rate: '18% p.a.', desc: 'Annual Fixed Return', sub: 'Quarterly Cash Payouts', color: '#D4AF37' },
-            { id: 2, label: 'Option 2', title: 'Semi-Annual', rate: '20% p.a.', desc: 'Annual Fixed Return', sub: 'Semi-Annual Liquidity', color: '#10b981' },
-            { id: 3, label: 'Option 3', title: 'Syndicate Lien', rate: '22% p.a.', desc: 'Annual Fixed Return', sub: 'Dedicated Work-Order Lien', color: '#a855f7' },
+            { id: 1, label: 'Option 1', title: 'Monthly Return', rate: '18% p.a.', desc: 'Annual Fixed Yield', sub: 'Monthly Cash Payouts', color: '#D4AF37' },
+            { id: 2, label: 'Option 2', title: 'Semi-Annual', rate: '20% p.a.', desc: 'Annual Fixed Yield', sub: 'Semi-Annual Liquidity', color: '#10b981' },
+            { id: 3, label: 'Option 3', title: 'Annual Return', rate: '22% p.a.', desc: 'Annual Fixed Yield', sub: 'Annual Maturity Payout', color: '#a855f7' },
           ] : [
             { id: 1, label: 'Option 1', title: 'Capped Yield', rate: `${opt1Rate}%`, desc: 'Gross Sales Share', sub: '22% Total ROI Cap', color: '#D4AF37' },
             { id: 2, label: 'Option 2', title: 'Multiplier', rate: `${opt2Rate}%`, desc: 'Gross Sales Share', sub: '1.5X Buyout Exit', color: '#10b981' },

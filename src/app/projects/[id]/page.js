@@ -6,7 +6,7 @@ import {
   Building2, ShieldCheck, TrendingUp, Share2,
   CheckCircle2, ChevronRight, ExternalLink,
   Lock, AlertCircle, Loader2, MessageSquare,
-  FileText, Sparkles, Clock
+  FileText, Sparkles, Clock, Briefcase, Layers
 } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
@@ -21,14 +21,14 @@ const SAFE_HOME_PROJECT_DATA = {
   amount_raised_bdt: 52500000,
   booked_amount_bdt: 20000000,
   spv_name: 'Safe Home Wealth Management SPV-01',
-  yield_model: '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
+  yield_model: '18% p.a. (Monthly) · 20% p.a. (Semi-Annual) · 22% p.a. (Annual) Fixed Returns. Multi-Asset SME Deployments.',
   yield_percent: 20,
   duration_months: 36,
   min_otc_investment_bdt: 1000000,
   status: 'Active Capital Raise',
   cover_image_url: null,
   youtube_url: null,
-  project_description: 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit facility actively deployed into verified, high-turnover corporate purchase orders and SME work orders (7–10 day turnaround, 12%–18% per-cycle gross margins). ৳5+ Crore AUM currently managed across 50+ private wealth investors. Delivers a steady 18%–22% annual fixed return with quarterly liquidity cycles.',
+  project_description: 'Safe Home Wealth Management Fund: A ৳20 Crore institutional credit & private equity facility actively deployed across high-turnover SME Work-Order Financing (7–10 day turnaround, 12%–18% per-cycle gross margins), profitable Franchise & Outlet expansion, and strategic growth equity syndicates. Delivers predictable monthly, semi-annual, or annual fixed returns ring-fenced under Safe Home SPV-01.',
   businesses: {
     id: 'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
     brand_name: 'Safe Home Wealth Management',
@@ -107,7 +107,7 @@ function ProjectDetail() {
           amount_raised_bdt: 52500000,
           booked_amount_bdt: 20000000,
           spv_name: 'Safe Home Wealth Management SPV-01',
-          yield_model: '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
+          yield_model: '18% p.a. (Monthly) · 20% p.a. (Semi-Annual) · 22% p.a. (Annual) Fixed Returns. Multi-Asset SME Deployments.',
           yield_percent: 20,
           duration_months: 36,
           min_otc_investment_bdt: 1000000,
@@ -285,11 +285,11 @@ function ProjectDetail() {
                       Safe Home Wealth Management Fund
                     </h3>
                     <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.86rem', maxWidth: '580px', lineHeight: '1.5' }}>
-                      Active revolving work-order credit line for verified corporate buyers (Delta Limited, Greenfield Jutex, Unique Group). Managed by Faiz Ahmed (Managing Partner) &amp; GRO10X Investment Committee.
+                      Multi-asset deployment facility actively funding verified corporate SME purchase orders, retail franchise expansion, and collateral-backed credit lines. Managed by Faiz Ahmed (Managing Partner) &amp; GRO10X Investment Committee.
                     </p>
                   </div>
                   <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', padding: '0.4rem 0.75rem', borderRadius: '8px', color: '#10b981', fontWeight: '700', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <ShieldCheck size={14} /> 100% PO Backed
+                    <ShieldCheck size={14} /> 100% Asset &amp; PO Backed
                   </div>
                 </div>
 
@@ -307,28 +307,28 @@ function ProjectDetail() {
                     <strong style={{ display: 'block', color: '#10b981', fontSize: '1.1rem', marginTop: '0.15rem' }}>18% – 22%</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase' }}>Turnaround Cycles</span>
-                    <strong style={{ display: 'block', color: '#38bdf8', fontSize: '1.1rem', marginTop: '0.15rem' }}>7 – 10 Days</strong>
+                    <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase' }}>Payout Schedules</span>
+                    <strong style={{ display: 'block', color: '#38bdf8', fontSize: '1.1rem', marginTop: '0.15rem' }}>Monthly · Semi · Annual</strong>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <a 
-                    href="/track/maats-cottage" 
-                    className="btn-gold" 
-                    style={{ fontSize: '0.82rem', padding: '0.55rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', fontWeight: '700' }}
-                  >
-                    <ExternalLink size={14} /> Open Live Work-Order Tracker
-                  </a>
-                  <a 
                     href="/docs/maats-company-profile.pdf" 
                     target="_blank" 
                     rel="noreferrer" 
-                    className="btn-outline" 
-                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}
+                    className="btn-gold" 
+                    style={{ fontSize: '0.82rem', padding: '0.55rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', fontWeight: '700' }}
                   >
-                    <FileText size={14} /> View Company Profile Deck
+                    <FileText size={14} /> Download Portfolio &amp; Profile Deck
                   </a>
+                  <button 
+                    onClick={openLeadBot} 
+                    className="btn-outline" 
+                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
+                  >
+                    <MessageSquare size={14} /> Inquire Capital Allocation
+                  </button>
                 </div>
               </div>
             ) : embedUrl ? (
@@ -359,6 +359,178 @@ function ProjectDetail() {
             )}
           </div>
 
+          {/* PORTFOLIO DEPLOYMENTS SECTION (Institutional Portfolio Overview for Wealth Management) */}
+          {isWealthManagement && (
+            <div className="glass-card" style={{ padding: '1.75rem', borderColor: 'rgba(212,175,55,0.25)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Briefcase size={20} style={{ color: '#D4AF37' }} />
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                      Active Portfolio Deployments &amp; Asset Allocation
+                    </h3>
+                  </div>
+                  <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0.3rem 0 0 0', lineHeight: 1.5 }}>
+                    The fund deploys strictly into verified institutional receivables, rapid turnover SME purchase orders, and asset-backed retail franchises.
+                  </p>
+                </div>
+                <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <ShieldCheck size={12} /> Institutional Collateral
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                
+                {/* COMPANY 1: MAATS COTTAGE */}
+                <div style={{ background: 'rgba(7,10,20,0.7)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                      <span style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                        Portfolio Co. #01
+                      </span>
+                      <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        ● Active Revolving
+                      </span>
+                    </div>
+                    <h4 style={{ margin: '0 0 0.25rem 0', color: '#fff', fontSize: '1.05rem', fontWeight: '800' }}>
+                      Maats Cottage Ltd.
+                    </h4>
+                    <p style={{ margin: '0 0 0.85rem 0', color: '#94a3b8', fontSize: '0.78rem' }}>
+                      Solmaid, Vatara, Dhaka · Finished Leather Goods &amp; Export Jute Crafts
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', background: 'rgba(0,0,0,0.35)', padding: '0.75rem', borderRadius: '8px', marginBottom: '0.85rem', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Credit Facility</span>
+                        <strong style={{ color: '#D4AF37', fontSize: '0.92rem' }}>৳25,00,000</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Settlement History</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.92rem' }}>5 Cycles (100% On-Time)</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Avg. Turnaround</span>
+                        <strong style={{ color: '#38bdf8', fontSize: '0.92rem' }}>7 – 10 Days</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Corporate Buyers</span>
+                        <strong style={{ color: '#cbd5e1', fontSize: '0.78rem' }}>Delta, Greenfield, Unique</strong>
+                      </div>
+                    </div>
+
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.72rem', lineHeight: '1.4' }}>
+                      🔒 Backed by audited Purchase Orders, verified Delivery Challans, undated signed security cheques &amp; director CIB.
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Audit Status: Clean (5/5 Settled)</span>
+                    <a href="/docs/maats-company-profile.pdf" target="_blank" rel="noreferrer" style={{ color: '#D4AF37', fontSize: '0.75rem', fontWeight: '700', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      Profile Deck <ExternalLink size={11} />
+                    </a>
+                  </div>
+                </div>
+
+                {/* COMPANY 2: CYCLE 2 ONBOARDING */}
+                <div style={{ background: 'rgba(7,10,20,0.7)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                      <span style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                        Portfolio Co. #02
+                      </span>
+                      <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        ● Onboarding (Cycle 2)
+                      </span>
+                    </div>
+                    <h4 style={{ margin: '0 0 0.25rem 0', color: '#fff', fontSize: '1.05rem', fontWeight: '800' }}>
+                      Institutional SME Supplier
+                    </h4>
+                    <p style={{ margin: '0 0 0.85rem 0', color: '#94a3b8', fontSize: '0.78rem' }}>
+                      Tejgaon / Gazipur Industrial Zone · Corporate Procurement &amp; Packaging
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', background: 'rgba(0,0,0,0.35)', padding: '0.75rem', borderRadius: '8px', marginBottom: '0.85rem', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Target Facility</span>
+                        <strong style={{ color: '#3b82f6', fontSize: '0.92rem' }}>৳50,00,000</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>KYC &amp; Due Diligence</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.92rem' }}>In Progress (Stage 3)</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Turnaround Target</span>
+                        <strong style={{ color: '#cbd5e1', fontSize: '0.92rem' }}>10 – 14 Days</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Risk Rating</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.92rem' }}>Tier-1 Blue Chip POs</strong>
+                      </div>
+                    </div>
+
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.72rem', lineHeight: '1.4' }}>
+                      🔒 Credit underwriting by Faiz Ahmed &amp; GRO10X Investment Committee. Dedicated tenant tracking being configured.
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Deployment Schedule: Q3 2026</span>
+                    <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '700' }}>Ring-Fenced SPV</span>
+                  </div>
+                </div>
+
+                {/* VEHICLE 3: FRANCHISE RETAIL HUBS */}
+                <div style={{ background: 'rgba(7,10,20,0.7)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                      <span style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                        Asset Vehicle #03
+                      </span>
+                      <span style={{ color: '#c084fc', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        ● Performing Outlets
+                      </span>
+                    </div>
+                    <h4 style={{ margin: '0 0 0.25rem 0', color: '#fff', fontSize: '1.05rem', fontWeight: '800' }}>
+                      Retail Franchise &amp; Asset Outlets
+                    </h4>
+                    <p style={{ margin: '0 0 0.85rem 0', color: '#94a3b8', fontSize: '0.78rem' }}>
+                      Prime Commercial Hubs · High-Footfall Specialty F&amp;B Hubs
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', background: 'rgba(0,0,0,0.35)', padding: '0.75rem', borderRadius: '8px', marginBottom: '0.85rem', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Asset Backing</span>
+                        <strong style={{ color: '#c084fc', fontSize: '0.92rem' }}>100% Machinery Title</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Revenue Tracking</span>
+                        <strong style={{ color: '#10b981', fontSize: '0.92rem' }}>Live Cloud POS Synced</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Cash-Flow Flow</span>
+                        <strong style={{ color: '#cbd5e1', fontSize: '0.92rem' }}>Daily Audited Audits</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Operational Track</span>
+                        <strong style={{ color: '#D4AF37', fontSize: '0.92rem' }}>18+ Months Operating</strong>
+                      </div>
+                    </div>
+
+                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.72rem', lineHeight: '1.4' }}>
+                      🔒 Direct asset co-ownership under SPV legal structure. Zero unsecured exposure.
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Model: Franchise Expansion</span>
+                    <span style={{ color: '#c084fc', fontSize: '0.75rem', fontWeight: '700' }}>Oro Roasters SPV Co-Op</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
           {/* YIELD OPTIONS */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
             <h3 style={{ fontSize: '1.2rem', color: '#D4AF37', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -366,9 +538,9 @@ function ProjectDetail() {
             </h3>
             <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem' }}>
               {(isWealthManagement ? [
-                { label: 'Option 1', name: 'Quarterly Yield', rate: '18% p.a.', detail: 'Annual Fixed Return', sub: 'Quarterly Cash Payouts', color: '#D4AF37', border: 'rgba(212,175,55,0.3)' },
-                { label: 'Option 2', name: 'Semi-Annual',   rate: '20% p.a.', detail: 'Annual Fixed Return', sub: 'Semi-Annual Liquidity',  color: '#10b981', border: 'rgba(16,185,129,0.3)' },
-                { label: 'Option 3', name: 'Syndicate Lien', rate: '22% p.a.', detail: 'Annual Fixed Return', sub: 'Dedicated Work-Order Lien', color: '#a855f7', border: 'rgba(168,85,247,0.3)' },
+                { label: 'Option 1', name: 'Monthly Return', rate: '18% p.a.', detail: 'Monthly Cash Payout', sub: 'Paid 7th of every month directly to bank', color: '#D4AF37', border: 'rgba(212,175,55,0.3)' },
+                { label: 'Option 2', name: 'Semi-Annual',   rate: '20% p.a.', detail: 'Semi-Annual Distribution', sub: 'Every 6 months liquidity payout',  color: '#10b981', border: 'rgba(16,185,129,0.3)' },
+                { label: 'Option 3', name: 'Annual Return', rate: '22% p.a.', detail: 'Annual Lump-Sum Payout', sub: '12-month compounded maturity return', color: '#a855f7', border: 'rgba(168,85,247,0.3)' },
               ] : [
                 { label: 'Option 1', name: 'Capped Yield', rate: '10%', detail: 'Gross Sales', sub: '22% Max ROI Cap', color: '#D4AF37', border: 'rgba(212,175,55,0.3)' },
                 { label: 'Option 2', name: 'Multiplier',   rate: '12%', detail: 'Gross Sales', sub: '1.5X Buyout Exit',  color: '#10b981', border: 'rgba(16,185,129,0.3)' },
@@ -385,7 +557,7 @@ function ProjectDetail() {
             </div>
             <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '1rem', margin: '1rem 0 0' }}>
               💰 {isWealthManagement 
-                ? 'All returns distributed directly to investor registered accounts, backed by 7–10 day corporate collection cycles.' 
+                ? 'All returns distributed directly to investor registered accounts, backed by multi-asset SME cash flows and corporate collection cycles.' 
                 : 'All distributions made monthly directly to your registered bank account.'}
             </p>
           </div>
@@ -439,7 +611,7 @@ function ProjectDetail() {
           </div>
 
           {/* INVESTOR FAQ SECTION */}
-          <FAQAccordion />
+          <FAQAccordion type={isWealthManagement ? 'wealth_management' : 'franchise'} />
         </div>
 
         {/* RIGHT: STICKY INVESTMENT CARD */}

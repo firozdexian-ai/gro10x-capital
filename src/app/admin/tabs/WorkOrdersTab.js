@@ -1079,7 +1079,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                   </div>
                   <div>
                     <span style={{ color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>Telegram Authentication Bot</span>
-                    <p style={{ margin: '0.2rem 0 0 0', color: '#cbd5e1' }}>Founder connects registered phone ({onboardSuccessData.founder_phone}) to <strong>@gro10x_os_bot</strong> to receive their 4-digit access PIN.</p>
+                    <p style={{ margin: '0.2rem 0 0 0', color: '#cbd5e1' }}>Founder connects registered phone ({onboardSuccessData.founder_phone}) to <strong>@gro10xbizbot</strong> to receive their 4-digit access PIN.</p>
                   </div>
                 </div>
 
@@ -1131,7 +1131,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                     `🏛️ SPV Entity: *Safe Home Wealth Management SPV-01*\n\n` +
                     `🔗 Dedicated Company Portal:\n${portalUrl}\n\n` +
                     `📝 Direct Work Order Creation Link:\n${formUrl}\n\n` +
-                    `🔑 Access PIN: Open Telegram bot @gro10x_os_bot and type /pin (or share contact) from ${newFacility.founder_phone} to receive your 4-digit temporary access PIN.\n\n` +
+                    `🔑 Access PIN: Open Telegram bot @gro10xbizbot and type /pin (or share contact) from ${newFacility.founder_phone} to receive your 4-digit temporary access PIN.\n\n` +
                     `GRO10X Capital Operations Desk`;
 
                   setOnboardSuccessData({

@@ -1579,18 +1579,18 @@ export default function MaatsCottageTrackerPage() {
               <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '10px', padding: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
                 <ShieldCheck size={20} style={{ color: '#38bdf8', flexShrink: 0, marginTop: '0.1rem' }} />
                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.45' }}>
-                  Open our official Telegram management bot <strong>@gro10x_os_bot</strong> and type <code>/pin</code> from your registered WhatsApp/phone (<code>{MAATS_COTTAGE_PROFILE.phone}</code>) to receive your 4-digit temporary PIN.
+                  Open our official Telegram client bot <strong>@gro10xbizbot</strong> and type <code>/pin</code> from your registered WhatsApp/phone (<code>{MAATS_COTTAGE_PROFILE.phone}</code>) to receive your 4-digit temporary PIN.
                 </p>
               </div>
 
               <a 
-                href="https://t.me/gro10x_os_bot" 
+                href="https://t.me/gro10xbizbot" 
                 target="_blank" 
                 rel="noreferrer"
                 className="btn-gold"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.7rem 1rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '700', fontSize: '0.88rem' }}
               >
-                <Bot size={16} /> 1-Tap: Open @gro10x_os_bot on Telegram
+                <Bot size={16} /> 1-Tap: Open @gro10xbizbot on Telegram
               </a>
 
               <div style={{ textAlign: 'center', position: 'relative', margin: '0.25rem 0' }}>

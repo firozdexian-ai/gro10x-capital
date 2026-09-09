@@ -392,36 +392,36 @@ export default function MaatsCottageTrackerPage() {
               <Clock size={20} className="animate-pulse" />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>MSP-001: Delta Limited (Order 1)</span>
-                <span className="status-badge status-badge--danger" style={{ fontSize: '0.65rem' }}>MATURITY TODAY (4:00 PM)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: '800', color: '#fff', fontSize: '0.95rem' }}>MSP-003 &amp; MSP-004 (Greenfield &amp; Delta)</span>
+                <span className="status-badge status-badge--danger" style={{ fontSize: '0.65rem' }}>MATURING TODAY (09 SEP)</span>
+                <span className="status-badge status-badge--success" style={{ fontSize: '0.65rem' }}>MSP-001 SETTLED (৳2.875L) ✓</span>
               </div>
               <p style={{ color: '#cbd5e1', fontSize: '0.82rem', margin: '0.15rem 0 0 0' }}>
-                Principal Disbursed: <strong>৳2.50 Lakhs</strong> <span style={{ color: '#38bdf8' }}>(Tranche 1: ৳1.00L + Tranche 2: ৳1.50L CityTouch)</span> → Total Repayment Due: <strong style={{ color: '#10b981' }}>৳2.875 Lakhs</strong> (+৳37.5k Profit)
+                Due Today: <strong>MSP-003 (৳2.645L)</strong> + <strong>MSP-004 (৳1.668L)</strong> = <strong style={{ color: '#10b981' }}>৳4.3125 Lakhs</strong> Return | MSP-002 (৳4.30L) Matured Sep 8
               </p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button 
               onClick={() => {
-                const m1 = orders.find(o => o.order_code === 'MSP-001');
-                if (m1) setSelectedOrderDocs(m1);
-                else setSelectedReceipt('/receipts/msp-001-tranche-1.png');
+                const m3 = orders.find(o => o.order_code === 'MSP-003');
+                if (m3) setSelectedOrderDocs(m3);
               }}
               className="btn-outline" 
               style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderColor: 'rgba(255,255,255,0.2)' }}
             >
-              <Eye size={13} style={{ marginRight: '0.3rem' }} /> Inspect Documents
+              <Eye size={13} style={{ marginRight: '0.3rem' }} /> Inspect Docs
             </button>
             <button 
               onClick={() => {
-                const m1 = orders.find(o => o.order_code === 'MSP-001');
-                if (m1) setSettleTargetOrder(m1);
+                const m3 = orders.find(o => o.order_code === 'MSP-003');
+                if (m3) setSettleTargetOrder(m3);
               }}
               className="btn-gold" 
               style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
             >
-              <CheckCircle2 size={13} style={{ marginRight: '0.3rem' }} /> Settle &amp; Close Today
+              <CheckCircle2 size={13} style={{ marginRight: '0.3rem' }} /> Settle MSP-003
             </button>
           </div>
         </div>
@@ -843,7 +843,7 @@ export default function MaatsCottageTrackerPage() {
                 <CheckCircle2 size={40} style={{ color: '#10b981', margin: '0 auto 1rem auto', opacity: 0.8 }} />
                 <h4 style={{ color: '#fff', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>No Settled Orders Yet</h4>
                 <p style={{ color: '#94a3b8', fontSize: '0.85rem', maxWidth: '440px', margin: '0 auto 1.25rem auto' }}>
-                  Orders undergoing closing (such as MSP-001 maturing today) will appear here once verified with both the repayment bank slip and delivery challan.
+                  Orders undergoing closing (such as MSP-002, MSP-003, or MSP-004) will appear here once verified with both the repayment bank slip and delivery challan.
                 </p>
                 {activeOrders.length > 0 && (
                   <button 

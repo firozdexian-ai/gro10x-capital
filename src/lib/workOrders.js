@@ -58,10 +58,11 @@ export const SEED_WORK_ORDERS = [
     duration_days: 7,
     start_date: '2026-08-30',
     due_date: '2026-09-06',
-    status: 'Disbursed_Active',
+    settled_date: '2026-09-06',
+    status: 'Settled_Repaid',
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: DL/Bag Combo/2026/1013(August) (৳3,13,500 total value). Disbursed in 2 CityTouch tranches (৳1.00L + ৳1.50L = ৳2.50L). Closing today Sep 6 by 4:00 PM.',
+    notes: 'PO Ref: DL/Bag Combo/2026/1013(August) (৳3,13,500 total value). Disbursed in 2 CityTouch tranches (৳1.00L + ৳1.50L = ৳2.50L). 100% Repaid (৳2.875L) to Ahmed Faiz on 06 Sep 2026.',
     disbursement_receipt_url: '/receipts/msp-001-tranche-1.png',
     po_document_url: '/docs/msp-001-delta-po.png',
     po_document_pdf: '/docs/msp-001-delta-po.pdf',
@@ -69,7 +70,10 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260907',
     delivery_received_date: '07 Sep 2026',
     delivery_received_by: 'Kamal (Delta Limited)',
-    due_note: 'CLOSING TODAY (4:00 PM)',
+    settlement_repayment_receipt_url: '/receipts/msp-001-full-repayment-slips.png',
+    settlement_challan_receipt_url: '/docs/msp-001-delta-delivery-challan.png',
+    settlement_note: 'Full principal (৳2.50L) + profit (৳37.5k) returned via 2 CityTouch tranches (৳1.86L + ৳1.015L = ৳2.875L) to Ahmed Faiz on 06 Sep 2026. Delivery confirmed via signed challan MCL_INVOICE_260907.',
+    due_note: 'Settled & Repaid on 06 Sep',
     tranche_info: '2 Tranches: ৳1.00L + ৳1.50L CityTouch',
     disbursement_transfers: [
       {
@@ -88,6 +92,24 @@ export const SEED_WORK_ORDERS = [
         method: 'City Bank Transfer (CityTouch)',
         receipt_url: '/receipts/msp-001-tranche-2.png'
       }
+    ],
+    repayment_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 186000,
+        date: '06 Sep 2026, 06:01 PM',
+        ref_no: '100010794713',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-001-repayment-tranche-1.png'
+      },
+      {
+        tranche_no: 2,
+        amount_bdt: 101500,
+        date: '06 Sep 2026, 06:02 PM',
+        ref_no: '100010795080',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-001-repayment-tranche-2.png'
+      }
     ]
   },
   {
@@ -101,13 +123,13 @@ export const SEED_WORK_ORDERS = [
     investment_amount_bdt: 375000,
     return_amount_bdt: 430000,
     profit_bdt: 55000,
-    duration_days: 9,
+    duration_days: 8,
     start_date: '2026-08-31',
-    due_date: '2026-09-09',
+    due_date: '2026-09-08',
     status: 'Disbursed_Active',
     payment_mode: 'EFT/NPSB + Cash Handover',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: DL/Laptop Bag/2026/1014(August) (৳4,42,000 total value). Disbursed in 3 tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k cash handover.',
+    notes: 'PO Ref: DL/Laptop Bag/2026/1014(August) (৳4,42,000 total value). Disbursed in 3 tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k cash handover. Return date: 8 SEP.',
     disbursement_receipt_url: '/receipts/msp-002-tranche-1.png',
     po_document_url: '/docs/msp-002-delta-po.png',
     po_document_pdf: '/docs/msp-002-delta-po.pdf',
@@ -115,7 +137,7 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260909.02',
     delivery_received_date: '09 Sep 2026',
     delivery_received_by: 'Kamal (Delta Limited)',
-    due_note: 'Due Sep 9 (3 days left)',
+    due_note: 'Matured Sep 8 (Pending Repayment Slip)',
     tranche_info: '3 Tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k Cash Handover',
     disbursement_transfers: [
       {
@@ -156,13 +178,13 @@ export const SEED_WORK_ORDERS = [
     investment_amount_bdt: 230000,
     return_amount_bdt: 264500,
     profit_bdt: 34500,
-    duration_days: 8,
+    duration_days: 7,
     start_date: '2026-09-02',
-    due_date: '2026-09-10',
+    due_date: '2026-09-09',
     status: 'Disbursed_Active',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: GFJ/09/2026/212 (৳2,92,500 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026.',
+    notes: 'PO Ref: GFJ/09/2026/212 (৳2,92,500 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026. Return date: 9 SEP.',
     disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
     po_document_url: '/docs/msp-003-greenfield-po.png',
     po_document_pdf: '/docs/msp-003-greenfield-po.pdf',
@@ -170,7 +192,7 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260913',
     delivery_received_date: '13 Sep 2026',
     delivery_received_by: 'Shakil Ahmed (Greenfield Jutex)',
-    due_note: 'Due Sep 10 (4 days left)',
+    due_note: 'DUE TODAY (Sep 9)',
     tranche_info: 'Single Combined Tranche: ৳2.30L (Part of ৳3.75L transfer)',
     is_combined_disbursement: true,
     disbursement_transfers: [
@@ -203,7 +225,7 @@ export const SEED_WORK_ORDERS = [
     status: 'Disbursed_Active',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: DL/Key Ring/2026/1016(September) (৳1,94,625 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026.',
+    notes: 'PO Ref: DL/Key Ring/2026/1016(September) (৳1,94,625 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026. Return date: 9 SEP.',
     disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
     po_document_url: '/docs/msp-004-delta-po.png',
     po_document_pdf: '/docs/msp-004-delta-po.pdf',
@@ -211,7 +233,7 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260913.02',
     delivery_received_date: '13 Sep 2026',
     delivery_received_by: 'Kamal (Delta Limited)',
-    due_note: 'Due Sep 9 (3 days left)',
+    due_note: 'DUE TODAY (Sep 9)',
     tranche_info: 'Single Combined Tranche: ৳1.45L (Part of ৳3.75L transfer)',
     is_combined_disbursement: true,
     disbursement_transfers: [
@@ -244,7 +266,7 @@ export const SEED_WORK_ORDERS = [
     status: 'Disbursed_Active',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: GFJ/09/2026/214 (৳4,86,000 PO value). Disbursed in 2 CityTouch tranches: ৳3.00L (Sep 3) + ৳1.00L (Sep 4) = ৳4.00L total.',
+    notes: 'PO Ref: GFJ/09/2026/214 (৳4,86,000 PO value). Disbursed in 2 CityTouch tranches: ৳3.00L (Sep 3) + ৳1.00L (Sep 4) = ৳4.00L total. Return date: 13 SEP.',
     disbursement_receipt_url: '/receipts/msp-005-tranche-1.png',
     po_document_url: '/docs/msp-005-greenfield-po.png',
     po_document_pdf: '/docs/msp-005-greenfield-po.pdf',
@@ -252,7 +274,7 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260915',
     delivery_received_date: '15 Sep 2026',
     delivery_received_by: 'Shakil Ahmed (Greenfield Jutex)',
-    due_note: 'Due Sep 13 (7 days left)',
+    due_note: 'Due Sep 13 (4 days left)',
     tranche_info: '2 Tranches: ৳3.00L + ৳1.00L CityTouch',
     disbursement_transfers: [
       {
@@ -292,7 +314,7 @@ export const SEED_WORK_ORDERS = [
     status: 'Disbursed_Active',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: PO-00474151 (৳3,74,000 PO value with VAT). Disbursed in combined ৳5,15,000 single transfer (৳3.25L for MSP-006 + ৳1.90L for MSP-009) to Aysha Siddika on 06 Sep 2026.',
+    notes: 'PO Ref: PO-00474151 (৳3,74,000 PO value with VAT). Disbursed in combined ৳5,15,000 single transfer (৳3.25L for MSP-006 + ৳1.90L for MSP-009) to Aysha Siddika on 06 Sep 2026. Return date: 19 SEP.',
     disbursement_receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
     po_document_url: '/docs/msp-006-unique-po.png',
     po_document_pdf: '/docs/msp-006-unique-po.pdf',
@@ -315,38 +337,48 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-007',
     order_code: 'MSP-007',
-    corporate_client: 'National Life Insurance',
-    item_description: 'Short wallet',
+    corporate_client: 'National Life Insurance PLC',
+    po_ref_number: 'NLIC-PO-078422',
+    po_date: '2026-09-07',
+    po_value_bdt: 310000,
+    item_description: 'Short Wallet (680 pcs)',
     investment_amount_bdt: 250000,
     return_amount_bdt: 290000,
     profit_bdt: 40000,
-    duration_days: 10,
+    duration_days: 8,
     start_date: '2026-09-07',
-    due_date: '2026-09-17',
+    due_date: '2026-09-15',
     status: 'Pending_Approval',
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Premium leather executive short wallets. Material procurement lined up.',
+    notes: 'PO Ref: NLIC-PO-078422 (৳3,10,000 PO value). 680 pcs Short Wallets @ ৳455.88. Delivery to NLI Tower Karwan Bazar by 15 Sep 2026.',
     disbursement_receipt_url: null,
-    due_note: 'Awaiting Disbursal'
+    po_document_url: '/docs/msp-007-national-life-po.png',
+    po_document_pdf: '/docs/msp-007-national-life-po.pdf',
+    due_note: 'Awaiting Partner Co-Sign'
   },
   {
     id: 'wo-008',
     order_code: 'MSP-008',
-    corporate_client: 'National Life Insurance',
-    item_description: 'Jute shopping bag',
+    corporate_client: 'National Life Insurance PLC',
+    po_ref_number: 'NLIC-PO-078420',
+    po_date: '2026-09-06',
+    po_value_bdt: 400000,
+    item_description: 'Jute Shopping Bag (2,800 pcs)',
     investment_amount_bdt: 275000,
     return_amount_bdt: 315000,
     profit_bdt: 40000,
-    duration_days: 10,
-    start_date: '2026-09-07',
-    due_date: '2026-09-17',
+    duration_days: 9,
+    start_date: '2026-09-06',
+    due_date: '2026-09-15',
     status: 'Pending_Approval',
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'National Life corporate eco shopping bags for branch roll-out.',
+    notes: 'PO Ref: NLIC-PO-078420 (৳4,00,000 PO value). 2,800 pcs Jute Shopping Bags @ ৳142.86. Delivery to NLI Tower Karwan Bazar by 15 Sep 2026.',
     disbursement_receipt_url: null,
-    due_note: 'Awaiting Disbursal'
+    po_document_url: '/docs/msp-008-national-life-po.png',
+    po_document_pdf: '/docs/msp-008-national-life-po.pdf',
+    due_note: 'Awaiting Partner Co-Sign'
   },
   {
     id: 'wo-009',
@@ -387,7 +419,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v7';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v8';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data
@@ -616,6 +648,7 @@ export function generateWhatsAppBroadcast(orders = []) {
   const metrics = calculateLedgerMetrics(orders);
   const activeOrders = orders.filter(o => o.status === 'Disbursed_Active');
   const pendingOrders = orders.filter(o => o.status === 'Pending_Approval');
+  const settledOrders = orders.filter(o => o.status === 'Settled_Repaid');
 
   const lines = [
     `🏢 *GRO10X CAPITAL × SAFE HOME WEALTH MANAGEMENT FUND*`,
@@ -628,6 +661,8 @@ export function generateWhatsAppBroadcast(orders = []) {
     `• Active Capital Deployed: *৳${(metrics.totalDisbursedActive / 100000).toFixed(2)} Lac* (${activeOrders.length} Orders)`,
     `• Expected Gross Return: *৳${(metrics.totalExpectedReturnActive / 100000).toFixed(2)} Lac*`,
     `• Net Cycle Profit: *৳${(metrics.totalActiveProfit / 1000).toFixed(0)}k* (${metrics.avgMarginActivePct}%)`,
+    `• Total Settled & Repaid: *৳${(metrics.totalSettledCapital / 100000).toFixed(2)} Lac* (${settledOrders.length} Orders Completed ✓)`,
+    `• Available Fund Headroom: *৳${((2500000 - metrics.totalDisbursedActive) / 100000).toFixed(2)} Lac* (of ৳25.00L Limit)`,
     `• Pending Disbursal Requests: *৳${(metrics.totalPendingCapital / 100000).toFixed(2)} Lac* (${pendingOrders.length} Orders)`,
     `───────────────────────────────`,
     `⚡ *ACTIVE DEPLOYMENTS:*`
@@ -641,6 +676,18 @@ export function generateWhatsAppBroadcast(orders = []) {
     lines.push(`▸ *${o.order_code}* | ${o.corporate_client} (${o.item_description})`);
     lines.push(`  Disbursed: ৳${invLac}L → Return: ৳${retLac}L (+৳${profitK}k)${alert}`);
   });
+
+  if (settledOrders.length > 0) {
+    lines.push(`───────────────────────────────`);
+    lines.push(`✅ *COMPLETED & FULLY REPAID:*`);
+    settledOrders.forEach(o => {
+      const invLac = (Number(o.investment_amount_bdt) / 100000).toFixed(2);
+      const retLac = (Number(o.return_amount_bdt) / 100000).toFixed(2);
+      const profitK = (Number(o.profit_bdt || (o.return_amount_bdt - o.investment_amount_bdt)) / 1000).toFixed(0);
+      lines.push(`▸ *${o.order_code}* | ${o.corporate_client} (${o.item_description})`);
+      lines.push(`  Settled: ৳${retLac}L on ${o.settled_date || '06 Sep'} (Principal ৳${invLac}L + Profit ৳${profitK}k) ✓`);
+    });
+  }
 
   if (pendingOrders.length > 0) {
     lines.push(`───────────────────────────────`);

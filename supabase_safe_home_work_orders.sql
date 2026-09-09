@@ -79,15 +79,15 @@ VALUES (
 ON CONFLICT (id) DO UPDATE
 SET brand_name = 'Maats Cottage Ltd', company_legal_name = 'Maats Cottage Limited';
 
--- 4. Transform Deal 3 to Safe Home Wealth Management Fund (৳20 Cr)
+-- 4. Transform Deal 3 to Safe Plan Wealth Management Fund (৳20 Cr)
 UPDATE public.funding_projects
 SET 
-  project_title = 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
-  project_description = 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit facility actively deployed into verified, high-turnover corporate purchase orders and SME work orders (7–10 day turnaround, 12%–18% per-cycle gross margins). ৳5+ Crore AUM currently managed across 50+ private wealth investors. Delivers a steady 18%–22% annual fixed return with quarterly liquidity cycles.',
+  project_title = 'Safe Plan Wealth Management Fund — ৳20 Cr Facility',
+  project_description = 'GRO10X Safe Plan Wealth Management Fund: A ৳20 Crore institutional credit facility actively deployed into verified, high-turnover corporate purchase orders and SME work orders (7–10 day turnaround, 12%–18% per-cycle gross margins). ৳5+ Crore AUM currently managed across 50+ private wealth investors. Delivers a steady 18%–22% annual fixed return with quarterly liquidity cycles.',
   funding_type = 'Wealth Management',
   target_raise_bdt = 200000000,
   amount_raised_bdt = 52500000,
-  spv_name = 'Safe Home Wealth Management SPV-01',
+  spv_name = 'Safe Plan Wealth Management SPV-01',
   yield_model = '18% – 22% Annual Fixed Return (Backed by Revolving Work-Order Financing). Quarterly Distributions.',
   min_otc_investment_bdt = 1000000,
   status = 'Active Capital Raise',

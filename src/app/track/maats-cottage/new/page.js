@@ -120,7 +120,7 @@ export default function NewWorkOrderPage() {
             <ArrowLeft size={16} /> Back to Live Tracker
           </Link>
           <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-            Facility: <strong>Safe Home ৳20 Cr Fund</strong>
+            Facility: <strong>Safe Plan ৳20 Cr Fund</strong>
           </span>
         </div>
       </div>

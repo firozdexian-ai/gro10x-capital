@@ -18,7 +18,8 @@ import {
   settleWorkOrder,
   revertOrderToPending,
   calculateLedgerMetrics, 
-  generateWhatsAppBroadcast 
+  generateWhatsAppBroadcast,
+  formatDisplayDate
 } from '../../../lib/workOrders';
 import { formatCurrency } from '../../../lib/currency';
 
@@ -189,7 +190,7 @@ export default function MaatsCottageTrackerPage() {
         badge: 'Proof of Repayment',
         title: 'Repayment Bank Transfer Slip',
         url: order.settlement_repayment_receipt_url,
-        meta: `EFT/NPSB Repayment to Safe Home Fund • ${fmtLakhs(order.return_amount_bdt)}`,
+        meta: `EFT/NPSB Repayment to Safe Plan Fund • ${fmtLakhs(order.return_amount_bdt)}`,
         note: 'Document 1 of Dual Verification: Bank acknowledgment of full capital + profit return.'
       });
     }
@@ -603,7 +604,8 @@ export default function MaatsCottageTrackerPage() {
               {activeOrders.map(order => {
                 const profit = Number(order.profit_bdt || (order.return_amount_bdt - order.investment_amount_bdt));
                 const marginPct = ((profit / Number(order.investment_amount_bdt)) * 100).toFixed(1);
-                const isClosingToday = order.due_note?.includes('CLOSING TODAY');
+                const isClosingToday = order.due_note?.includes('CLOSING TODAY') || order.due_note?.includes('DUE TODAY');
+                const isMatured = order.due_note?.includes('Matured');
 
                 return (
                   <div 
@@ -611,20 +613,37 @@ export default function MaatsCottageTrackerPage() {
                     className="glass-card" 
                     style={{ 
                       padding: '1.25rem', 
-                      borderColor: isClosingToday ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.08)',
-                      background: isClosingToday ? 'linear-gradient(180deg, rgba(239,68,68,0.05) 0%, rgba(15,23,42,0.9) 100%)' : undefined
+                      borderColor: isClosingToday ? 'rgba(239,68,68,0.5)' : (isMatured ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.08)'),
+                      background: isClosingToday 
+                        ? 'linear-gradient(180deg, rgba(239,68,68,0.06) 0%, rgba(15,23,42,0.92) 100%)' 
+                        : (isMatured ? 'linear-gradient(180deg, rgba(245,158,11,0.06) 0%, rgba(15,23,42,0.92) 100%)' : undefined)
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#fff' }}>{order.order_code}</span>
                           <span className="status-badge status-badge--success" style={{ fontSize: '0.7rem' }}>
                             Disbursed &amp; Active
                           </span>
-                          {isClosingToday && (
-                            <span className="status-badge status-badge--danger" style={{ fontSize: '0.68rem', fontWeight: '700' }}>
-                              CLOSING TODAY (4:00 PM)
+                          {/* Prominent Return / Due Note Badge */}
+                          {order.due_note && (
+                            <span 
+                              style={{ 
+                                background: isClosingToday ? 'rgba(239,68,68,0.2)' : (isMatured ? 'rgba(245,158,11,0.2)' : 'rgba(56,189,248,0.15)'), 
+                                color: isClosingToday ? '#ef4444' : (isMatured ? '#f59e0b' : '#38bdf8'), 
+                                border: `1px solid ${isClosingToday ? '#ef4444' : (isMatured ? '#f59e0b' : 'rgba(56,189,248,0.4)')}`, 
+                                borderRadius: '6px', 
+                                padding: '0.15rem 0.55rem', 
+                                fontSize: '0.68rem', 
+                                fontWeight: '700', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.3rem' 
+                              }}
+                            >
+                              {isClosingToday ? <Clock size={11} className="animate-pulse" /> : (isMatured ? <AlertTriangle size={11} /> : <Calendar size={11} />)}
+                              {order.due_note}
                             </span>
                           )}
                           {order.tranche_info && (
@@ -634,7 +653,7 @@ export default function MaatsCottageTrackerPage() {
                           )}
                           {order.delivery_challan_url && (
                             <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                              <CheckCircle2 size={11} /> Buyer Stamped ({order.delivery_received_date})
+                              <CheckCircle2 size={11} /> Challan Stamped ({order.delivery_challan_invoice_no || 'Verified'})
                             </span>
                           )}
                         </div>
@@ -684,9 +703,13 @@ export default function MaatsCottageTrackerPage() {
                         <strong style={{ fontSize: '1rem', color: '#D4AF37' }}>+৳{(profit / 1000).toFixed(1)}k <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>({marginPct}%)</span></strong>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Timeline</span>
-                        <span style={{ color: '#f8fafc', fontWeight: '600' }}>{order.duration_days} Days</span>
-                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>Due: {order.due_date}</span>
+                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Return Date</span>
+                        <strong style={{ fontSize: '1rem', color: isClosingToday ? '#ef4444' : (isMatured ? '#f59e0b' : '#38bdf8'), display: 'block' }}>
+                          {formatDisplayDate(order.due_date || order.return_date)}
+                        </strong>
+                        <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>
+                          Tenor: {order.duration_days} Days (Disbursed: {formatDisplayDate(order.start_date)})
+                        </span>
                       </div>
                     </div>
 
@@ -812,8 +835,11 @@ export default function MaatsCottageTrackerPage() {
                         <strong style={{ fontSize: '1rem', color: '#D4AF37' }}>+৳{(profit / 1000).toFixed(1)}k <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>({marginPct}%)</span></strong>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Turnaround</span>
-                        <span style={{ color: '#f8fafc', fontWeight: '600' }}>{order.duration_days} Days</span>
+                        <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase' }}>Target Return</span>
+                        <strong style={{ fontSize: '1rem', color: '#38bdf8', display: 'block' }}>
+                          {formatDisplayDate(order.due_date || order.return_date)}
+                        </strong>
+                        <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>Tenor: {order.duration_days} Days</span>
                       </div>
                     </div>
 
@@ -872,7 +898,7 @@ export default function MaatsCottageTrackerPage() {
                             </span>
                             {order.settled_date && (
                               <span style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
-                                Settled on: <strong style={{ color: '#cbd5e1' }}>{order.settled_date}</strong>
+                                Settled on: <strong style={{ color: '#cbd5e1' }}>{formatDisplayDate(order.settled_date)}</strong>
                               </span>
                             )}
                           </div>
@@ -1248,7 +1274,7 @@ export default function MaatsCottageTrackerPage() {
               {/* Footer */}
               <div style={{ padding: '0.75rem 1.25rem', background: '#0b1120', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                  Institutional Audit Trail • Safe Home Wealth Management Fund
+                  Institutional Audit Trail • Safe Plan Wealth Management Fund
                 </span>
                 <button 
                   onClick={() => setSelectedOrderDocs(null)} 
@@ -1314,7 +1340,7 @@ export default function MaatsCottageTrackerPage() {
                   <Landmark size={15} style={{ color: '#10b981' }} /> Document 1: Proof of Repayment Bank Transfer *
                 </label>
                 <p style={{ color: '#94a3b8', fontSize: '0.73rem', margin: '0 0 0.5rem 0' }}>
-                  EFT/NPSB slip from Aysha Siddika returning <strong>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong> to Safe Home account.
+                  EFT/NPSB slip from Aysha Siddika returning <strong>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong> to Safe Plan account.
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <input 
@@ -1665,7 +1691,7 @@ export default function MaatsCottageTrackerPage() {
               </form>
 
               <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b', textAlign: 'center' }}>
-                🔒 Session is encrypted and bound to Maats Cottage Ltd facility under Safe Home SPV-01.
+                🔒 Session is encrypted and bound to Maats Cottage Ltd facility under Safe Plan SPV-01.
               </p>
             </div>
           </div>

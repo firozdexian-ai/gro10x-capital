@@ -32,8 +32,8 @@ const FRANCHISE_FAQS = [
 
 const WEALTH_MANAGEMENT_FAQS = [
   {
-    q: 'What is the Safe Home Wealth Management Fund and how is capital deployed?',
-    a: 'The Safe Home Wealth Management Fund is a ৳20 Crore institutional credit & private equity facility. Capital is diversified across high-turnover SME Work-Order Financing (revolving 7–10 day cash-flow cycles for verified corporate purchase orders), Franchise & Retail Expansion, and Strategic Equity Investments.'
+    q: 'What is the Safe Plan Wealth Management Fund and how is capital deployed?',
+    a: 'The Safe Plan Wealth Management Fund is a ৳20 Crore institutional credit & private equity facility. Capital is diversified across high-turnover SME Work-Order Financing (revolving 7–10 day cash-flow cycles for verified corporate purchase orders), Franchise & Retail Expansion, and Strategic Equity Investments.'
   },
   {
     q: 'How do the 3 return structures work (Monthly 18%, Semi-Annual 20%, Annual 22%)?',
@@ -41,7 +41,7 @@ const WEALTH_MANAGEMENT_FAQS = [
   },
   {
     q: 'How is investor principal secured and protected against default?',
-    a: 'Deployments are ring-fenced under Safe Home Wealth Management SPV-01. In work-order financing, funds are disbursed exclusively against verified corporate buyer contracts (e.g. Delta Limited, Greenfield Jutex, Unique Group), backed by undated signed security cheques, director CIB clearances, and dual-document settlement verification (signed delivery challans + bank repayment proof).'
+    a: 'Deployments are ring-fenced under Safe Plan Wealth Management SPV-01. In work-order financing, funds are disbursed exclusively against verified corporate buyer contracts (e.g. Delta Limited, Greenfield Jutex, Unique Group), backed by undated signed security cheques, director CIB clearances, and dual-document settlement verification (signed delivery challans + bank repayment proof).'
   },
   {
     q: 'Can the fund invest in businesses beyond work orders?',

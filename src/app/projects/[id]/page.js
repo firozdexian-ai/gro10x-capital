@@ -13,14 +13,14 @@ import { supabase } from '../../../lib/supabase';
 import ROICalculator from '../../../components/ROICalculator';
 import FAQAccordion from '../../../components/FAQAccordion';
 
-const SAFE_HOME_PROJECT_DATA = {
+const SAFE_PLAN_PROJECT_DATA = {
   id: 'c3a2b3c4-d5e6-7890-abcd-ef1234567890',
-  project_title: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+  project_title: 'Safe Plan Wealth Management Fund — ৳20 Cr Facility',
   funding_type: 'Wealth Management',
   target_raise_bdt: 200000000,
   amount_raised_bdt: 52500000,
   booked_amount_bdt: 20000000,
-  spv_name: 'Safe Home Wealth Management SPV-01',
+  spv_name: 'Safe Plan Wealth Management SPV-01',
   yield_model: '18% p.a. (Monthly) · 20% p.a. (Semi-Annual) · 22% p.a. (Annual) Fixed Returns. Multi-Asset SME Deployments.',
   yield_percent: 20,
   duration_months: 36,
@@ -28,10 +28,10 @@ const SAFE_HOME_PROJECT_DATA = {
   status: 'Active Capital Raise',
   cover_image_url: null,
   youtube_url: null,
-  project_description: 'Safe Home Wealth Management Fund: A ৳20 Crore institutional credit & private equity facility actively deployed across high-turnover SME Work-Order Financing (7–10 day turnaround, 12%–18% per-cycle gross margins), profitable Franchise & Outlet expansion, and strategic growth equity syndicates. Delivers predictable monthly, semi-annual, or annual fixed returns ring-fenced under Safe Home SPV-01.',
+  project_description: 'Safe Plan Wealth Management Fund: A ৳20 Crore institutional credit & private equity facility actively deployed across high-turnover SME Work-Order Financing (7–10 day turnaround, 12%–18% per-cycle gross margins), profitable Franchise & Outlet expansion, and strategic growth equity syndicates. Delivers predictable monthly, semi-annual, or annual fixed returns ring-fenced under Safe Plan SPV-01.',
   businesses: {
     id: 'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
-    brand_name: 'Safe Home Wealth Management',
+    brand_name: 'Safe Plan Wealth Management',
     industry_sector: 'Wealth Management',
     operational_months: 36,
     ai_health_score: 95,
@@ -43,6 +43,7 @@ const SAFE_HOME_PROJECT_DATA = {
     }
   }
 };
+const SAFE_HOME_PROJECT_DATA = SAFE_PLAN_PROJECT_DATA;
 
 // Convert any YouTube URL format to embed URL
 function toEmbedUrl(url) {
@@ -96,26 +97,26 @@ function ProjectDetail() {
         .eq('id', projectId)
         .single();
 
-      if (isSafeHomeRoute || data?.project_title?.includes('National Grid') || data?.project_title?.includes('Safe Home')) {
+      if (isSafeHomeRoute || data?.project_title?.includes('National Grid') || data?.project_title?.includes('Safe Plan') || data?.project_title?.includes('Safe Home')) {
         setProject({
-          ...SAFE_HOME_PROJECT_DATA,
+          ...SAFE_PLAN_PROJECT_DATA,
           ...(data || {}),
           id: 'c3a2b3c4-d5e6-7890-abcd-ef1234567890',
-          project_title: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+          project_title: 'Safe Plan Wealth Management Fund — ৳20 Cr Facility',
           funding_type: 'Wealth Management',
           target_raise_bdt: 200000000,
           amount_raised_bdt: 52500000,
           booked_amount_bdt: 20000000,
-          spv_name: 'Safe Home Wealth Management SPV-01',
+          spv_name: 'Safe Plan Wealth Management SPV-01',
           yield_model: '18% p.a. (Monthly) · 20% p.a. (Semi-Annual) · 22% p.a. (Annual) Fixed Returns. Multi-Asset SME Deployments.',
           yield_percent: 20,
           duration_months: 36,
           min_otc_investment_bdt: 1000000,
           cover_image_url: null,
           youtube_url: null,
-          project_description: SAFE_HOME_PROJECT_DATA.project_description,
+          project_description: SAFE_PLAN_PROJECT_DATA.project_description,
           businesses: {
-            brand_name: 'Safe Home Wealth Management',
+            brand_name: 'Safe Plan Wealth Management',
             industry_sector: 'Wealth Management',
             operational_months: 36,
             ai_health_score: 95,
@@ -225,6 +226,7 @@ function ProjectDetail() {
   const embedUrl        = toEmbedUrl(project.youtube_url);
   const isWealthManagement = 
     project.funding_type === 'Wealth Management' || 
+    project.project_title?.includes('Safe Plan') ||
     project.project_title?.includes('Safe Home') ||
     project.id === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890';
 
@@ -274,15 +276,15 @@ function ProjectDetail() {
           {/* MEDIA GALLERY / VIDEO PLAYER */}
           <div className="glass-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
             {isWealthManagement ? (
-              /* Dedicated Safe Home Wealth Management Showcase Banner */
+              /* Dedicated Safe Plan Wealth Management Showcase Banner */
               <div style={{ padding: '2rem 1.75rem', background: 'linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(15,23,42,0.95) 100%)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div>
                     <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Institutional Credit Facility • Safe Home SPV-01
+                      Institutional Credit Facility • Safe Plan SPV-01
                     </span>
                     <h3 style={{ margin: '0.35rem 0 0.35rem 0', color: '#fff', fontSize: '1.4rem', fontWeight: '800' }}>
-                      Safe Home Wealth Management Fund
+                      Safe Plan Wealth Management Fund
                     </h3>
                     <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.86rem', maxWidth: '580px', lineHeight: '1.5' }}>
                       Multi-asset deployment facility actively funding verified corporate SME purchase orders, retail franchise expansion, and collateral-backed credit lines. Managed by Faiz Ahmed (Managing Partner) &amp; GRO10X Investment Committee.
@@ -598,7 +600,7 @@ function ProjectDetail() {
             </h3>
             <p style={{ color: '#cbd5e1', fontSize: '0.92rem', lineHeight: '1.6', margin: '0 0 1rem' }}>
               {isWealthManagement ? (
-                <>Capital is ring-fenced under <strong>Safe Home Wealth Management SPV-01</strong>. All funds are disbursed exclusively against verified corporate purchase orders (Delta Limited, Greenfield Jutex, Unique Group), backed by registered security cheques and dual-document settlement verification (signed delivery challans + bank repayment receipts).</>
+                <>Capital is ring-fenced under <strong>Safe Plan Wealth Management SPV-01</strong>. All funds are disbursed exclusively against verified corporate purchase orders (Delta Limited, Greenfield Jutex, Unique Group), backed by registered security cheques and dual-document settlement verification (signed delivery challans + bank repayment receipts).</>
               ) : (
                 <>Capital raised is funneled directly into <strong>{project.spv_name || 'GRO10X SPV Ltd.'}</strong>. All machinery, civil fit-outs, and inventory are held under the SPV — providing asset-backed security to every investor.</>
               )}

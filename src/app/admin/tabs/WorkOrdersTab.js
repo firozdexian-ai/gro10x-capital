@@ -16,7 +16,8 @@ import {
   settleWorkOrder,
   revertOrderToPending,
   calculateLedgerMetrics, 
-  generateWhatsAppBroadcast 
+  generateWhatsAppBroadcast,
+  formatDisplayDate
 } from '../../../lib/workOrders';
 import { formatCurrency } from '../../../lib/currency';
 
@@ -195,7 +196,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
         badge: 'Proof of Repayment',
         title: 'Repayment Bank Transfer Slip',
         url: order.settlement_repayment_receipt_url,
-        meta: `EFT/NPSB Repayment to Safe Home Fund • ${fmtLakhs(order.return_amount_bdt)}`,
+        meta: `EFT/NPSB Repayment to Safe Plan Fund • ${fmtLakhs(order.return_amount_bdt)}`,
         note: 'Document 1 of Dual Verification: Bank acknowledgment of full capital + profit return.'
       });
     }
@@ -287,7 +288,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
               <span className="status-badge status-badge--gold" style={{ fontSize: '0.72rem' }}>
-                SAFE HOME WEALTH MANAGEMENT FUND
+                SAFE PLAN WEALTH MANAGEMENT FUND
               </span>
               <span style={{ color: '#64748b' }}>•</span>
               <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '700' }}>৳20 Crore Facility</span>
@@ -518,8 +519,12 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <div style={{ color: '#cbd5e1' }}>{order.duration_days} Days</div>
-                        <div style={{ color: '#64748b', fontSize: '0.72rem' }}>Due: {order.due_date}</div>
+                        <div style={{ color: '#cbd5e1', fontWeight: '600' }}>
+                          Return: <span style={{ color: isClosingToday ? '#ef4444' : '#38bdf8' }}>{formatDisplayDate(order.due_date || order.return_date)}</span>
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                          Tenor: {order.duration_days} Days ({formatDisplayDate(order.start_date)})
+                        </div>
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
@@ -711,7 +716,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
               {/* Footer */}
               <div style={{ padding: '0.75rem 1.25rem', background: '#0b1120', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
-                  Institutional Audit Trail • Safe Home Wealth Management Fund
+                  Institutional Audit Trail • Safe Plan Wealth Management Fund
                 </span>
                 <button 
                   onClick={() => setSelectedOrderDocs(null)} 
@@ -777,7 +782,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                   <Landmark size={15} style={{ color: '#10b981' }} /> Document 1: Proof of Repayment Bank Transfer *
                 </label>
                 <p style={{ color: '#94a3b8', fontSize: '0.73rem', margin: '0 0 0.5rem 0' }}>
-                  EFT/NPSB slip from Aysha Siddika returning <strong>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong> to Safe Home account.
+                  EFT/NPSB slip from Aysha Siddika returning <strong>{fmtLakhs(settleTargetOrder.return_amount_bdt)}</strong> to Safe Plan account.
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <input 
@@ -1047,7 +1052,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                 <Briefcase size={18} style={{ color: '#38bdf8' }} />
                 <div>
                   <h3 style={{ margin: 0, fontWeight: '800', color: '#fff', fontSize: '1.05rem' }}>Onboard SME Facility &amp; Underwrite Limit</h3>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Safe Home Wealth Management SPV-01 • Multi-Tenant Workspace</span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Safe Plan Wealth Management SPV-01 • Multi-Tenant Workspace</span>
                 </div>
               </div>
               <button onClick={() => setShowOnboardModal(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
@@ -1063,7 +1068,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                   <div>
                     <h4 style={{ margin: '0 0 0.2rem 0', color: '#fff', fontSize: '0.95rem' }}>Facility Approved &amp; Workspace Provisioned!</h4>
                     <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem' }}>
-                      <strong>{onboardSuccessData.company_name}</strong> facility set at <strong>৳{(Number(onboardSuccessData.facility_limit_bdt)/100000).toFixed(2)} Lakhs</strong> under Safe Home SPV-01.
+                      <strong>{onboardSuccessData.company_name}</strong> facility set at <strong>৳{(Number(onboardSuccessData.facility_limit_bdt)/100000).toFixed(2)} Lakhs</strong> under Safe Plan SPV-01.
                     </p>
                   </div>
                 </div>
@@ -1128,7 +1133,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                     `We are pleased to inform you that the revolving credit facility for *${newFacility.company_name}* has been approved by Managing Partner Faiz Ahmed & GRO10X Investment Committee.\n\n` +
                     `💼 Approved Facility Limit: *৳${limitLakhs} Lakhs*\n` +
                     `⏳ Tenor: *${newFacility.cycle_tenor_days || 10} Days per Cycle*\n` +
-                    `🏛️ SPV Entity: *Safe Home Wealth Management SPV-01*\n\n` +
+                    `🏛️ SPV Entity: *Safe Plan Wealth Management SPV-01*\n\n` +
                     `🔗 Dedicated Company Portal:\n${portalUrl}\n\n` +
                     `📝 Direct Work Order Creation Link:\n${formUrl}\n\n` +
                     `🔑 Access PIN: Open Telegram bot @gro10xbizbot and type /pin (or share contact) from ${newFacility.founder_phone} to receive your 4-digit temporary access PIN.\n\n` +
@@ -1250,7 +1255,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                         checked={newFacility.security_cheque_received} 
                         onChange={e => setNewFacility({ ...newFacility, security_cheque_received: e.target.checked })}
                       />
-                      <span>Physical Signed Undated Security Cheque Deposited to Safe Home SPV</span>
+                      <span>Physical Signed Undated Security Cheque Deposited to Safe Plan SPV</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer' }}>
                       <input 

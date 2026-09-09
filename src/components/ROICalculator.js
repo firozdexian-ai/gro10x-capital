@@ -18,7 +18,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
   const opt3Rate = parseAmount(project?.yield_option_3_rate) || 35; // 35% Net Profit
 
   const durationMonths = parseAmount(project?.duration_months) || 24;
-  const isWealth = project?.funding_type === 'Wealth Management' || project?.project_title?.includes('Safe Home');
+  const isWealth = project?.funding_type === 'Wealth Management' || project?.project_title?.includes('Safe Plan') || project?.project_title?.includes('Safe Home');
 
   // Local interactive state
   const [investment, setInvestment] = useState(Math.max(minTicket, 1000000)); // Default 10L

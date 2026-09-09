@@ -63,20 +63,20 @@ function BusinessShowcaseContent() {
 
       if (error) throw error;
       const mappedData = (data || []).map(p => {
-        if (p.id === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890' || p.project_title?.includes('National Grid') || p.project_title?.includes('Safe Home')) {
+        if (p.id === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890' || p.project_title?.includes('National Grid') || p.project_title?.includes('Safe Plan') || p.project_title?.includes('Safe Home')) {
           return {
             ...p,
-            project_title: 'Safe Home Wealth Management Fund — ৳20 Cr Facility',
+            project_title: 'Safe Plan Wealth Management Fund — ৳20 Cr Facility',
             funding_type: 'Wealth Management',
             target_raise_bdt: 200000000,
             amount_raised_bdt: 52500000,
-            spv_name: 'Safe Home Wealth Management SPV-01',
+            spv_name: 'Safe Plan Wealth Management SPV-01',
             yield_model: '18% p.a. (Monthly) · 20% p.a. (Semi-Annual) · 22% p.a. (Annual) Fixed Returns. Multi-Asset SME Deployments.',
             min_otc_investment_bdt: 1000000,
-            project_description: 'GRO10X Safe Home Wealth Management Fund: A ৳20 Crore institutional credit & private equity facility actively deployed into verified SME work orders, franchise expansion, and collateral-backed credit lines. ৳5+ Crore AUM managed across 50+ private wealth investors.',
+            project_description: 'GRO10X Safe Plan Wealth Management Fund: A ৳20 Crore institutional credit & private equity facility actively deployed into verified SME work orders, franchise expansion, and collateral-backed credit lines. ৳5+ Crore AUM managed across 50+ private wealth investors.',
             businesses: {
               ...p.businesses,
-              brand_name: 'Safe Home Wealth Management',
+              brand_name: 'Safe Plan Wealth Management',
               industry_sector: 'Wealth Management',
               ai_health_score: 95
             }

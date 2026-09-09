@@ -431,7 +431,7 @@ export default function AdminPortal() {
         setPlatformSettings(sMap);
       }
 
-      // Fetch Work Orders (Safe Home Fund / Maats Cottage)
+      // Fetch Work Orders (Safe Plan Fund / Maats Cottage)
       try {
         const woData = await getWorkOrders();
         setWorkOrders(woData || []);

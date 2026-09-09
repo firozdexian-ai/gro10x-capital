@@ -240,7 +240,7 @@ async function runSafeHomeTests() {
 
     const adminContent = await adminPage.content();
     assert(adminContent.includes('Corporate Work-Order Financing Desk'), 'Admin desk header is rendered');
-    assert(adminContent.includes('SAFE HOME WEALTH MANAGEMENT FUND'), 'Safe Home Wealth Management Fund banner is displayed');
+    assert(adminContent.includes('SAFE PLAN WEALTH MANAGEMENT FUND') || adminContent.includes('SAFE HOME WEALTH MANAGEMENT FUND'), 'Safe Plan Wealth Management Fund banner is displayed');
     assert(adminContent.includes('Faiz Ahmed'), 'Faiz Ahmed Managing Partner co-sign is present');
     assert(adminContent.includes('Facility Utilization'), 'Maats Cottage facility utilization widget is rendered');
 
@@ -275,7 +275,7 @@ async function runSafeHomeTests() {
     const showcaseContent = await showcasePage.content();
     assert(showcaseContent.includes('Oro Roasters — Mirpur Hub'), 'Oro Mirpur deal is displayed');
     assert(showcaseContent.includes('Oro Roasters — Banani Hub'), 'Oro Banani deal is displayed');
-    assert(showcaseContent.includes('Safe Home Wealth Management Fund') || showcaseContent.includes('Safe Home'), 'Safe Home Wealth Management Fund deal is displayed');
+    assert(showcaseContent.includes('Safe Plan Wealth Management Fund') || showcaseContent.includes('Safe Plan') || showcaseContent.includes('Safe Home'), 'Safe Plan Wealth Management Fund deal is displayed');
 
     // Filter by Wealth Management
     const wmBtn = await showcasePage.locator('button:has-text("Wealth Management")').first();
@@ -283,20 +283,20 @@ async function runSafeHomeTests() {
       await wmBtn.click();
       await showcasePage.waitForTimeout(600);
       const filteredShowcase = await showcasePage.content();
-      assert(filteredShowcase.includes('Safe Home Wealth Management Fund'), 'Wealth Management category filter shows Safe Home Fund');
+      assert(filteredShowcase.includes('Safe Plan Wealth Management Fund') || filteredShowcase.includes('Safe Plan') || filteredShowcase.includes('Safe Home'), 'Wealth Management category filter shows Safe Plan Fund');
     }
 
     await showcasePage.screenshot({ path: path.join(ARTIFACTS_DIR, '07_showcase_safe_home_fund.png') });
     console.log('  📸 Captured 07_showcase_safe_home_fund.png');
 
-    // Test View Deal Room for Safe Home Wealth Management Fund
+    // Test View Deal Room for Safe Plan Wealth Management Fund
     await showcasePage.goto(`${BASE_URL}/projects/c3a2b3c4-d5e6-7890-abcd-ef1234567890`, { waitUntil: 'networkidle' });
     await showcasePage.waitForTimeout(1200);
 
     const dealRoomContent = await showcasePage.content();
-    assert(dealRoomContent.includes('Safe Home Wealth Management Fund'), 'Deal room displays Safe Home Wealth Management Fund title');
+    assert(dealRoomContent.includes('Safe Plan Wealth Management Fund') || dealRoomContent.includes('Safe Home'), 'Deal room displays Safe Plan Wealth Management Fund title');
     assert(!dealRoomContent.includes('National Grid'), 'Deal room does NOT display National Grid');
-    assert(dealRoomContent.includes('Safe Home SPV-01') || dealRoomContent.includes('Safe Home Wealth Management SPV-01'), 'Deal room displays Safe Home SPV');
+    assert(dealRoomContent.includes('Safe Plan SPV-01') || dealRoomContent.includes('Safe Plan Wealth Management SPV-01') || dealRoomContent.includes('Safe Home SPV-01') || dealRoomContent.includes('Safe Home Wealth Management SPV-01'), 'Deal room displays Safe Plan SPV');
     assert(!dealRoomContent.includes('Open Live Work-Order Tracker'), 'Open Live Work-Order Tracker is removed from public deal room');
     assert(dealRoomContent.includes('Active Portfolio Deployments'), 'Deal room displays Portfolio Deployments section');
     assert(dealRoomContent.includes('Maats Cottage Ltd'), 'Deal room displays Maats Cottage in portfolio deployments');

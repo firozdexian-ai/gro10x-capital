@@ -183,15 +183,17 @@ export default function MaatsCottageTrackerPage() {
       });
     }
 
-    // 5. Settle Challan
-    if (order.settlement_challan_receipt_url) {
+    // 5. Delivery Challan / Corporate Bill Copy
+    if (order.delivery_challan_url || order.settlement_challan_receipt_url) {
       list.push({
         id: 'challan',
-        badge: 'Delivery Proof',
-        title: 'Corporate Delivery Challan',
-        url: order.settlement_challan_receipt_url,
-        meta: `Goods Delivered to Mohakhali Warehouse`,
-        note: 'Document 2 of Dual Verification: Signed delivery challan acknowledging physical receipt of goods.'
+        badge: 'Delivery Challan',
+        title: 'Corporate Delivery Challan & Bill Copy',
+        url: order.delivery_challan_url || order.settlement_challan_receipt_url,
+        meta: `Stamped & Received by ${order.corporate_client} • Inv: ${order.delivery_challan_invoice_no || 'MCL-INVOICE'}`,
+        note: order.delivery_received_by 
+          ? `Goods physically received and officially stamped by ${order.delivery_received_by} on ${order.delivery_received_date}.`
+          : 'Document 2 of Dual Verification: Signed delivery challan acknowledging physical receipt of goods.'
       });
     }
 
@@ -617,6 +619,11 @@ export default function MaatsCottageTrackerPage() {
                           {order.tranche_info && (
                             <span style={{ background: 'rgba(56,189,248,0.15)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '600' }}>
                               {order.tranche_info}
+                            </span>
+                          )}
+                          {order.delivery_challan_url && (
+                            <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                              <CheckCircle2 size={11} /> Buyer Stamped ({order.delivery_received_date})
                             </span>
                           )}
                         </div>
@@ -1351,7 +1358,7 @@ export default function MaatsCottageTrackerPage() {
                   />
                   <button 
                     type="button" 
-                    onClick={() => setSettleChallanFile('/docs/msp-001-delta-po.png')}
+                    onClick={() => setSettleChallanFile(settleTargetOrder?.delivery_challan_url || '/docs/msp-001-delta-delivery-challan.png')}
                     className="btn-outline" 
                     style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
                   >

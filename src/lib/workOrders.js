@@ -65,6 +65,10 @@ export const SEED_WORK_ORDERS = [
     disbursement_receipt_url: '/receipts/msp-001-tranche-1.png',
     po_document_url: '/docs/msp-001-delta-po.png',
     po_document_pdf: '/docs/msp-001-delta-po.pdf',
+    delivery_challan_url: '/docs/msp-001-delta-delivery-challan.png',
+    delivery_challan_invoice_no: 'MCL_INVOICE_260907',
+    delivery_received_date: '07 Sep 2026',
+    delivery_received_by: 'Kamal (Delta Limited)',
     due_note: 'CLOSING TODAY (4:00 PM)',
     tranche_info: '2 Tranches: ৳1.00L + ৳1.50L CityTouch',
     disbursement_transfers: [
@@ -107,6 +111,10 @@ export const SEED_WORK_ORDERS = [
     disbursement_receipt_url: '/receipts/msp-002-tranche-1.png',
     po_document_url: '/docs/msp-002-delta-po.png',
     po_document_pdf: '/docs/msp-002-delta-po.pdf',
+    delivery_challan_url: '/docs/msp-002-delta-delivery-challan.png',
+    delivery_challan_invoice_no: 'MCL_INVOICE_260909.02',
+    delivery_received_date: '09 Sep 2026',
+    delivery_received_by: 'Kamal (Delta Limited)',
     due_note: 'Due Sep 9 (3 days left)',
     tranche_info: '3 Tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k Cash Handover',
     disbursement_transfers: [
@@ -158,6 +166,10 @@ export const SEED_WORK_ORDERS = [
     disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
     po_document_url: '/docs/msp-003-greenfield-po.png',
     po_document_pdf: '/docs/msp-003-greenfield-po.pdf',
+    delivery_challan_url: '/docs/msp-003-greenfield-delivery-challan.png',
+    delivery_challan_invoice_no: 'MCL_INVOICE_260913',
+    delivery_received_date: '13 Sep 2026',
+    delivery_received_by: 'Shakil Ahmed (Greenfield Jutex)',
     due_note: 'Due Sep 10 (4 days left)',
     tranche_info: 'Single Combined Tranche: ৳2.30L (Part of ৳3.75L transfer)',
     is_combined_disbursement: true,
@@ -195,6 +207,10 @@ export const SEED_WORK_ORDERS = [
     disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
     po_document_url: '/docs/msp-004-delta-po.png',
     po_document_pdf: '/docs/msp-004-delta-po.pdf',
+    delivery_challan_url: '/docs/msp-004-delta-delivery-challan.png',
+    delivery_challan_invoice_no: 'MCL_INVOICE_260913.02',
+    delivery_received_date: '13 Sep 2026',
+    delivery_received_by: 'Kamal (Delta Limited)',
     due_note: 'Due Sep 9 (3 days left)',
     tranche_info: 'Single Combined Tranche: ৳1.45L (Part of ৳3.75L transfer)',
     is_combined_disbursement: true,
@@ -232,6 +248,10 @@ export const SEED_WORK_ORDERS = [
     disbursement_receipt_url: '/receipts/msp-005-tranche-1.png',
     po_document_url: '/docs/msp-005-greenfield-po.png',
     po_document_pdf: '/docs/msp-005-greenfield-po.pdf',
+    delivery_challan_url: '/docs/msp-005-greenfield-delivery-challan.png',
+    delivery_challan_invoice_no: 'MCL_INVOICE_260915',
+    delivery_received_date: '15 Sep 2026',
+    delivery_received_by: 'Shakil Ahmed (Greenfield Jutex)',
     due_note: 'Due Sep 13 (7 days left)',
     tranche_info: '2 Tranches: ৳3.00L + ৳1.00L CityTouch',
     disbursement_transfers: [
@@ -367,7 +387,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v6';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v7';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

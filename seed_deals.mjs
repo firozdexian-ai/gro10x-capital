@@ -337,18 +337,21 @@ async function run() {
     },
     {
       order_code: 'MSP-006',
-      corporate_client: 'National Life Insurance',
-      item_description: 'Jute shopping bag',
+      corporate_client: 'Unique Group',
+      item_description: 'Jute Shopping Bag (2,000 pcs)',
       investment_amount_bdt: 325000,
       return_amount_bdt: 375000,
       profit_bdt: 50000,
-      duration_days: 10,
+      duration_days: 13,
       start_date: '2026-09-06',
-      due_date: '2026-09-16',
-      status: 'Pending_Approval',
-      payment_mode: 'EFT/NPSB',
+      due_date: '2026-09-19',
+      status: 'Disbursed_Active',
+      payment_mode: 'City Bank Transfer (CityTouch)',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Corporate jute bags for National Life nationwide branches.'
+      notes: 'PO Ref: PO-00474151 (৳3,74,000 PO value with VAT). Disbursed in combined ৳5,15,000 single transfer (৳3.25L for MSP-006 + ৳1.90L for MSP-009) to Aysha Siddika on 06 Sep 2026.',
+      disbursement_receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
+      po_document_url: '/docs/msp-006-unique-po.png',
+      po_document_pdf: '/docs/msp-006-unique-po.pdf'
     },
     {
       order_code: 'MSP-007',
@@ -367,7 +370,7 @@ async function run() {
     },
     {
       order_code: 'MSP-008',
-      corporate_client: 'Unique Group',
+      corporate_client: 'National Life Insurance',
       item_description: 'Jute shopping bag',
       investment_amount_bdt: 275000,
       return_amount_bdt: 315000,
@@ -378,22 +381,25 @@ async function run() {
       status: 'Pending_Approval',
       payment_mode: 'EFT/NPSB',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Institutional branded eco shopping bags.'
+      notes: 'National Life corporate eco shopping bags for branch roll-out.'
     },
     {
       order_code: 'MSP-009',
-      corporate_client: 'Delta',
-      item_description: 'Mug',
+      corporate_client: 'Delta Limited',
+      item_description: 'Porcelain mug four color branding (1,150 pcs)',
       investment_amount_bdt: 190000,
       return_amount_bdt: 220000,
       profit_bdt: 30000,
-      duration_days: 10,
+      duration_days: 9,
       start_date: '2026-09-06',
-      due_date: '2026-09-16',
-      status: 'Pending_Approval',
-      payment_mode: 'EFT/NPSB',
+      due_date: '2026-09-15',
+      status: 'Disbursed_Active',
+      payment_mode: 'City Bank Transfer (CityTouch)',
       bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-      notes: 'Custom ceramic branded mugs for Delta.'
+      notes: 'PO Ref: DL/MUG/2026/2114(September) (৳2,41,500 PO value). Disbursed in combined ৳5,15,000 single transfer (৳3.25L for MSP-006 + ৳1.90L for MSP-009) to Aysha Siddika on 06 Sep 2026.',
+      disbursement_receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
+      po_document_url: '/docs/msp-009-delta-po.png',
+      po_document_pdf: '/docs/msp-009-delta-po.pdf'
     }
   ];
 

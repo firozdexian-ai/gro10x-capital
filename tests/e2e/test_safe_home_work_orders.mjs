@@ -55,15 +55,17 @@ async function runSafeHomeTests() {
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '01_terminal_mobile_hero.png'), fullPage: false });
     console.log('  📸 Captured 01_terminal_mobile_hero.png');
 
-    // 1.3 Verify Active Deployments Tab (MSP-001 through MSP-005)
+    // 1.3 Verify Active Deployments Tab (MSP-001 through MSP-006, MSP-009)
     assert(pageText.includes('MSP-001'), 'Active order MSP-001 is displayed');
     assert(pageText.includes('MSP-002'), 'Active order MSP-002 is displayed');
     assert(pageText.includes('MSP-003'), 'Active order MSP-003 is displayed');
     assert(pageText.includes('MSP-004'), 'Active order MSP-004 is displayed');
     assert(pageText.includes('MSP-005'), 'Active order MSP-005 is displayed');
+    assert(pageText.includes('MSP-006'), 'Active order MSP-006 is displayed');
+    assert(pageText.includes('MSP-009'), 'Active order MSP-009 is displayed');
     assert(pageText.includes('Travel Kit Bag') || pageText.includes('Greenfield Jutex'), 'MSP-003 Greenfield Jutex Travel Kit Bag is displayed');
     assert(pageText.includes('Leather Key Ring'), 'MSP-004 Delta Limited Leather Key Ring is displayed');
-    assert(pageText.includes('Combined') || pageText.includes('3.75L'), 'Combined single transfer badge is displayed');
+    assert(pageText.includes('Combined') || pageText.includes('3.75L') || pageText.includes('5.15L'), 'Combined single transfer badge is displayed');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '02_terminal_active_orders.png'), fullPage: true });
     console.log('  📸 Captured 02_terminal_active_orders.png');
 
@@ -145,10 +147,8 @@ async function runSafeHomeTests() {
     await mobilePage.click('button:has-text("Pending Approvals")');
     await mobilePage.waitForTimeout(600);
     const pendingText = await mobilePage.content();
-    assert(pendingText.includes('MSP-006') && pendingText.includes('National Life Insurance'), 'Pending order MSP-006 is present');
     assert(pendingText.includes('MSP-007'), 'Pending order MSP-007 is present');
-    assert(pendingText.includes('MSP-008') && pendingText.includes('Unique Group'), 'Pending order MSP-008 is present');
-    assert(pendingText.includes('MSP-009') && pendingText.includes('Delta'), 'Pending order MSP-009 is present');
+    assert(pendingText.includes('MSP-008'), 'Pending order MSP-008 is present');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '04b_terminal_pending_approvals.png') });
     console.log('  📸 Captured 04b_terminal_pending_approvals.png');
 

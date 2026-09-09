@@ -258,20 +258,39 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-006',
     order_code: 'MSP-006',
-    corporate_client: 'National Life Insurance',
-    item_description: 'Jute shopping bag',
+    corporate_client: 'Unique Group',
+    po_ref_number: 'PO-00474151',
+    po_date: '2026-09-05',
+    po_value_bdt: 374000,
+    item_description: 'Jute Shopping Bag (2,000 pcs)',
     investment_amount_bdt: 325000,
     return_amount_bdt: 375000,
     profit_bdt: 50000,
-    duration_days: 10,
+    duration_days: 13,
     start_date: '2026-09-06',
-    due_date: '2026-09-16',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    due_date: '2026-09-19',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Corporate jute shopping bags for nationwide branch campaign. Client PO verified.',
-    disbursement_receipt_url: null,
-    due_note: 'Awaiting Disbursal'
+    notes: 'PO Ref: PO-00474151 (৳3,74,000 PO value with VAT). Disbursed in combined ৳5,15,000 single transfer (৳3.25L for MSP-006 + ৳1.90L for MSP-009) to Aysha Siddika on 06 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
+    po_document_url: '/docs/msp-006-unique-po.png',
+    po_document_pdf: '/docs/msp-006-unique-po.pdf',
+    due_note: 'Due Sep 19 (10 days left)',
+    tranche_info: 'Single Combined Tranche: ৳3.25L (Part of ৳5.15L transfer)',
+    is_combined_disbursement: true,
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 325000,
+        date: '06 Sep 2026, 05:54 PM',
+        ref_no: '100010793142',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
+        is_combined: true,
+        note: 'Disbursed in combined ৳5,15,000 single transfer with MSP-009 (3.25L + 1.90L) to Aysha Siddika'
+      }
+    ]
   },
   {
     id: 'wo-007',
@@ -294,7 +313,7 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-008',
     order_code: 'MSP-008',
-    corporate_client: 'Unique Group',
+    corporate_client: 'National Life Insurance',
     item_description: 'Jute shopping bag',
     investment_amount_bdt: 275000,
     return_amount_bdt: 315000,
@@ -305,31 +324,50 @@ export const SEED_WORK_ORDERS = [
     status: 'Pending_Approval',
     payment_mode: 'EFT/NPSB',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Unique Group corporate eco shopping bags.',
+    notes: 'National Life corporate eco shopping bags for branch roll-out.',
     disbursement_receipt_url: null,
     due_note: 'Awaiting Disbursal'
   },
   {
     id: 'wo-009',
     order_code: 'MSP-009',
-    corporate_client: 'Delta',
-    item_description: 'Mug',
+    corporate_client: 'Delta Limited',
+    po_ref_number: 'DL/MUG/2026/2114(September)',
+    po_date: '2026-09-06',
+    po_value_bdt: 241500,
+    item_description: 'Porcelain mug four color branding (1,150 pcs)',
     investment_amount_bdt: 190000,
     return_amount_bdt: 220000,
     profit_bdt: 30000,
-    duration_days: 10,
+    duration_days: 9,
     start_date: '2026-09-06',
-    due_date: '2026-09-16',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    due_date: '2026-09-15',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Delta promotional ceramic custom mugs.',
-    disbursement_receipt_url: null,
-    due_note: 'Awaiting Disbursal'
+    notes: 'PO Ref: DL/MUG/2026/2114(September) (৳2,41,500 PO value). Disbursed in combined ৳5,15,000 single transfer (৳3.25L for MSP-006 + ৳1.90L for MSP-009) to Aysha Siddika on 06 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
+    po_document_url: '/docs/msp-009-delta-po.png',
+    po_document_pdf: '/docs/msp-009-delta-po.pdf',
+    due_note: 'Due Sep 15 (6 days left)',
+    tranche_info: 'Single Combined Tranche: ৳1.90L (Part of ৳5.15L transfer)',
+    is_combined_disbursement: true,
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 190000,
+        date: '06 Sep 2026, 05:54 PM',
+        ref_no: '100010793142',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-006-009-combined-disbursement.png',
+        is_combined: true,
+        note: 'Disbursed in combined ৳5,15,000 single transfer with MSP-006 (3.25L + 1.90L) to Aysha Siddika'
+      }
+    ]
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v5';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v6';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

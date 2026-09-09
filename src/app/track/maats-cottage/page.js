@@ -171,8 +171,19 @@ export default function MaatsCottageTrackerPage() {
       });
     }
 
-    // 4. Settle Repayment Slip
-    if (order.settlement_repayment_receipt_url) {
+    // 4. Settle Repayment Slip(s)
+    if (order.repayment_transfers && order.repayment_transfers.length > 0) {
+      order.repayment_transfers.forEach((t, idx) => {
+        list.push({
+          id: `repayment-${idx + 1}`,
+          badge: `Repayment Slip ${idx + 1}`,
+          title: `Repayment Slip (${fmtLakhs(t.amount_bdt)})`,
+          url: t.receipt_url,
+          meta: `${t.method} • Ref: ${t.ref_no}`,
+          note: `Received into AHMED FAIZ account on ${t.date} (${fmtLakhs(t.amount_bdt)})`
+        });
+      });
+    } else if (order.settlement_repayment_receipt_url) {
       list.push({
         id: 'repayment',
         badge: 'Proof of Repayment',
@@ -1320,7 +1331,7 @@ export default function MaatsCottageTrackerPage() {
                   />
                   <button 
                     type="button" 
-                    onClick={() => setSettleRepaymentFile('/receipts/msp-001-tranche-1.png')}
+                    onClick={() => setSettleRepaymentFile('/receipts/msp-001-full-repayment-slips.png')}
                     className="btn-outline" 
                     style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
                   >

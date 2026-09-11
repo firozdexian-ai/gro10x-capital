@@ -352,17 +352,29 @@ export const SEED_WORK_ORDERS = [
     return_amount_bdt: 290000,
     profit_bdt: 40000,
     duration_days: 8,
-    start_date: '2026-09-07',
-    due_date: '2026-09-15',
-    return_date: '2026-09-15',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    start_date: '2026-09-10',
+    due_date: '2026-09-18',
+    return_date: '2026-09-18',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: NLIC-PO-078422 (৳3,10,000 PO value). 680 pcs Short Wallets @ ৳455.88. Delivery to NLI Tower Karwan Bazar by 15 Sep 2026. Target return: 15 Sep 2026.',
-    disbursement_receipt_url: null,
+    notes: 'PO Ref: NLIC-PO-078422 (৳3,10,000 PO value). Disbursed ৳2.50L via CityTouch on 10 Sep 2026. Return date: 18 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-007-disbursement.png',
     po_document_url: '/docs/msp-007-national-life-po.png',
     po_document_pdf: '/docs/msp-007-national-life-po.pdf',
-    due_note: 'Awaiting Partner Co-Sign'
+    due_note: 'Due Sep 18 (7 days left)',
+    tranche_info: 'Single Tranche: ৳2.50L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 250000,
+        date: '10 Sep 2026, 06:35 PM',
+        ref_no: '100011514433',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-007-disbursement.png',
+        note: 'Disbursed ৳2.50L via CityTouch by Faiz Ahmed on 10 Sep 2026'
+      }
+    ]
   },
   {
     id: 'wo-008',
@@ -376,17 +388,29 @@ export const SEED_WORK_ORDERS = [
     return_amount_bdt: 315000,
     profit_bdt: 40000,
     duration_days: 9,
-    start_date: '2026-09-06',
-    due_date: '2026-09-15',
-    return_date: '2026-09-15',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    start_date: '2026-09-10',
+    due_date: '2026-09-19',
+    return_date: '2026-09-19',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: NLIC-PO-078420 (৳4,00,000 PO value). 2,800 pcs Jute Shopping Bags @ ৳142.86. Delivery to NLI Tower Karwan Bazar by 15 Sep 2026. Target return: 15 Sep 2026.',
-    disbursement_receipt_url: null,
+    notes: 'PO Ref: NLIC-PO-078420 (৳4,00,000 PO value). Disbursed ৳2.75L via CityTouch on 10 Sep 2026. Return date: 19 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-008-disbursement.png',
     po_document_url: '/docs/msp-008-national-life-po.png',
     po_document_pdf: '/docs/msp-008-national-life-po.pdf',
-    due_note: 'Awaiting Partner Co-Sign'
+    due_note: 'Due Sep 19 (8 days left)',
+    tranche_info: 'Single Tranche: ৳2.75L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 275000,
+        date: '10 Sep 2026, 06:40 PM',
+        ref_no: '100011515558',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-008-disbursement.png',
+        note: 'Disbursed ৳2.75L via CityTouch by Faiz Ahmed on 10 Sep 2026'
+      }
+    ]
   },
   {
     id: 'wo-009',
@@ -428,7 +452,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v9';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v10';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

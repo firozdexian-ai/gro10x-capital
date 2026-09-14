@@ -55,7 +55,7 @@ async function runSafeHomeTests() {
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '01_terminal_mobile_hero.png'), fullPage: false });
     console.log('  📸 Captured 01_terminal_mobile_hero.png');
 
-    // 1.3 Verify Active Deployments Tab (MSP-002 through MSP-009)
+    // 1.3 Verify Active Deployments Tab (MSP-002 through MSP-010)
     assert(pageText.includes('MSP-002'), 'Active order MSP-002 is displayed');
     assert(pageText.includes('MSP-003'), 'Active order MSP-003 is displayed');
     assert(pageText.includes('MSP-004'), 'Active order MSP-004 is displayed');
@@ -64,6 +64,8 @@ async function runSafeHomeTests() {
     assert(pageText.includes('MSP-007'), 'Active order MSP-007 is displayed');
     assert(pageText.includes('MSP-008'), 'Active order MSP-008 is displayed');
     assert(pageText.includes('MSP-009'), 'Active order MSP-009 is displayed');
+    assert(pageText.includes('MSP-010'), 'Active order MSP-010 is displayed');
+    assert(pageText.includes('Sheltech') || pageText.includes('Sheltech Branded Printed Mug'), 'MSP-010 Sheltech order is displayed');
     assert(pageText.includes('Travel Kit Bag') || pageText.includes('Greenfield Jutex'), 'MSP-003 Greenfield Jutex Travel Kit Bag is displayed');
     assert(pageText.includes('Leather Key Ring'), 'MSP-004 Delta Limited Leather Key Ring is displayed');
     assert(pageText.includes('Combined') || pageText.includes('3.75L') || pageText.includes('5.15L'), 'Combined single transfer badge is displayed');
@@ -249,12 +251,14 @@ async function runSafeHomeTests() {
     assert(adminContent.includes('MSP-001'), 'MSP-001 is listed in the admin table');
     assert(adminContent.includes('Delta Limited') || adminContent.includes('Delta Life Insurance') || adminContent.includes('Delta'), 'Corporate client Delta is listed in table');
     assert(adminContent.includes('Greenfield Jutex') || adminContent.includes('Greenfield'), 'Greenfield Jutex is listed in table');
+    assert(adminContent.includes('Sheltech') || adminContent.includes('MSP-010'), 'MSP-010 Sheltech is listed in table');
 
     // Test filter buttons
     await adminPage.click('button:has-text("Disbursed Active")');
     await adminPage.waitForTimeout(400);
     assert(await adminPage.locator('td:has-text("MSP-007")').first().isVisible(), 'Filtered to disbursed active orders (MSP-007 visible)');
     assert(await adminPage.locator('td:has-text("MSP-008")').first().isVisible(), 'Filtered to disbursed active orders (MSP-008 visible)');
+    assert(await adminPage.locator('td:has-text("MSP-010")').first().isVisible(), 'Filtered to disbursed active orders (MSP-010 visible)');
 
     await adminPage.click('button:has-text("Pending Approval")');
     await adminPage.waitForTimeout(400);

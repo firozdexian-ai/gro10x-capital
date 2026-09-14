@@ -17,7 +17,8 @@ import {
   revertOrderToPending,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast,
-  formatDisplayDate
+  formatDisplayDate,
+  computeDueStatus
 } from '../../../lib/workOrders';
 import { formatCurrency } from '../../../lib/currency';
 
@@ -481,14 +482,18 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                 filteredOrders.map(order => {
                   const profit = Number(order.profit_bdt || (order.return_amount_bdt - order.investment_amount_bdt));
                   const marginPct = ((profit / Number(order.investment_amount_bdt)) * 100).toFixed(1);
-                  const isClosingToday = order.due_note?.includes('CLOSING TODAY');
+                  const liveStatus = computeDueStatus(order);
+                  const isOverdue = liveStatus.includes('Overdue');
+                  const isClosingToday = liveStatus.includes('DUE TODAY');
+                  const isUrgent = isOverdue || isClosingToday;
+                  const isNearDue = liveStatus.includes('Due Tomorrow') || (liveStatus.includes('days left') && liveStatus.includes('⚠️'));
 
                   return (
                     <tr 
                       key={order.order_code} 
                       style={{ 
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        background: isClosingToday ? 'rgba(239,68,68,0.04)' : undefined
+                        background: isUrgent ? 'rgba(239,68,68,0.04)' : undefined
                       }}
                     >
                       <td style={{ padding: '0.85rem 1rem', fontWeight: '700', color: '#fff' }}>
@@ -520,17 +525,22 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
 
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <div style={{ color: '#cbd5e1', fontWeight: '600' }}>
-                          Return: <span style={{ color: isClosingToday ? '#ef4444' : '#38bdf8' }}>{formatDisplayDate(order.due_date || order.return_date)}</span>
+                          Return: <span style={{ color: isUrgent ? '#ef4444' : (isNearDue ? '#f59e0b' : '#38bdf8') }}>{formatDisplayDate(order.due_date || order.return_date)}</span>
                         </div>
                         <div style={{ color: '#64748b', fontSize: '0.72rem' }}>
                           Tenor: {order.duration_days} Days ({formatDisplayDate(order.start_date)})
                         </div>
+                        {liveStatus && order.status === 'Disbursed_Active' && (
+                          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: isUrgent ? '#ef4444' : (isNearDue ? '#f59e0b' : '#38bdf8'), marginTop: '0.2rem' }}>
+                            {liveStatus}
+                          </div>
+                        )}
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
                         {order.status === 'Disbursed_Active' && (
-                          <span className={`status-badge ${isClosingToday ? 'status-badge--danger' : 'status-badge--success'}`} style={{ fontSize: '0.7rem' }}>
-                            {isClosingToday ? 'CLOSING TODAY (4PM)' : 'Active'}
+                          <span className={`status-badge ${isUrgent ? 'status-badge--danger' : 'status-badge--success'}`} style={{ fontSize: '0.7rem' }}>
+                            {isOverdue ? 'Overdue' : (isClosingToday ? 'DUE TODAY' : 'Active')}
                           </span>
                         )}
                         {order.status === 'Pending_Approval' && (

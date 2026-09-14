@@ -449,10 +449,46 @@ export const SEED_WORK_ORDERS = [
         note: 'Disbursed in combined ৳5,15,000 single transfer with MSP-006 (3.25L + 1.90L) to Aysha Siddika'
       }
     ]
+  },
+  {
+    id: 'wo-010',
+    order_code: 'MSP-010',
+    corporate_client: 'Sheltech (Pvt.) Ltd.',
+    po_ref_number: 'Sheltech/Brand/26-000142',
+    po_date: '2026-09-14',
+    po_value_bdt: 640000,
+    item_description: 'Sheltech Branded Printed Mug (2,000 pcs)',
+    investment_amount_bdt: 550000,
+    return_amount_bdt: 610000,
+    profit_bdt: 60000,
+    duration_days: 3,
+    start_date: '2026-09-14',
+    due_date: '2026-09-17',
+    return_date: '2026-09-17',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'PO Ref: Sheltech/Brand/26-000142 (৳6,40,000 PO value). 2,000 pcs porcelain ceramic mugs with 24K Gold branding @ ৳320. Disbursed ৳5.50L via CityTouch on 14 Sep 2026. Return date: 17 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-010-disbursement.png',
+    po_document_url: '/docs/msp-010-sheltech-po.png',
+    po_document_pdf: '/docs/msp-010-sheltech-po.pdf',
+    due_note: 'Due Sep 17 (3 days left)',
+    tranche_info: 'Single Tranche: ৳5.50L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 550000,
+        date: '14 Sep 2026, 05:57 PM',
+        ref_no: '100012081695',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-010-disbursement.png',
+        note: 'Disbursed ৳5.50L via CityTouch by Faiz Ahmed on 14 Sep 2026'
+      }
+    ]
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v10';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v11';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data
@@ -689,6 +725,45 @@ export function formatDisplayDate(dateStr) {
 }
 
 /**
+ * Dynamically computes real-time due status and countdown relative to today's date
+ */
+export function computeDueStatus(order, refDate = new Date()) {
+  if (!order) return '';
+  if (order.status === 'Settled_Repaid') return order.due_note || 'Settled & Repaid';
+  if (order.status === 'Pending_Approval') return order.due_note || 'Awaiting Partner Sign-off';
+  if (!order.due_date && !order.return_date) return order.due_note || '';
+
+  const targetDateStr = order.due_date || order.return_date;
+  const today = new Date(refDate);
+  today.setHours(0, 0, 0, 0);
+
+  const due = new Date(targetDateStr + (targetDateStr.includes('T') ? '' : 'T00:00:00'));
+  due.setHours(0, 0, 0, 0);
+
+  if (isNaN(due.getTime())) return order.due_note || '';
+
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  const displayDate = formatDisplayDate(targetDateStr);
+
+  if (diffDays < 0) {
+    const absDays = Math.abs(diffDays);
+    return `🔴 ${absDays} Day${absDays > 1 ? 's' : ''} Overdue (was due ${displayDate})`;
+  }
+  if (diffDays === 0) {
+    return `🚨 DUE TODAY (${displayDate})`;
+  }
+  if (diffDays === 1) {
+    return `⚠️ Due Tomorrow (${displayDate})`;
+  }
+  if (diffDays <= 3) {
+    return `⚠️ Due ${displayDate} (${diffDays} days left)`;
+  }
+  return `Due ${displayDate} (${diffDays} days left)`;
+}
+
+/**
  * Generates formatted text for WhatsApp group updates ("Maats Cottage small work order")
  */
 export function generateWhatsAppBroadcast(orders = []) {
@@ -696,6 +771,11 @@ export function generateWhatsAppBroadcast(orders = []) {
   const activeOrders = orders.filter(o => o.status === 'Disbursed_Active');
   const pendingOrders = orders.filter(o => o.status === 'Pending_Approval');
   const settledOrders = orders.filter(o => o.status === 'Settled_Repaid');
+
+  const headroom = 2500000 - metrics.totalDisbursedActive;
+  const headroomLine = headroom >= 0
+    ? `• Available Fund Headroom: *৳${(headroom / 100000).toFixed(2)} Lac* (of ৳25.00L Limit)`
+    : `• Available Fund Headroom: *৳0.00 Lac* (Active ৳${(metrics.totalDisbursedActive / 100000).toFixed(2)}L deployed of ৳25.00L Limit — 109.6% Peak Revolving)`;
 
   const lines = [
     `🏢 *GRO10X CAPITAL × SAFE PLAN WEALTH MANAGEMENT FUND*`,
@@ -708,8 +788,8 @@ export function generateWhatsAppBroadcast(orders = []) {
     `• Active Capital Deployed: *৳${(metrics.totalDisbursedActive / 100000).toFixed(2)} Lac* (${activeOrders.length} Orders)`,
     `• Expected Gross Return: *৳${(metrics.totalExpectedReturnActive / 100000).toFixed(2)} Lac*`,
     `• Net Cycle Profit: *৳${(metrics.totalActiveProfit / 1000).toFixed(0)}k* (${metrics.avgMarginActivePct}%)`,
-    `• Total Settled & Repaid: *৳${(metrics.totalSettledCapital / 100000).toFixed(2)} Lac* (${settledOrders.length} Orders Completed ✓)`,
-    `• Available Fund Headroom: *৳${((2500000 - metrics.totalDisbursedActive) / 100000).toFixed(2)} Lac* (of ৳25.00L Limit)`,
+    `• Total Settled & Repaid: *৳${(metrics.totalSettledCapital / 100000).toFixed(2)} Lac* (${settledOrders.length} Order${settledOrders.length === 1 ? '' : 's'} Completed ✓)`,
+    headroomLine,
     `• Pending Disbursal Requests: *৳${(metrics.totalPendingCapital / 100000).toFixed(2)} Lac* (${pendingOrders.length} Orders)`,
     `───────────────────────────────`,
     `⚡ *ACTIVE DEPLOYMENTS:*`
@@ -719,7 +799,8 @@ export function generateWhatsAppBroadcast(orders = []) {
     const invLac = (Number(o.investment_amount_bdt) / 100000).toFixed(2);
     const retLac = (Number(o.return_amount_bdt) / 100000).toFixed(2);
     const profitK = (Number(o.profit_bdt || (o.return_amount_bdt - o.investment_amount_bdt)) / 1000).toFixed(0);
-    const alert = o.due_note ? ` — ⚠️ *${o.due_note}*` : '';
+    const dueStatus = computeDueStatus(o);
+    const alert = dueStatus ? ` — *${dueStatus}*` : '';
     lines.push(`▸ *${o.order_code}* | ${o.corporate_client} (${o.item_description})`);
     lines.push(`  Disbursed: ৳${invLac}L → Return: ৳${retLac}L (+৳${profitK}k)${alert}`);
   });

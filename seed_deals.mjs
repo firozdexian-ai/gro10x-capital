@@ -539,6 +539,41 @@ async function run() {
           note: 'Disbursed in combined ৳5,15,000 single transfer with MSP-006 (3.25L + 1.90L) to Aysha Siddika'
         }
       ]
+    },
+    {
+      order_code: 'MSP-010',
+      corporate_client: 'Sheltech (Pvt.) Ltd.',
+      po_ref_number: 'Sheltech/Brand/26-000142',
+      po_date: '2026-09-14',
+      po_value_bdt: 640000,
+      item_description: 'Sheltech Branded Printed Mug (2,000 pcs)',
+      investment_amount_bdt: 550000,
+      return_amount_bdt: 610000,
+      profit_bdt: 60000,
+      duration_days: 3,
+      start_date: '2026-09-14',
+      due_date: '2026-09-17',
+      return_date: '2026-09-17',
+      status: 'Disbursed_Active',
+      payment_mode: 'City Bank Transfer (CityTouch)',
+      bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+      notes: 'PO Ref: Sheltech/Brand/26-000142 (৳6,40,000 PO value). 2,000 pcs porcelain ceramic mugs with 24K Gold branding @ ৳320. Disbursed ৳5.50L via CityTouch on 14 Sep 2026. Return date: 17 Sep 2026.',
+      disbursement_receipt_url: '/receipts/msp-010-disbursement.png',
+      po_document_url: '/docs/msp-010-sheltech-po.png',
+      po_document_pdf: '/docs/msp-010-sheltech-po.pdf',
+      due_note: 'Due Sep 17 (3 days left)',
+      tranche_info: 'Single Tranche: ৳5.50L CityTouch',
+      disbursement_transfers: [
+        {
+          tranche_no: 1,
+          amount_bdt: 550000,
+          date: '14 Sep 2026, 05:57 PM',
+          ref_no: '100012081695',
+          method: 'City Bank Transfer (CityTouch)',
+          receipt_url: '/receipts/msp-010-disbursement.png',
+          note: 'Disbursed ৳5.50L via CityTouch by Faiz Ahmed on 14 Sep 2026'
+        }
+      ]
     }
   ];
 

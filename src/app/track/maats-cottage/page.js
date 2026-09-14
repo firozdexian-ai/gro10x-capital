@@ -19,7 +19,8 @@ import {
   revertOrderToPending,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast,
-  formatDisplayDate
+  formatDisplayDate,
+  computeDueStatus
 } from '../../../lib/workOrders';
 import { formatCurrency } from '../../../lib/currency';
 
@@ -604,8 +605,11 @@ export default function MaatsCottageTrackerPage() {
               {activeOrders.map(order => {
                 const profit = Number(order.profit_bdt || (order.return_amount_bdt - order.investment_amount_bdt));
                 const marginPct = ((profit / Number(order.investment_amount_bdt)) * 100).toFixed(1);
-                const isClosingToday = order.due_note?.includes('CLOSING TODAY') || order.due_note?.includes('DUE TODAY');
-                const isMatured = order.due_note?.includes('Matured');
+                const liveStatus = computeDueStatus(order);
+                const isOverdue = liveStatus.includes('Overdue');
+                const isClosingToday = liveStatus.includes('DUE TODAY');
+                const isUrgent = isOverdue || isClosingToday;
+                const isNearDue = liveStatus.includes('Due Tomorrow') || (liveStatus.includes('days left') && liveStatus.includes('⚠️'));
 
                 return (
                   <div 
@@ -613,10 +617,10 @@ export default function MaatsCottageTrackerPage() {
                     className="glass-card" 
                     style={{ 
                       padding: '1.25rem', 
-                      borderColor: isClosingToday ? 'rgba(239,68,68,0.5)' : (isMatured ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.08)'),
-                      background: isClosingToday 
+                      borderColor: isUrgent ? 'rgba(239,68,68,0.5)' : (isNearDue ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.08)'),
+                      background: isUrgent 
                         ? 'linear-gradient(180deg, rgba(239,68,68,0.06) 0%, rgba(15,23,42,0.92) 100%)' 
-                        : (isMatured ? 'linear-gradient(180deg, rgba(245,158,11,0.06) 0%, rgba(15,23,42,0.92) 100%)' : undefined)
+                        : (isNearDue ? 'linear-gradient(180deg, rgba(245,158,11,0.06) 0%, rgba(15,23,42,0.92) 100%)' : undefined)
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
@@ -627,12 +631,12 @@ export default function MaatsCottageTrackerPage() {
                             Disbursed &amp; Active
                           </span>
                           {/* Prominent Return / Due Note Badge */}
-                          {order.due_note && (
+                          {liveStatus && (
                             <span 
                               style={{ 
-                                background: isClosingToday ? 'rgba(239,68,68,0.2)' : (isMatured ? 'rgba(245,158,11,0.2)' : 'rgba(56,189,248,0.15)'), 
-                                color: isClosingToday ? '#ef4444' : (isMatured ? '#f59e0b' : '#38bdf8'), 
-                                border: `1px solid ${isClosingToday ? '#ef4444' : (isMatured ? '#f59e0b' : 'rgba(56,189,248,0.4)')}`, 
+                                background: isUrgent ? 'rgba(239,68,68,0.2)' : (isNearDue ? 'rgba(245,158,11,0.2)' : 'rgba(56,189,248,0.15)'), 
+                                color: isUrgent ? '#ef4444' : (isNearDue ? '#f59e0b' : '#38bdf8'), 
+                                border: `1px solid ${isUrgent ? '#ef4444' : (isNearDue ? '#f59e0b' : 'rgba(56,189,248,0.4)')}`, 
                                 borderRadius: '6px', 
                                 padding: '0.15rem 0.55rem', 
                                 fontSize: '0.68rem', 
@@ -642,8 +646,8 @@ export default function MaatsCottageTrackerPage() {
                                 gap: '0.3rem' 
                               }}
                             >
-                              {isClosingToday ? <Clock size={11} className="animate-pulse" /> : (isMatured ? <AlertTriangle size={11} /> : <Calendar size={11} />)}
-                              {order.due_note}
+                              {isUrgent ? <AlertTriangle size={11} className="animate-pulse" /> : (isNearDue ? <Clock size={11} /> : <Calendar size={11} />)}
+                              {liveStatus}
                             </span>
                           )}
                           {order.tranche_info && (
@@ -704,7 +708,7 @@ export default function MaatsCottageTrackerPage() {
                       </div>
                       <div>
                         <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Return Date</span>
-                        <strong style={{ fontSize: '1rem', color: isClosingToday ? '#ef4444' : (isMatured ? '#f59e0b' : '#38bdf8'), display: 'block' }}>
+                        <strong style={{ fontSize: '1rem', color: isUrgent ? '#ef4444' : (isNearDue ? '#f59e0b' : '#38bdf8'), display: 'block' }}>
                           {formatDisplayDate(order.due_date || order.return_date)}
                         </strong>
                         <span style={{ color: '#94a3b8', fontSize: '0.72rem', display: 'block' }}>

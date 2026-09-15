@@ -55,10 +55,8 @@ async function runSafeHomeTests() {
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '01_terminal_mobile_hero.png'), fullPage: false });
     console.log('  📸 Captured 01_terminal_mobile_hero.png');
 
-    // 1.3 Verify Active Deployments Tab (MSP-002 through MSP-010)
+    // 1.3 Verify Active Deployments Tab (MSP-002, MSP-005 through MSP-010)
     assert(pageText.includes('MSP-002'), 'Active order MSP-002 is displayed');
-    assert(pageText.includes('MSP-003'), 'Active order MSP-003 is displayed');
-    assert(pageText.includes('MSP-004'), 'Active order MSP-004 is displayed');
     assert(pageText.includes('MSP-005'), 'Active order MSP-005 is displayed');
     assert(pageText.includes('MSP-006'), 'Active order MSP-006 is displayed');
     assert(pageText.includes('MSP-007'), 'Active order MSP-007 is displayed');
@@ -66,9 +64,6 @@ async function runSafeHomeTests() {
     assert(pageText.includes('MSP-009'), 'Active order MSP-009 is displayed');
     assert(pageText.includes('MSP-010'), 'Active order MSP-010 is displayed');
     assert(pageText.includes('Sheltech') || pageText.includes('Sheltech Branded Printed Mug'), 'MSP-010 Sheltech order is displayed');
-    assert(pageText.includes('Travel Kit Bag') || pageText.includes('Greenfield Jutex'), 'MSP-003 Greenfield Jutex Travel Kit Bag is displayed');
-    assert(pageText.includes('Leather Key Ring'), 'MSP-004 Delta Limited Leather Key Ring is displayed');
-    assert(pageText.includes('Combined') || pageText.includes('3.75L') || pageText.includes('5.15L'), 'Combined single transfer badge is displayed');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '02_terminal_active_orders.png'), fullPage: true });
     console.log('  📸 Captured 02_terminal_active_orders.png');
 
@@ -93,7 +88,7 @@ async function runSafeHomeTests() {
     await mobilePage.locator('button:has-text("Close Audit Package")').first().click();
     await mobilePage.waitForTimeout(400);
 
-    // 1.5 Test Dual-Document Settlement Modal on MSP-001
+    // 1.5 Test Dual-Document Settlement Modal
     const settleBtn = await mobilePage.locator('button:has-text("Settle & Close")').first();
     assert(await settleBtn.isVisible(), 'Settle & Close button is visible on active orders');
     await settleBtn.click();
@@ -115,7 +110,10 @@ async function runSafeHomeTests() {
     await mobilePage.click('button:has-text("Settled Orders")');
     await mobilePage.waitForTimeout(600);
     const settledContent = await mobilePage.content();
-    assert((settledContent.includes('Settled & Repaid') || settledContent.includes('Settled &amp; Repaid')) && settledContent.includes('MSP-001'), 'MSP-001 moved to Settled Orders tab after dual verification');
+    assert(settledContent.includes('Settled & Repaid') || settledContent.includes('Settled &amp; Repaid'), 'Settled Orders tab rendered');
+    assert(settledContent.includes('MSP-001'), 'MSP-001 in Settled Orders tab');
+    assert(settledContent.includes('MSP-003'), 'MSP-003 in Settled Orders tab');
+    assert(settledContent.includes('MSP-004'), 'MSP-004 in Settled Orders tab');
     await mobilePage.screenshot({ path: path.join(ARTIFACTS_DIR, '03c_terminal_settled_orders_tab.png') });
     console.log('  📸 Captured 03c_terminal_settled_orders_tab.png');
 

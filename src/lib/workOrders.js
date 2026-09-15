@@ -184,10 +184,11 @@ export const SEED_WORK_ORDERS = [
     start_date: '2026-09-02',
     due_date: '2026-09-09',
     return_date: '2026-09-09',
-    status: 'Disbursed_Active',
+    settled_date: '2026-09-15',
+    status: 'Settled_Repaid',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: GFJ/09/2026/212 (৳2,92,500 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026. Return date: 09 Sep 2026.',
+    notes: 'PO Ref: GFJ/09/2026/212 (৳2,92,500 PO value). Disbursed ৳2.30L via CityTouch on 02 Sep 2026. 100% Repaid (৳2.645L) to Ahmed Faiz on 15 Sep 2026.',
     disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
     po_document_url: '/docs/msp-003-greenfield-po.png',
     po_document_pdf: '/docs/msp-003-greenfield-po.pdf',
@@ -195,7 +196,10 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260913',
     delivery_received_date: '13 Sep 2026',
     delivery_received_by: 'Shakil Ahmed (Greenfield Jutex)',
-    due_note: 'DUE TODAY (Sep 9)',
+    settlement_repayment_receipt_url: '/receipts/msp-003-repayment.png',
+    settlement_challan_receipt_url: '/docs/msp-003-greenfield-delivery-challan.png',
+    settlement_note: 'Full principal (৳2.30L) + profit (৳34.5k) returned via CityTouch (৳2,64,500) to Ahmed Faiz on 15 Sep 2026. Ref: 100012161837. Delivery verified via signed challan MCL_INVOICE_260913.',
+    due_note: 'Settled & Repaid on 15 Sep',
     tranche_info: 'Single Combined Tranche: ৳2.30L (Part of ৳3.75L transfer)',
     is_combined_disbursement: true,
     disbursement_transfers: [
@@ -209,6 +213,17 @@ export const SEED_WORK_ORDERS = [
         is_combined: true,
         note: 'Disbursed in combined ৳3,75,000 single transfer with MSP-004 (2.3L + 1.45L) by Faiz Ahmed to Aysha Siddika'
       }
+    ],
+    repayment_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 264500,
+        date: '15 Sep 2026, 10:35 AM',
+        ref_no: '100012161837',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-003-repayment.png',
+        note: 'Full settlement of ৳2.645L transferred by Aysha Siddika to Ahmed Faiz'
+      }
     ]
   },
   {
@@ -220,16 +235,17 @@ export const SEED_WORK_ORDERS = [
     po_value_bdt: 194625,
     item_description: 'Leather Key Ring with ID Hook (2,250 pcs)',
     investment_amount_bdt: 145000,
-    return_amount_bdt: 166750,
-    profit_bdt: 21750,
+    return_amount_bdt: 166000,
+    profit_bdt: 21000,
     duration_days: 7,
     start_date: '2026-09-02',
     due_date: '2026-09-09',
     return_date: '2026-09-09',
-    status: 'Disbursed_Active',
+    settled_date: '2026-09-15',
+    status: 'Settled_Repaid',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: DL/Key Ring/2026/1016(September) (৳1,94,625 PO value). Disbursed in combined ৳3,75,000 single transfer (৳2.30L for MSP-003 + ৳1.45L for MSP-004) by Faiz Ahmed to Aysha Siddika on 02 Sep 2026. Return date: 09 Sep 2026.',
+    notes: 'PO Ref: DL/Key Ring/2026/1016(September) (৳1,94,625 PO value). Disbursed ৳1.45L via CityTouch on 02 Sep 2026. 100% Repaid (৳1.66L) to Ahmed Faiz on 15 Sep 2026.',
     disbursement_receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
     po_document_url: '/docs/msp-004-delta-po.png',
     po_document_pdf: '/docs/msp-004-delta-po.pdf',
@@ -237,7 +253,10 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260913.02',
     delivery_received_date: '13 Sep 2026',
     delivery_received_by: 'Kamal (Delta Limited)',
-    due_note: 'DUE TODAY (Sep 9)',
+    settlement_repayment_receipt_url: '/receipts/msp-004-repayment.png',
+    settlement_challan_receipt_url: '/docs/msp-004-delta-delivery-challan.png',
+    settlement_note: 'Full principal (৳1.45L) + profit (৳21k) returned via CityTouch (৳1,66,000) to Ahmed Faiz on 15 Sep 2026. Ref: 100012173609. Delivery confirmed via signed challan MCL_INVOICE_260913.02.',
+    due_note: 'Settled & Repaid on 15 Sep',
     tranche_info: 'Single Combined Tranche: ৳1.45L (Part of ৳3.75L transfer)',
     is_combined_disbursement: true,
     disbursement_transfers: [
@@ -250,6 +269,17 @@ export const SEED_WORK_ORDERS = [
         receipt_url: '/receipts/msp-003-004-combined-disbursement.png',
         is_combined: true,
         note: 'Disbursed in combined ৳3,75,000 single transfer with MSP-003 (2.3L + 1.45L) by Faiz Ahmed to Aysha Siddika'
+      }
+    ],
+    repayment_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 166000,
+        date: '15 Sep 2026, 11:48 AM',
+        ref_no: '100012173609',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-004-repayment.png',
+        note: 'Full settlement of ৳1.66L transferred by Aysha Siddika to Ahmed Faiz'
       }
     ]
   },
@@ -488,7 +518,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v11';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v12';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

@@ -12,6 +12,14 @@ import { formatCurrency } from '../../../lib/currency';
 import { supabase } from '../../../lib/supabase';
 import ROICalculator from '../../../components/ROICalculator';
 import FAQAccordion from '../../../components/FAQAccordion';
+import WealthHero from '../../../components/wealth/WealthHero';
+import WealthTabs from '../../../components/wealth/WealthTabs';
+import WealthOverview from '../../../components/wealth/WealthOverview';
+import WealthReturnsSimulator from '../../../components/wealth/WealthReturnsSimulator';
+import LiveWorkOrderPipeline from '../../../components/wealth/LiveWorkOrderPipeline';
+import SpvSecurityFramework from '../../../components/wealth/SpvSecurityFramework';
+import FundGovernance from '../../../components/wealth/FundGovernance';
+import WealthStickySidebar from '../../../components/wealth/WealthStickySidebar';
 
 const SAFE_PLAN_PROJECT_DATA = {
   id: 'c3a2b3c4-d5e6-7890-abcd-ef1234567890',
@@ -68,11 +76,34 @@ function ProjectDetail() {
   const [project,    setProject]    = useState(null);
   const [error,      setError]      = useState(null);
   const [copied,     setCopied]     = useState(false);
+  const [activeTab,  setActiveTab]  = useState('overview');
+  const [fundMetrics, setFundMetrics] = useState(null);
 
   useEffect(() => {
     if (!projectId) return;
     fetchProject();
   }, [projectId]);
+
+  const isWealthManagement = 
+    project?.funding_type === 'Wealth Management' || 
+    project?.project_title?.includes('Safe Plan') ||
+    project?.project_title?.includes('Safe Home') ||
+    projectId === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890' ||
+    projectId === 'safe-home' ||
+    projectId === 'safe-home-fund';
+
+  useEffect(() => {
+    if (isWealthManagement && projectId) {
+      fetch(`/api/projects/${projectId}/fund-metrics`)
+        .then(res => res.json())
+        .then(data => {
+          if (data?.success && data?.fund) {
+            setFundMetrics(data.fund);
+          }
+        })
+        .catch(err => console.warn('Fund metrics fetch error:', err));
+    }
+  }, [projectId, isWealthManagement]);
 
   const fetchProject = async () => {
     setLoading(true);
@@ -152,20 +183,26 @@ function ProjectDetail() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const openLeadBot = async () => {
+  const openLeadBot = async (triggerContext = 'Deal Express Interest') => {
     if (typeof window === 'undefined') return;
 
     // 1. Dispatch custom event for client LeadBot drawer
     window.dispatchEvent(new CustomEvent('open-lead-bot', {
-      detail: { projectId, projectTitle: project?.project_title, refCode }
+      detail: { 
+        projectId, 
+        projectTitle: project?.project_title, 
+        refCode,
+        investmentAmount: isWealthManagement ? 1000000 : 500000,
+        yieldOption: isWealthManagement ? 'Option 1 (18% p.a. Monthly Cash Flow)' : 'Option 1'
+      }
     }));
 
     // 2. Log lead record into inquiry_leads
     try {
       await supabase.from('inquiry_leads').insert([{
-        full_name: 'Deal Room Prospect',
-        inquiry_type: 'Deal Express Interest',
-        notes: `Express interest triggered for: ${project?.project_title || projectId}`,
+        full_name: isWealthManagement ? 'Private Wealth Prospect' : 'Deal Room Prospect',
+        inquiry_type: isWealthManagement ? 'Wealth Management Briefing' : 'Deal Express Interest',
+        notes: `Interest from: ${triggerContext} for: ${project?.project_title || projectId}`,
         lead_status: 'New',
         referral_code: refCode || null
       }]);
@@ -179,8 +216,8 @@ function ProjectDetail() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: '🔥 New Deal Room Interest Clicked',
-          message: `An investor clicked 'Express Interest' for: <b>${project?.project_title}</b> (${project?.businesses?.brand_name || 'Syndicate Deal'})\n\nRef Code: <code>${refCode || 'Direct'}</code>`,
+          title: isWealthManagement ? '🔥 New Wealth Management Briefing Request' : '🔥 New Deal Room Interest Clicked',
+          message: `An investor requested a briefing for: <b>${project?.project_title}</b> (${project?.businesses?.brand_name || 'Syndicate Deal'})\nContext: <code>${triggerContext}</code>\nRef Code: <code>${refCode || 'Direct'}</code>`,
           actionUrl: `${window.location.origin}/admin`
         })
       });
@@ -214,6 +251,92 @@ function ProjectDetail() {
     </div>
   );
 
+  // ── WEALTH MANAGEMENT FLAGSHIP VIEW ───────────────────────────────────────
+  if (isWealthManagement) {
+    return (
+      <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 1.5rem 6rem' }}>
+        {/* WEALTH HERO & AT-A-GLANCE METRICS */}
+        <WealthHero 
+          fundData={project} 
+          onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Hero')} 
+        />
+
+        {/* PROGRESSIVE DISCLOSURE TABS */}
+        <WealthTabs 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+        />
+
+        {/* TWO-COLUMN LAYOUT: MAIN TAB VIEW + STICKY SIDEBAR */}
+        <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.75fr 1fr', gap: '2rem', alignItems: 'start' }}>
+          
+          {/* TAB CONTENT */}
+          <div>
+            {activeTab === 'overview' && (
+              <WealthOverview 
+                fundData={project} 
+                onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Overview')}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'returns' && (
+              <WealthReturnsSimulator 
+                fundData={project} 
+                onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Returns Simulator')}
+              />
+            )}
+
+            {activeTab === 'portfolio' && (
+              <LiveWorkOrderPipeline 
+                fundMetrics={fundMetrics}
+              />
+            )}
+
+            {activeTab === 'security' && (
+              <SpvSecurityFramework />
+            )}
+
+            {activeTab === 'governance' && (
+              <FundGovernance 
+                onOpenBriefing={(ctx) => openLeadBot(ctx || 'Fund Governance')}
+              />
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: STICKY DESKTOP CARD */}
+          <WealthStickySidebar 
+            fundData={project} 
+            onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Sticky Sidebar')}
+          />
+        </div>
+
+        {/* MOBILE STICKY CTA */}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#0f172a', borderTop: '1px solid rgba(212,175,55,0.25)', padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 50 }} className="mobile-cta-bar">
+          <div>
+            <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>Min Subscription</span>
+            <strong style={{ color: '#D4AF37' }}>{formatCurrency(project.min_otc_investment_bdt || 1000000, 'BDT')}</strong>
+          </div>
+          <button 
+            onClick={() => openLeadBot('Mobile Sticky Bar')} 
+            className="btn-gold" 
+            style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: '700', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14' }}
+          >
+            Schedule Briefing
+          </button>
+        </div>
+
+        <style>{`
+          @media (min-width: 769px) { .mobile-cta-bar { display: none !important; } }
+          @media (max-width: 768px) {
+            div[style*="gridTemplateColumns: 1.75fr"] { grid-template-columns: 1fr !important; }
+            div[style*="position: sticky"] { position: static !important; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   const target          = Number(project.target_raise_bdt) || 20000000;
   const raised          = Number(project.amount_raised_bdt) || 0;
   const defaultBooked   = Math.round(target * 0.10);
@@ -224,11 +347,6 @@ function ProjectDetail() {
   const biz             = project.businesses || {};
   const founder         = biz.founders || {};
   const embedUrl        = toEmbedUrl(project.youtube_url);
-  const isWealthManagement = 
-    project.funding_type === 'Wealth Management' || 
-    project.project_title?.includes('Safe Plan') ||
-    project.project_title?.includes('Safe Home') ||
-    project.id === 'c3a2b3c4-d5e6-7890-abcd-ef1234567890';
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem 6rem' }}>

@@ -109,7 +109,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
     window.dispatchEvent(new CustomEvent('open-lead-bot', {
       detail: {
         projectId: project?.id,
-        projectTitle: project?.project_title || 'Oro Roasters Deal',
+        projectTitle: project?.project_title || 'Investment Opportunity',
         investmentAmount: investment,
         yieldOption: `Option ${selectedOption}`
       }
@@ -151,7 +151,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
           </div>
           <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0.2rem 0 0 1.75rem' }}>
             {isPreviewMode
-              ? 'Based on Oro Roasters verified ৳31.6L monthly gross revenue'
+              ? 'Based on verified baseline revenue model'
               : `Based on verified baseline revenue for ${project?.project_title || 'this deal'}`}
           </p>
         </div>

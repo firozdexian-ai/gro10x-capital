@@ -569,45 +569,72 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-012',
     order_code: 'MSP-012',
-    corporate_client: 'TBD (Pending Details)',
-    po_ref_number: '',
-    po_date: '',
-    po_value_bdt: 0,
-    item_description: 'Pending Collection — To be updated during team sync',
-    investment_amount_bdt: 0,
-    return_amount_bdt: 0,
-    profit_bdt: 0,
-    duration_days: 7,
-    start_date: '',
-    due_date: '',
-    return_date: '',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    corporate_client: 'Sheltech (Pvt.) Ltd.',
+    po_ref_number: 'Sheltech/Brand/26-000151',
+    po_date: '2026-09-15',
+    po_value_bdt: 302400,
+    item_description: 'Ceramic Tableware Set (72 pcs @ ৳4,200)',
+    investment_amount_bdt: 260000,
+    return_amount_bdt: 290000,
+    profit_bdt: 30000,
+    duration_days: 5,
+    start_date: '2026-09-15',
+    due_date: '2026-09-20',
+    return_date: '2026-09-20',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Details pending collection. Can be updated directly via the dashboard Edit Order modal.',
-    due_note: 'Awaiting Details & PO'
+    notes: 'PO Ref: Sheltech/Brand/26-000151 (৳3,02,400 PO value). Ceramic tableware set (72 pcs @ ৳4,200). Disbursed ৳2.60L via CityTouch on 15 Sep 2026. 5 days tenor. Expected return: ৳2.90L (+৳30k profit). Due date: 20 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-012-disbursement.png',
+    po_document_pdf: '/docs/msp-012-sheltech-po.pdf',
+    due_note: 'Due Sep 20 (5 days tenor)',
+    tranche_info: 'Single Tranche: ৳2.60L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 260000,
+        date: '15 Sep 2026, 07:03 PM',
+        ref_no: '100012252879',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-012-disbursement.png',
+        note: 'Disbursed ৳2.60L via CityTouch by Faiz Ahmed to Aysha Siddika on 15 Sep 2026'
+      }
+    ]
   },
   {
     id: 'wo-013',
     order_code: 'MSP-013',
-    corporate_client: 'Delta Limited',
+    corporate_client: 'Delta Pharma / Delta Limited',
     po_ref_number: 'DL/Combo/2026/1051 (September)',
     po_date: '2026-09-16',
     po_value_bdt: 220000,
     item_description: 'Pen Drive 32GB (500 pcs) & Leather Key Ring (2,000 pcs)',
-    investment_amount_bdt: 0,
-    return_amount_bdt: 0,
-    profit_bdt: 0,
+    investment_amount_bdt: 170000,
+    return_amount_bdt: 200000,
+    profit_bdt: 30000,
     duration_days: 10,
     start_date: '2026-09-16',
     due_date: '2026-09-26',
     return_date: '2026-09-26',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: DL/Combo/2026/1051 (September) (৳2,20,000 PO value). Pen Drive (500 pcs @ ৳300) + Key Ring (2,000 pcs @ ৳35). Delivery to Delta Warehouse Mohakhali on 26 Sep 2026. Payment: COD.',
+    notes: 'PO Ref: DL/Combo/2026/1051 (September) (৳2,20,000 PO value). Pen Drive (500 pcs @ ৳300) + Key Ring (2,000 pcs @ ৳35). Disbursed ৳1.70L via CityTouch on 16 Sep 2026. 10 days tenor. Expected return: ৳2.00L (+৳30k profit). Delivery: 26 Sep 2026 to Delta Warehouse Mohakhali.',
+    disbursement_receipt_url: '/receipts/msp-013-disbursement.png',
     po_document_pdf: '/docs/msp-013-delta-po.pdf',
-    due_note: 'Due 26 Sep (Pending Terms)'
+    due_note: 'Due Sep 26 (5 days left)',
+    tranche_info: 'Single Tranche: ৳1.70L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 170000,
+        date: '16 Sep 2026, 05:34 PM',
+        ref_no: '100012398765',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-013-disbursement.png',
+        note: 'Disbursed ৳1.70L via CityTouch by Faiz Ahmed to Aysha Siddika on 16 Sep 2026'
+      }
+    ]
   },
   {
     id: 'wo-014',
@@ -725,7 +752,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v15';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v16';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

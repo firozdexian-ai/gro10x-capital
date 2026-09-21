@@ -534,23 +534,37 @@ export const SEED_WORK_ORDERS = [
   {
     id: 'wo-011',
     order_code: 'MSP-011',
-    corporate_client: 'TBD (Pending Details)',
-    po_ref_number: '',
-    po_date: '',
-    po_value_bdt: 0,
-    item_description: 'Pending Collection — To be updated during team sync',
-    investment_amount_bdt: 0,
-    return_amount_bdt: 0,
-    profit_bdt: 0,
-    duration_days: 7,
-    start_date: '',
-    due_date: '',
-    return_date: '',
-    status: 'Pending_Approval',
-    payment_mode: 'EFT/NPSB',
+    corporate_client: 'Delta Limited',
+    po_ref_number: 'DL/Combo/2026/1042 (September)',
+    po_date: '2026-09-15',
+    po_value_bdt: 425250,
+    item_description: 'Thermal Flask 500ml (300 pcs) & Leather Card Holder (255 pcs)',
+    investment_amount_bdt: 350000,
+    return_amount_bdt: 405000,
+    profit_bdt: 55000,
+    duration_days: 10,
+    start_date: '2026-09-15',
+    due_date: '2026-09-25',
+    return_date: '2026-09-25',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'Details pending collection. Can be updated directly via the dashboard Edit Order modal.',
-    due_note: 'Awaiting Details & PO'
+    notes: 'PO Ref: DL/Combo/2026/1042 (September) (৳4,25,250 PO value). Thermal Flask 500ml (300 pcs @ ৳950) + Leather Card Holder (255 pcs @ ৳550). Disbursed ৳3.50L via CityTouch on 15 Sep 2026. 10 days. Expected Return: ৳4.05L (+৳55k profit). Delivery: 25 Sep 2026 to Delta Warehouse Mohakhali.',
+    disbursement_receipt_url: '/receipts/msp-011-disbursement.png',
+    po_document_pdf: '/docs/msp-011-delta-po.pdf',
+    due_note: 'Due Sep 25 (4 days left)',
+    tranche_info: 'Single Tranche: ৳3.50L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 350000,
+        date: '15 Sep 2026, 06:42 PM',
+        ref_no: '100012248834',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-011-disbursement.png',
+        note: 'Disbursed ৳3.50L via CityTouch by Faiz Ahmed to Aysha Siddika on 15 Sep 2026'
+      }
+    ]
   },
   {
     id: 'wo-012',
@@ -711,7 +725,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v14';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v15';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

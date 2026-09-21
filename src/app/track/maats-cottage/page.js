@@ -225,17 +225,17 @@ export default function MaatsCottageTrackerPage() {
         </div>
       )}
 
-      {/* ── DYNAMIC CRITICAL MATURITY ALERT BANNER ── */}
-      <DynamicMaturityAlert 
-        orders={orders}
-        onInspectOrder={(order) => { setSelectedOrderDocs(order); setActiveDocTab(0); }}
-        onSettleOrder={(order) => setSettleTargetOrder(order)}
-      />
-
-      {/* ── KPI METRICS STRIP WITH REVOLVING LIMIT BAR ── */}
+      {/* ── KPI METRICS STRIP WITH INLINE MATURITY PILL ── */}
       <LedgerMetricsGrid 
         metrics={metrics}
         orders={orders}
+        alertNode={
+          <DynamicMaturityAlert 
+            orders={orders}
+            onInspectOrder={(order) => { setSelectedOrderDocs(order); setActiveDocTab(0); }}
+            onSettleOrder={(order) => setSettleTargetOrder(order)}
+          />
+        }
       />
 
       {/* ── MAIN CONTENT TABS ── */}

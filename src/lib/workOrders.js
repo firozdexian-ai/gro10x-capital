@@ -749,10 +749,56 @@ export const SEED_WORK_ORDERS = [
         note: 'Disbursed ৳4.50L via CityTouch by Faiz Ahmed to Aysha Siddika on 20 Sep 2026'
       }
     ]
+  },
+  {
+    id: 'wo-017',
+    order_code: 'MSP-017',
+    corporate_client: 'Sheltech (Pvt.) Ltd.',
+    po_ref_number: 'Sheltech/Combo/Brand/26-000192',
+    po_date: '2026-09-21',
+    po_value_bdt: 330000,
+    item_description: 'Thermal Flux (700 pcs) & Ballpoint Pen (1,000 pcs)',
+    investment_amount_bdt: 275000,
+    return_amount_bdt: 315000,
+    profit_bdt: 40000,
+    duration_days: 5,
+    start_date: '2026-09-21',
+    due_date: '2026-09-26',
+    return_date: '2026-09-26',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'PO Ref: Sheltech/Combo/Brand/26-000192 (৳3,30,000 PO value). Thermal flux (700 pcs @ ৳450) + Ballpoint pen (1,000 pcs @ ৳15). Disbursed ৳2.75L on 21 Sep 2026. 5 days tenor. Expected Return: ৳3.15L (+৳40k profit). Due date: 26 Sep 2026.',
+    po_document_pdf: '/docs/msp-017-sheltech-po.pdf',
+    due_note: 'Due Sep 26 (5 days left)',
+    tranche_info: 'Single Tranche: ৳2.75L CityTouch'
+  },
+  {
+    id: 'wo-018',
+    order_code: 'MSP-018',
+    corporate_client: 'Sheltech (Pvt.) Ltd.',
+    po_ref_number: 'Sheltech/Combo/Brand/26-000193',
+    po_date: '2026-09-21',
+    po_value_bdt: 315000,
+    item_description: 'ID Card Holder (700 pcs) & Leather Belt (450 pcs)',
+    investment_amount_bdt: 260000,
+    return_amount_bdt: 300000,
+    profit_bdt: 40000,
+    duration_days: 5,
+    start_date: '2026-09-21',
+    due_date: '2026-09-26',
+    return_date: '2026-09-26',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'PO Ref: Sheltech/Combo/Brand/26-000193 (৳3,15,000 PO value). ID card holder (700 pcs @ ৳45) + Leather belt (450 pcs @ ৳630). Disbursed ৳2.60L on 21 Sep 2026. 5 days tenor. Expected Return: ৳3.00L (+৳40k profit). Due date: 26 Sep 2026.',
+    po_document_pdf: '/docs/msp-018-sheltech-po.pdf',
+    due_note: 'Due Sep 26 (5 days left)',
+    tranche_info: 'Single Tranche: ৳2.60L CityTouch'
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v16';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v17';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

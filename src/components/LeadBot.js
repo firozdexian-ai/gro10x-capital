@@ -34,15 +34,29 @@ export default function LeadBot() {
     return () => window.removeEventListener('open-lead-bot', handleOpen);
   }, []);
 
+  const [phoneError, setPhoneError] = useState('');
+  const [nameError, setNameError] = useState('');
+
   const handleStep1Submit = (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setNameError('Please enter your full name (at least 2 characters).');
+      return;
+    }
+    setNameError('');
     setStep(2);
   };
 
   const handleStep2Submit = (e) => {
     e.preventDefault();
-    if (!phone.trim()) return;
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    const isValidBDPhone = /^(?:\+?88)?01[3-9]\d{8}$/.test(cleanPhone);
+    if (!isValidBDPhone && cleanPhone.length < 10) {
+      setPhoneError('Please enter a valid phone number (e.g., 01700-000000).');
+      return;
+    }
+    setPhoneError('');
     setStep(3);
   };
 
@@ -210,19 +224,24 @@ export default function LeadBot() {
                     </div>
 
                     {step === 1 && (
-                      <form onSubmit={handleStep1Submit} style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input
-                          type="text"
-                          placeholder="Your Full Name"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          required
-                          className="form-input"
-                          style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', flex: 1 }}
-                        />
-                        <button type="submit" className="btn-gold" style={{ padding: '0.6rem 1rem' }}>
-                          <Send size={16} />
-                        </button>
+                      <form onSubmit={handleStep1Submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input
+                            type="text"
+                            placeholder="Your Full Name"
+                            value={name}
+                            onChange={(e) => { setName(e.target.value); setNameError(''); }}
+                            required
+                            className="form-input"
+                            style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', flex: 1, borderColor: nameError ? '#ef4444' : undefined }}
+                          />
+                          <button type="submit" className="btn-gold" style={{ padding: '0.6rem 1rem' }}>
+                            <Send size={16} />
+                          </button>
+                        </div>
+                        {nameError && (
+                          <span style={{ color: '#ef4444', fontSize: '0.75rem', paddingLeft: '0.2rem' }}>{nameError}</span>
+                        )}
                       </form>
                     )}
 
@@ -242,19 +261,24 @@ export default function LeadBot() {
                     </div>
 
                     {step === 2 && (
-                      <form onSubmit={handleStep2Submit} style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input
-                          type="tel"
-                          placeholder="+880 1700-000000"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          required
-                          className="form-input"
-                          style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', flex: 1 }}
-                        />
-                        <button type="submit" className="btn-gold" style={{ padding: '0.6rem 1rem' }}>
-                          <Send size={16} />
-                        </button>
+                      <form onSubmit={handleStep2Submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input
+                            type="tel"
+                            placeholder="+880 1700-000000"
+                            value={phone}
+                            onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }}
+                            required
+                            className="form-input"
+                            style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', flex: 1, borderColor: phoneError ? '#ef4444' : undefined }}
+                          />
+                          <button type="submit" className="btn-gold" style={{ padding: '0.6rem 1rem' }}>
+                            <Send size={16} />
+                          </button>
+                        </div>
+                        {phoneError && (
+                          <span style={{ color: '#ef4444', fontSize: '0.75rem', paddingLeft: '0.2rem' }}>{phoneError}</span>
+                        )}
                       </form>
                     )}
 

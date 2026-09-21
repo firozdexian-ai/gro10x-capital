@@ -3,6 +3,7 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currency';
+import { formatLakhCrore } from '../../../components/ui/CurrencyInput';
 
 export default function ProjectFormModal({
   showProjectModal,
@@ -165,22 +166,38 @@ export default function ProjectFormModal({
             <>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Target CapEx Raise (BDT)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Target CapEx Raise (BDT)</label>
+                    {projectForm.target_raise_bdt && formatLakhCrore(projectForm.target_raise_bdt) && (
+                      <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: '700' }}>
+                        ≈ {formatLakhCrore(projectForm.target_raise_bdt)}
+                      </span>
+                    )}
+                  </div>
                   <input 
                     type="number" 
                     value={projectForm.target_raise_bdt}
                     onChange={(e) => setProjectForm({ ...projectForm, target_raise_bdt: e.target.value })}
                     className="form-input" 
+                    placeholder="e.g. 50000000 (= ৳5.0 Crore)"
                     required
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Min OTC Ticket Size (BDT)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Min OTC Ticket Size (BDT)</label>
+                    {projectForm.min_otc_investment_bdt && formatLakhCrore(projectForm.min_otc_investment_bdt) && (
+                      <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>
+                        ≈ {formatLakhCrore(projectForm.min_otc_investment_bdt)}
+                      </span>
+                    )}
+                  </div>
                   <input 
                     type="number" 
                     value={projectForm.min_otc_investment_bdt}
                     onChange={(e) => setProjectForm({ ...projectForm, min_otc_investment_bdt: e.target.value })}
                     className="form-input" 
+                    placeholder="e.g. 500000 (= ৳5.0 Lakhs)"
                     required
                   />
                 </div>
@@ -188,7 +205,14 @@ export default function ProjectFormModal({
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Booked / Reserved Capital (BDT)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Booked / Reserved Capital (BDT)</label>
+                    {projectForm.booked_amount_bdt && formatLakhCrore(projectForm.booked_amount_bdt) && (
+                      <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: '700' }}>
+                        ≈ {formatLakhCrore(projectForm.booked_amount_bdt)}
+                      </span>
+                    )}
+                  </div>
                   <input 
                     type="number" 
                     value={projectForm.booked_amount_bdt}

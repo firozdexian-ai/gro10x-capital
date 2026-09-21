@@ -1,10 +1,12 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   TrendingUp, RefreshCw, FileSpreadsheet, Send, Download, 
   Coins, Sparkles, ArrowRight, FileText, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { formatCurrency, CURRENCY_RATES } from '../../../lib/currency';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import { formatLakhCrore } from '../../../components/ui/CurrencyInput';
 
 /** Shorthand Bengali/Crore currency formatter helper */
 function formatShorthand(val, curr = 'BDT') {
@@ -93,6 +95,10 @@ export default function YieldEngineTab({
 
   const totalDistributed = yieldDisbursements.reduce((acc, d) => acc + Number(d.total_disbursed_bdt || 0), 0);
   const unacknowledgedCount = allInvestorYields.filter(y => !y.acknowledged).length;
+  const [showConfirmDistribute, setShowConfirmDistribute] = useState(false);
+
+  const selectedProject = projects.find(p => p.id === dividendProjectId);
+  const selectedProjInvestments = activeInvestments.filter(i => i.project_id === dividendProjectId);
 
   return (
     <div className="tab-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -197,7 +203,13 @@ export default function YieldEngineTab({
               <TrendingUp size={22} /> Declare Yield Batch
             </h3>
 
-            <form onSubmit={handleDistributeYield} style={{ display: 'grid', gap: '1.1rem' }}>
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                setShowConfirmDistribute(true);
+              }} 
+              style={{ display: 'grid', gap: '1.1rem' }}
+            >
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Target Project Campaign</label>
                 <select
@@ -254,7 +266,14 @@ export default function YieldEngineTab({
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Gross Sales (BDT)</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Gross Sales (BDT)</label>
+                  {grossSales && formatLakhCrore(grossSales) && (
+                    <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: '700' }}>
+                      ≈ {formatLakhCrore(grossSales)}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="number"
                   value={grossSales}
@@ -266,7 +285,14 @@ export default function YieldEngineTab({
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.3rem' }}>Net Profit (BDT)</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Net Profit (BDT)</label>
+                  {netProfit && formatLakhCrore(netProfit) && (
+                    <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>
+                      ≈ {formatLakhCrore(netProfit)}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="number"
                   value={netProfit}
@@ -279,11 +305,11 @@ export default function YieldEngineTab({
 
               <button
                 type="submit"
-                disabled={isDistributing}
+                disabled={isDistributing || !dividendProjectId || !grossSales || !netProfit}
                 className="btn-gold"
-                style={{ padding: '0.85rem', justifyContent: 'center', fontSize: '0.95rem', cursor: isDistributing ? 'not-allowed' : 'pointer', marginTop: '0.5rem', fontWeight: '700' }}
+                style={{ padding: '0.85rem', justifyContent: 'center', fontSize: '0.95rem', cursor: (isDistributing || !dividendProjectId || !grossSales || !netProfit) ? 'not-allowed' : 'pointer', marginTop: '0.5rem', fontWeight: '700', opacity: (!dividendProjectId || !grossSales || !netProfit) ? 0.6 : 1 }}
               >
-                {isDistributing ? 'Distributing...' : 'Declare & Allocate Yield Batch'}
+                {isDistributing ? 'Distributing...' : 'Review & Declare Yield Batch'}
               </button>
             </form>
           </div>
@@ -667,7 +693,14 @@ export default function YieldEngineTab({
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Gross Sales (BDT)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <label style={{ color: '#94a3b8' }}>Gross Sales (BDT)</label>
+                      {posEntryForm.gross_sales_bdt && formatLakhCrore(posEntryForm.gross_sales_bdt) && (
+                        <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: '700' }}>
+                          ≈ {formatLakhCrore(posEntryForm.gross_sales_bdt)}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       placeholder="e.g. 1800000 (= ৳18.0 Lakhs)"
@@ -678,7 +711,14 @@ export default function YieldEngineTab({
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Net Profit (BDT)</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <label style={{ color: '#94a3b8' }}>Net Profit (BDT)</label>
+                      {posEntryForm.net_profit_bdt && formatLakhCrore(posEntryForm.net_profit_bdt) && (
+                        <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: '700' }}>
+                          ≈ {formatLakhCrore(posEntryForm.net_profit_bdt)}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       placeholder="e.g. 420000 (= ৳4.20 Lakhs)"
@@ -810,6 +850,55 @@ export default function YieldEngineTab({
         </div>
       )}
 
+      {/* ── YIELD DISTRIBUTION CONFIRMATION DIALOG ── */}
+      <ConfirmDialog
+        isOpen={showConfirmDistribute}
+        onClose={() => setShowConfirmDistribute(false)}
+        onConfirm={async () => {
+          setShowConfirmDistribute(false);
+          await handleDistributeYield();
+        }}
+        title="Confirm Yield Batch Declaration"
+        description="You are declaring and irrevocably allocating monthly yield for this project. Once executed, individual yield share records are immediately generated for all settled investors."
+        confirmText="Confirm & Allocate Yield"
+        cancelText="Cancel & Review"
+        confirmVariant="gold"
+        isLoading={isDistributing}
+      >
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Target Campaign:</span>
+            <span style={{ color: '#f8fafc', fontWeight: '700' }}>
+              {selectedProject?.businesses?.brand_name ? `${selectedProject.businesses.brand_name} - ` : ''}
+              {selectedProject?.project_title || 'Selected Campaign'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Operating Period:</span>
+            <span style={{ color: '#D4AF37', fontWeight: '700' }}>{dividendMonth} {dividendYear}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Gross Sales:</span>
+            <span style={{ color: '#fff', fontWeight: '700' }}>
+              ৳{Number(grossSales || 0).toLocaleString('en-IN')} {formatLakhCrore(grossSales) && `(${formatLakhCrore(grossSales)})`}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Net Profit:</span>
+            <span style={{ color: '#10b981', fontWeight: '700' }}>
+              ৳{Number(netProfit || 0).toLocaleString('en-IN')} {formatLakhCrore(netProfit) && `(${formatLakhCrore(netProfit)})`}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#94a3b8' }}>Investors Impacted:</span>
+            <span style={{ color: '#60a5fa', fontWeight: '700' }}>
+              {selectedProjInvestments.length} Active Settled Investors
+            </span>
+          </div>
+        </div>
+      </ConfirmDialog>
+
     </div>
   );
 }
+

@@ -102,6 +102,75 @@ export default function SecondarySellModal({
               required 
               autoFocus
             />
+
+            {/* Quick Corridor Presets */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => setSellPrice(String(minPrice))}
+                style={{
+                  background: numericPrice === minPrice ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                  border: `1px solid ${numericPrice === minPrice ? '#ef4444' : 'rgba(255, 255, 255, 0.08)'}`,
+                  color: numericPrice === minPrice ? '#ef4444' : '#cbd5e1',
+                  padding: '0.25rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                -10% Floor (৳{(minPrice / 100000).toFixed(1)}L)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellPrice(String(originalAmt))}
+                style={{
+                  background: numericPrice === originalAmt ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                  border: `1px solid ${numericPrice === originalAmt ? '#D4AF37' : 'rgba(255, 255, 255, 0.08)'}`,
+                  color: numericPrice === originalAmt ? '#D4AF37' : '#cbd5e1',
+                  padding: '0.25rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                At Cost / FMV (৳{(originalAmt / 100000).toFixed(1)}L)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellPrice(String(Math.round(originalAmt * 1.05)))}
+                style={{
+                  background: numericPrice === Math.round(originalAmt * 1.05) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                  border: `1px solid ${numericPrice === Math.round(originalAmt * 1.05) ? '#10b981' : 'rgba(255, 255, 255, 0.08)'}`,
+                  color: numericPrice === Math.round(originalAmt * 1.05) ? '#10b981' : '#cbd5e1',
+                  padding: '0.25rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                +5% Premium
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellPrice(String(maxPrice))}
+                style={{
+                  background: numericPrice === maxPrice ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                  border: `1px solid ${numericPrice === maxPrice ? '#10b981' : 'rgba(255, 255, 255, 0.08)'}`,
+                  color: numericPrice === maxPrice ? '#10b981' : '#cbd5e1',
+                  padding: '0.25rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                +10% Cap (৳{(maxPrice / 100000).toFixed(1)}L)
+              </button>
+            </div>
+
             <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.45rem', lineHeight: '1.4' }}>
               🛡️ <strong>Anti-Speculation Rule:</strong> To preserve market stability, secondary orders are capped between {formatCurrency(minPrice, currency)} (-10%) and {formatCurrency(maxPrice, currency)} (+10%).
             </p>

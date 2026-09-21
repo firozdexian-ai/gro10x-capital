@@ -6,14 +6,14 @@ import {
   ArrowUpRight, Copy, Check, Plus, ExternalLink, Calendar, 
   FileText, Landmark, RefreshCw, Eye, X, ChevronRight, Phone,
   Sparkles, TrendingUp, DollarSign, Award, Briefcase, Filter, Search, CheckSquare,
-  RotateCcw, Download
+  RotateCcw, Download, Edit2
 } from 'lucide-react';
 import { 
   MAATS_COTTAGE_PROFILE, 
   getWorkOrders, 
   saveWorkOrder, 
   approveAndDisburseOrder, 
-  settleWorkOrder,
+  settleWorkOrder, 
   revertOrderToPending,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast,
@@ -37,6 +37,7 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
   const [settleNote, setSettleNote] = useState('');
   const [settling, setSettling] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [onboardSuccessData, setOnboardSuccessData] = useState(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
@@ -142,16 +143,40 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
     setTimeout(() => setActionSuccessMsg(''), 5000);
   };
 
+  const handleSaveEditedOrder = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingOrder) return;
+
+    const inv = Number(editingOrder.investment_amount_bdt || 0);
+    const ret = Number(editingOrder.return_amount_bdt || 0);
+    const profit = Math.max(0, ret - inv);
+
+    const updatedOrder = {
+      ...editingOrder,
+      investment_amount_bdt: inv,
+      return_amount_bdt: ret,
+      profit_bdt: profit,
+      po_value_bdt: Number(editingOrder.po_value_bdt || 0),
+      duration_days: Number(editingOrder.duration_days || 7)
+    };
+
+    const updated = await saveWorkOrder(updatedOrder);
+    setOrders(updated);
+    setEditingOrder(null);
+    setActionSuccessMsg(`Work Order ${updatedOrder.order_code} updated successfully!`);
+    setTimeout(() => setActionSuccessMsg(''), 4000);
+  };
+
   const getOrderDocsList = (order) => {
     if (!order) return [];
     const list = [];
     
-    if (order.po_document_url || order.po_ref_number) {
+    if (order.po_document_url || order.po_ref_number || order.po_document_pdf) {
       list.push({
         id: 'po',
         badge: 'Contract PO',
         title: 'Client Purchase Order (PO)',
-        url: order.po_document_url || '/docs/msp-001-delta-po.png',
+        url: order.po_document_url || order.po_document_pdf || '/docs/msp-001-delta-po.png',
         pdfUrl: order.po_document_pdf,
         meta: `Ref: ${order.po_ref_number || 'DL/PO/2026'} • Client: ${order.corporate_client}`,
         note: `PO Value: ${fmtLakhs(order.po_value_bdt || order.return_amount_bdt)} • Officially signed purchase contract.`
@@ -566,6 +591,15 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                             <FileText size={12} /> Docs
                           </button>
 
+                          <button 
+                            onClick={() => setEditingOrder({ ...order })}
+                            className="btn-outline"
+                            title="Edit Work Order Details &amp; Terms"
+                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', borderColor: 'rgba(212,175,55,0.4)', color: '#D4AF37' }}
+                          >
+                            <Edit2 size={12} /> Edit
+                          </button>
+
                           {order.status === 'Pending_Approval' && (
                             <button 
                               onClick={() => handleApprove(order.order_code)}
@@ -687,12 +721,20 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                       )}
                     </div>
 
-                    <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
-                      <img 
-                        src={currentDoc.url} 
-                        alt={currentDoc.title} 
-                        style={{ maxWidth: '100%', maxHeight: '48vh', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
-                      />
+                    <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', width: '100%' }}>
+                      {currentDoc.url?.toLowerCase().endsWith('.pdf') ? (
+                        <iframe 
+                          src={currentDoc.url} 
+                          title={currentDoc.title}
+                          style={{ width: '100%', height: '48vh', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                        />
+                      ) : (
+                        <img 
+                          src={currentDoc.url} 
+                          alt={currentDoc.title} 
+                          style={{ maxWidth: '100%', maxHeight: '48vh', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        />
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
@@ -1046,6 +1088,174 @@ export default function WorkOrdersTab({ currency = 'BDT' }) {
                 </button>
                 <button type="submit" className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.5rem 1.25rem', fontWeight: '700' }}>
                   Submit Order
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT WORK ORDER MODAL ── */}
+      {editingOrder && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'grid', placeItems: 'center', padding: '1rem' }}>
+          <div style={{ background: '#0f172a', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '16px', maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.85)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#0b1120' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Edit2 size={16} style={{ color: '#D4AF37' }} />
+                <span style={{ fontWeight: '700', color: '#fff', fontSize: '0.95rem' }}>Edit Work Order — {editingOrder.order_code}</span>
+              </div>
+              <button onClick={() => setEditingOrder(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedOrder} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Order Code</label>
+                  <input 
+                    type="text" 
+                    value={editingOrder.order_code || ''}
+                    disabled
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem', opacity: 0.7 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Status *</label>
+                  <select 
+                    value={editingOrder.status || 'Pending_Approval'}
+                    onChange={e => setEditingOrder({ ...editingOrder, status: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem', background: '#1e293b', color: '#fff' }}
+                  >
+                    <option value="Pending_Approval">Pending Approval</option>
+                    <option value="Disbursed_Active">Disbursed &amp; Active</option>
+                    <option value="Settled_Repaid">Settled &amp; Repaid</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Corporate Client *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editingOrder.corporate_client || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, corporate_client: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>PO Reference #</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. DL/PO/2026/1058"
+                    value={editingOrder.po_ref_number || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, po_ref_number: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Item Description *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editingOrder.item_description || ''}
+                  onChange={e => setEditingOrder({ ...editingOrder, item_description: e.target.value })}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>PO Value (৳)</label>
+                  <input 
+                    type="number" 
+                    value={editingOrder.po_value_bdt || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, po_value_bdt: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Investment (৳)</label>
+                  <input 
+                    type="number" 
+                    value={editingOrder.investment_amount_bdt || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, investment_amount_bdt: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Return Amount (৳)</label>
+                  <input 
+                    type="number" 
+                    value={editingOrder.return_amount_bdt || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, return_amount_bdt: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Tenor (Days)</label>
+                  <input 
+                    type="number" 
+                    value={editingOrder.duration_days || 7}
+                    onChange={e => setEditingOrder({ ...editingOrder, duration_days: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Start Date</label>
+                  <input 
+                    type="date" 
+                    value={editingOrder.start_date || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, start_date: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Due Date</label>
+                  <input 
+                    type="date" 
+                    value={editingOrder.due_date || editingOrder.return_date || ''}
+                    onChange={e => setEditingOrder({ ...editingOrder, due_date: e.target.value, return_date: e.target.value })}
+                    className="form-input"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '0.25rem' }}>Notes &amp; Internal Audit Trail</label>
+                <textarea 
+                  rows={3}
+                  value={editingOrder.notes || ''}
+                  onChange={e => setEditingOrder({ ...editingOrder, notes: e.target.value })}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setEditingOrder(null)} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.5rem 1.25rem', fontWeight: '700' }}>
+                  Save Changes
                 </button>
               </div>
             </form>

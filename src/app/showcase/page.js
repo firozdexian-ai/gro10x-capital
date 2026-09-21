@@ -12,6 +12,9 @@ import ProjectCard from '../../components/ProjectCard';
 
 import { Suspense } from 'react';
 
+import { CardSkeleton } from '../../components/ui/SkeletonLoader';
+import EmptyState from '../../components/ui/EmptyState';
+
 function BusinessShowcaseContent() {
   const searchParams = useSearchParams();
   const refCode = searchParams?.get('ref');
@@ -21,6 +24,7 @@ function BusinessShowcaseContent() {
   const [loading, setLoading] = useState(true);
   const [filterSector, setFilterSector] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('featured'); // 'featured' | 'yield' | 'funded' | 'ticket'
 
   useEffect(() => {
     fetchActiveDeals();
@@ -92,11 +96,39 @@ function BusinessShowcaseContent() {
     }
   };
 
-  const filteredProjects = projects.filter(p => {
-    const matchesSector = filterSector === 'All' || p.businesses?.industry_sector === filterSector;
-    const matchesQuery = !searchQuery || p.project_title?.toLowerCase().includes(searchQuery.toLowerCase()) || p.businesses?.brand_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSector && matchesQuery;
-  });
+  const sectors = ['All', 'F&B Franchise', 'Wealth Management', 'Digital Agency & Tech', 'Distribution'];
+
+  const getSectorCount = (sec) => {
+    if (sec === 'All') return projects.length;
+    return projects.filter(p => p.businesses?.industry_sector === sec).length;
+  };
+
+  const filteredProjects = projects
+    .filter(p => {
+      const matchesSector = filterSector === 'All' || p.businesses?.industry_sector === filterSector;
+      const matchesQuery = !searchQuery || 
+        p.project_title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        p.businesses?.brand_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSector && matchesQuery;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'yield') {
+        const yieldA = Number(a.yield_percent) || 18;
+        const yieldB = Number(b.yield_percent) || 18;
+        return yieldB - yieldA;
+      }
+      if (sortBy === 'funded') {
+        const pctA = (Number(a.amount_raised_bdt) || 0) / (Number(a.target_raise_bdt) || 1);
+        const pctB = (Number(b.amount_raised_bdt) || 0) / (Number(b.target_raise_bdt) || 1);
+        return pctB - pctA;
+      }
+      if (sortBy === 'ticket') {
+        const ticketA = Number(a.min_otc_investment_bdt) || 500000;
+        const ticketB = Number(b.min_otc_investment_bdt) || 500000;
+        return ticketA - ticketB;
+      }
+      return 0; // Default: 'featured' order
+    });
 
   const handleOpenLeadBot = () => {
     if (typeof window !== 'undefined') {
@@ -108,8 +140,8 @@ function BusinessShowcaseContent() {
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', paddingBottom: '5rem' }}>
       
       {/* HEADER BANNER */}
-      <div style={{ background: 'radial-gradient(circle at top center, rgba(212,175,55,0.1) 0%, rgba(15,23,42,0.8) 70%)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '3.5rem 2rem 2.5rem 2rem', textAlign: 'center' }}>
-        <div className="container" style={{ maxWidth: '800px' }}>
+      <div style={{ background: 'radial-gradient(circle at top center, rgba(212,175,55,0.12) 0%, rgba(15,23,42,0.8) 70%)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '3.5rem 2rem 2.5rem 2rem', textAlign: 'center' }}>
+        <div className="container" style={{ maxWidth: '850px' }}>
           
           {refCode && (
             <div className="badge-gold" style={{ display: 'inline-flex', marginBottom: '1rem', padding: '0.4rem 1rem' }}>
@@ -117,47 +149,81 @@ function BusinessShowcaseContent() {
             </div>
           )}
 
-          <h1 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '0 0 0.75rem 0', color: '#fff' }}>
+          <h1 style={{ fontSize: '2.6rem', fontWeight: '900', margin: '0 0 0.75rem 0', color: '#fff', letterSpacing: '-0.02em' }}>
             Live Verified Investment Deals
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: '1.6', margin: '0 0 2rem 0' }}>
-            Browse physical asset-backed franchise &amp; SME campaigns. Every deal is monitored by Key Account Managers and secured under individual SPVs.
+            Browse physical asset-backed franchise &amp; SME campaigns. Every deal is audited monthly by Key Account Managers and ring-fenced under individual SPVs.
           </p>
 
           {/* SEARCH & FILTER BAR */}
-          <div style={{ display: 'flex', gap: '1rem', background: 'rgba(15,23,42,0.9)', padding: '0.75rem', borderRadius: '14px', border: '1px solid rgba(212,175,55,0.3)', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
-              <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-              <input 
-                type="text" 
-                placeholder="Search deal or brand name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '2.8rem', background: 'rgba(7,10,20,0.6)', border: 'none' }}
-              />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', background: 'rgba(15,23,42,0.95)', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(212,175,55,0.3)', backdropFilter: 'blur(16px)' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, position: 'relative', minWidth: '220px' }}>
+                <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search deal or brand name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input" 
+                  style={{ paddingLeft: '2.8rem', background: 'rgba(7,10,20,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}
+                />
+              </div>
+
+              {/* Sort Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(7,10,20,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '0 0.8rem' }}>
+                <Filter size={15} style={{ color: '#D4AF37' }} />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{ background: 'transparent', border: 'none', color: '#f8fafc', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', outline: 'none', padding: '0.6rem 0' }}
+                >
+                  <option value="featured" style={{ background: '#0f172a' }}>Sort: Featured</option>
+                  <option value="yield" style={{ background: '#0f172a' }}>Highest Target Yield</option>
+                  <option value="funded" style={{ background: '#0f172a' }}>Most Funded</option>
+                  <option value="ticket" style={{ background: '#0f172a' }}>Min Ticket (Low to High)</option>
+                </select>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              {['All', 'F&B Franchise', 'Wealth Management', 'Digital Agency & Tech', 'Distribution'].map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setFilterSector(cat)}
-                  style={{
-                    background: filterSector === cat ? 'rgba(212,175,55,0.2)' : 'transparent',
-                    color: filterSector === cat ? '#D4AF37' : '#94a3b8',
-                    border: filterSector === cat ? '1px solid #D4AF37' : '1px solid transparent',
-                    padding: '0.5rem 0.85rem',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {cat}
-                </button>
-              ))}
+            {/* Category Pills */}
+            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {sectors.map(cat => {
+                const isSelected = filterSector === cat;
+                const count = getSectorCount(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setFilterSector(cat)}
+                    style={{
+                      background: isSelected ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.03)',
+                      color: isSelected ? '#D4AF37' : '#94a3b8',
+                      border: isSelected ? '1px solid #D4AF37' : '1px solid rgba(255,255,255,0.08)',
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>{cat}</span>
+                    <span style={{ 
+                      fontSize: '0.72rem', 
+                      background: isSelected ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.08)', 
+                      padding: '0.1rem 0.4rem', 
+                      borderRadius: '10px',
+                      color: isSelected ? '#fff' : '#64748b'
+                    }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -168,21 +234,22 @@ function BusinessShowcaseContent() {
       <main className="container" style={{ paddingTop: '3rem' }}>
         
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '5rem', color: '#D4AF37' }}>
-            <Loader2 size={40} className="animate-spin" style={{ margin: '0 auto 1rem auto' }} />
-            <p style={{ color: '#94a3b8' }}>Fetching Active Investment Opportunities...</p>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <CardSkeleton count={3} />
           </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem', maxWidth: '600px', margin: '0 auto' }}>
-            <AlertCircle size={44} style={{ color: '#D4AF37', margin: '0 auto 1rem auto' }} />
-            <h3 style={{ fontSize: '1.4rem', margin: '0 0 0.5rem 0' }}>No Matching Deals Found</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              {searchQuery || filterSector !== 'All' ? 'Try adjusting your search query or category filter.' : 'New investment campaigns are currently undergoing KAM due diligence.'}
-            </p>
-            <button onClick={handleOpenLeadBot} className="btn-gold" style={{ display: 'inline-flex' }}>
-              <MessageSquare size={16} /> Speak to Advisor / Join Waitlist
-            </button>
-          </div>
+          <EmptyState 
+            icon={AlertCircle}
+            title="No Matching Deals Found"
+            description={searchQuery || filterSector !== 'All' 
+              ? 'Try clearing your search query or switching category filters.' 
+              : 'New investment campaigns are currently undergoing KAM physical due diligence.'}
+            actionText="Speak to Advisor / Join Waitlist"
+            onAction={handleOpenLeadBot}
+            actionIcon={MessageSquare}
+            secondaryActionText={searchQuery || filterSector !== 'All' ? 'Reset Filters' : undefined}
+            onSecondaryAction={searchQuery || filterSector !== 'All' ? () => { setSearchQuery(''); setFilterSector('All'); } : undefined}
+          />
         ) : (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>

@@ -130,8 +130,28 @@ function StatusContent() {
               value={refCodeInput}
               onChange={(e) => setRefCodeInput(e.target.value.toUpperCase())}
               className="input-field"
-              style={{ width: '100%', paddingLeft: '42px', fontSize: '0.95rem', fontWeight: '600', letterSpacing: '0.03em' }}
+              style={{ width: '100%', paddingLeft: '42px', paddingRight: '36px', fontSize: '0.95rem', fontWeight: '600', letterSpacing: '0.03em' }}
             />
+            {refCodeInput && (
+              <button
+                type="button"
+                onClick={() => { setRefCodeInput(''); setApplication(null); setErrorMsg(''); }}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  display: 'flex'
+                }}
+              >
+                <XCircle size={16} />
+              </button>
+            )}
           </div>
           <button
             type="submit"

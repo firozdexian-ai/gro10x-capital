@@ -9,6 +9,9 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../components/AuthProvider';
 import { useToast } from '../../components/Toast';
 import { useRealtimeSubscription } from '../../hooks';
+import { CardSkeleton } from '../../components/ui/SkeletonLoader';
+import EmptyState from '../../components/ui/EmptyState';
+import AsyncButton from '../../components/ui/AsyncButton';
 
 export default function SecondaryMarketplace() {
   const { user } = useAuth();
@@ -353,16 +356,19 @@ export default function SecondaryMarketplace() {
 
         {/* ORDERBOOK GRID */}
         {loadingListings ? (
-           <div style={{ textAlign: 'center', padding: '5rem', color: '#D4AF37' }}>
-             <Loader2 className="animate-spin" size={40} style={{ margin: '0 auto 1rem auto' }} />
-             <p style={{ color: '#94a3b8' }}>Syncing with GRO10X Secondary Ledger...</p>
-           </div>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <CardSkeleton count={3} />
+          </div>
         ) : filteredListings.length === 0 ? (
-           <div className="glass-card" style={{ textAlign: 'center', padding: '5rem', borderColor: 'rgba(212,175,55,0.2)' }}>
-             <RefreshCw size={48} style={{ color: '#64748b', margin: '0 auto 1rem auto' }} />
-             <h3 style={{ fontSize: '1.5rem', color: '#f8fafc', marginBottom: '0.5rem' }}>No Active Orders</h3>
-             <p style={{ color: '#94a3b8' }}>There are currently no P2P listings matching this filter.</p>
-           </div>
+          <EmptyState
+            icon={RefreshCw}
+            title="No Active Orders in Orderbook"
+            description="There are currently no P2P secondary listings matching this category filter. Check back shortly or list your own share."
+            actionText="+ List Share for Sale"
+            onAction={handleOpenSellModal}
+            secondaryActionText={filterCategory !== 'All' ? 'View All Categories' : undefined}
+            onSecondaryAction={filterCategory !== 'All' ? () => setFilterCategory('All') : undefined}
+          />
         ) : (
           <div className="grid-3">
             {filteredListings.map((item) => {
@@ -488,6 +494,57 @@ export default function SecondaryMarketplace() {
                     className="form-input" 
                     required 
                   />
+                  {/* Quick Preset Buttons */}
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handlePriceChange(String(minCorridorPrice))}
+                      style={{
+                        background: Number(sellPriceInput) === minCorridorPrice ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                        border: `1px solid ${Number(sellPriceInput) === minCorridorPrice ? '#ef4444' : 'rgba(255, 255, 255, 0.08)'}`,
+                        color: Number(sellPriceInput) === minCorridorPrice ? '#ef4444' : '#cbd5e1',
+                        padding: '0.22rem 0.5rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      -10% Floor (৳{(minCorridorPrice / 100000).toFixed(1)}L)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePriceChange(String(calculatedFmv))}
+                      style={{
+                        background: Number(sellPriceInput) === calculatedFmv ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                        border: `1px solid ${Number(sellPriceInput) === calculatedFmv ? '#D4AF37' : 'rgba(255, 255, 255, 0.08)'}`,
+                        color: Number(sellPriceInput) === calculatedFmv ? '#D4AF37' : '#cbd5e1',
+                        padding: '0.22rem 0.5rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      At FMV (৳{(calculatedFmv / 100000).toFixed(1)}L)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePriceChange(String(maxCorridorPrice))}
+                      style={{
+                        background: Number(sellPriceInput) === maxCorridorPrice ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                        border: `1px solid ${Number(sellPriceInput) === maxCorridorPrice ? '#10b981' : 'rgba(255, 255, 255, 0.08)'}`,
+                        color: Number(sellPriceInput) === maxCorridorPrice ? '#10b981' : '#cbd5e1',
+                        padding: '0.22rem 0.5rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      +10% Cap (৳{(maxCorridorPrice / 100000).toFixed(1)}L)
+                    </button>
+                  </div>
                 </div>
 
                 {corridorError && (
@@ -497,9 +554,15 @@ export default function SecondaryMarketplace() {
                 )}
 
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                  <button type="submit" disabled={!!corridorError || isSubmitting} className="btn-gold" style={{ flex: 1, justifyContent: 'center', opacity: (corridorError || isSubmitting) ? 0.5 : 1 }}>
-                    {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : 'Publish Orderbook Listing'}
-                  </button>
+                  <AsyncButton
+                    type="submit"
+                    loading={isSubmitting}
+                    disabled={!!corridorError || !sellPriceInput}
+                    variant="gold"
+                    style={{ flex: 1.5 }}
+                  >
+                    Publish Orderbook Listing
+                  </AsyncButton>
                   <button type="button" onClick={() => setShowSellModal(false)} className="btn-outline" style={{ flex: 1, justifyContent: 'center' }}>
                     Cancel
                   </button>
@@ -551,9 +614,14 @@ export default function SecondaryMarketplace() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button onClick={handleAcquireShare} disabled={isAcquiring} className="btn-gold" style={{ flex: 1, justifyContent: 'center' }}>
-                    {isAcquiring ? <Loader2 className="animate-spin" size={16} /> : 'Confirm & Transfer SPV Share'}
-                  </button>
+                  <AsyncButton
+                    onClick={handleAcquireShare}
+                    loading={isAcquiring}
+                    variant="gold"
+                    style={{ flex: 1.5 }}
+                  >
+                    Confirm & Transfer SPV Share
+                  </AsyncButton>
                   <button onClick={() => setSelectedListing(null)} className="btn-outline" style={{ flex: 1, justifyContent: 'center' }}>
                     Cancel
                   </button>

@@ -128,10 +128,10 @@ export const SEED_WORK_ORDERS = [
     start_date: '2026-08-31',
     due_date: '2026-09-08',
     return_date: '2026-09-08',
-    status: 'Disbursed_Active',
+    status: 'Settled_Repaid',
     payment_mode: 'EFT/NPSB + Cash Handover',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: DL/Laptop Bag/2026/1014(August) (৳4,42,000 total value). Disbursed in 3 tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k cash handover. Return date: 08 Sep 2026.',
+    notes: 'PO Ref: DL/Laptop Bag/2026/1014(August) (৳4,42,000 total value). Disbursed in 3 tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k cash handover. 100% Repaid (৳4.30L) to Ahmed Faiz on 21 Sep 2026.',
     disbursement_receipt_url: '/receipts/msp-002-tranche-1.png',
     po_document_url: '/docs/msp-002-delta-po.png',
     po_document_pdf: '/docs/msp-002-delta-po.pdf',
@@ -139,7 +139,11 @@ export const SEED_WORK_ORDERS = [
     delivery_challan_invoice_no: 'MCL_INVOICE_260909.02',
     delivery_received_date: '09 Sep 2026',
     delivery_received_by: 'Kamal (Delta Limited)',
-    due_note: 'Matured Sep 8 (Pending Repayment Slip)',
+    settlement_repayment_receipt_url: '/receipts/msp-002-repayment.png',
+    settlement_challan_receipt_url: '/docs/msp-002-delta-delivery-challan.png',
+    settlement_note: 'Full principal (৳3.75L) + profit (৳55k) returned via CityTouch (৳4,30,000) to Ahmed Faiz on 21 Sep 2026. Ref: 100013027031. Delivery confirmed via signed challan MCL_INVOICE_260909.02.',
+    settled_date: '2026-09-21',
+    due_note: 'Settled & Repaid on 21 Sep',
     tranche_info: '3 Tranches: ৳2.00L + ৳1.25L CityTouch + ৳50k Cash Handover',
     disbursement_transfers: [
       {
@@ -166,6 +170,17 @@ export const SEED_WORK_ORDERS = [
         method: 'Cash Handover to Aysha Siddika Husband/Driver',
         receipt_url: '/receipts/msp-002-tranche-3-cash-comms.png',
         note: 'Confirmed via WhatsApp chat with Aysha Siddika & Firoz'
+      }
+    ],
+    repayment_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 430000,
+        date: '21 Sep 2026, 10:27 AM',
+        ref_no: '100013027031',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-002-repayment.png',
+        note: 'Full settlement of ৳4.30L transferred by Aysha Siddika to Ahmed Faiz'
       }
     ]
   },
@@ -515,10 +530,188 @@ export const SEED_WORK_ORDERS = [
         note: 'Disbursed ৳5.50L via CityTouch by Faiz Ahmed on 14 Sep 2026'
       }
     ]
+  },
+  {
+    id: 'wo-011',
+    order_code: 'MSP-011',
+    corporate_client: 'TBD (Pending Details)',
+    po_ref_number: '',
+    po_date: '',
+    po_value_bdt: 0,
+    item_description: 'Pending Collection — To be updated during team sync',
+    investment_amount_bdt: 0,
+    return_amount_bdt: 0,
+    profit_bdt: 0,
+    duration_days: 7,
+    start_date: '',
+    due_date: '',
+    return_date: '',
+    status: 'Pending_Approval',
+    payment_mode: 'EFT/NPSB',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'Details pending collection. Can be updated directly via the dashboard Edit Order modal.',
+    due_note: 'Awaiting Details & PO'
+  },
+  {
+    id: 'wo-012',
+    order_code: 'MSP-012',
+    corporate_client: 'TBD (Pending Details)',
+    po_ref_number: '',
+    po_date: '',
+    po_value_bdt: 0,
+    item_description: 'Pending Collection — To be updated during team sync',
+    investment_amount_bdt: 0,
+    return_amount_bdt: 0,
+    profit_bdt: 0,
+    duration_days: 7,
+    start_date: '',
+    due_date: '',
+    return_date: '',
+    status: 'Pending_Approval',
+    payment_mode: 'EFT/NPSB',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'Details pending collection. Can be updated directly via the dashboard Edit Order modal.',
+    due_note: 'Awaiting Details & PO'
+  },
+  {
+    id: 'wo-013',
+    order_code: 'MSP-013',
+    corporate_client: 'Delta Limited',
+    po_ref_number: 'DL/Combo/2026/1051 (September)',
+    po_date: '2026-09-16',
+    po_value_bdt: 220000,
+    item_description: 'Pen Drive 32GB (500 pcs) & Leather Key Ring (2,000 pcs)',
+    investment_amount_bdt: 0,
+    return_amount_bdt: 0,
+    profit_bdt: 0,
+    duration_days: 10,
+    start_date: '2026-09-16',
+    due_date: '2026-09-26',
+    return_date: '2026-09-26',
+    status: 'Pending_Approval',
+    payment_mode: 'EFT/NPSB',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'PO Ref: DL/Combo/2026/1051 (September) (৳2,20,000 PO value). Pen Drive (500 pcs @ ৳300) + Key Ring (2,000 pcs @ ৳35). Delivery to Delta Warehouse Mohakhali on 26 Sep 2026. Payment: COD.',
+    po_document_pdf: '/docs/msp-013-delta-po.pdf',
+    due_note: 'Due 26 Sep (Pending Terms)'
+  },
+  {
+    id: 'wo-014',
+    order_code: 'MSP-014',
+    corporate_client: 'Delta Pharma / Delta Limited',
+    po_ref_number: 'DL/PO/2026/1058 (September)',
+    po_date: '2026-09-17',
+    po_value_bdt: 2516000,
+    item_description: 'Jute Bag (1k), Diary (1k), Pen (2k), Umbrella (800), T-Shirt (1.2k), Folder (800), ID Holder (3k), Water Bottle (2k)',
+    investment_amount_bdt: 2120000,
+    return_amount_bdt: 2500000,
+    profit_bdt: 380000,
+    duration_days: 7,
+    start_date: '2026-09-17',
+    due_date: '2026-09-24',
+    return_date: '2026-09-24',
+    status: 'Disbursed_Active',
+    payment_mode: 'BRAC RTGS + City Bank Transfer',
+    bank_account_info: 'Maats Cottage Ltd (DBBL A/C: 2081200001490) & AYSHA SIDDIKA (City A/C: 2621519538001)',
+    notes: 'PO Ref: DL/PO/2026/1058 (September) (৳25,16,000 PO value). Disbursed in 2 tranches: ৳20.00L BRAC RTGS to DBBL + ৳1.20L CityTouch = ৳21.20L on 17 Sep 2026. 5-7 days sharp. Expected Return: ৳25.00L (+৳3.80L profit).',
+    disbursement_receipt_url: '/receipts/msp-014-tranche-1-brac-rtgs.png',
+    po_document_pdf: '/docs/msp-014-delta-po.pdf',
+    due_note: 'Due Sep 24 (3 days left)',
+    tranche_info: '2 Tranches: ৳20.00L BRAC RTGS + ৳1.20L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 2000000,
+        date: '17 Sep 2026, 11:53 AM',
+        ref_no: 'BRAC-RTGS-GULSHAN-01',
+        method: 'BRAC Bank RTGS to DBBL (A/C: 2081200001490)',
+        receipt_url: '/receipts/msp-014-tranche-1-brac-rtgs.png',
+        note: 'Tranche 1: ৳20.00L disbursed via BRAC Bank RTGS by Ahmed Faiz to Maats Cottage Limited'
+      },
+      {
+        tranche_no: 2,
+        amount_bdt: 120000,
+        date: '17 Sep 2026, 09:34 PM',
+        ref_no: '100012601686',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-014-tranche-2-citytouch.png',
+        note: 'Tranche 2: ৳1.20L disbursed via CityTouch to Aysha Siddika'
+      }
+    ]
+  },
+  {
+    id: 'wo-015',
+    order_code: 'MSP-015',
+    corporate_client: 'Crown Cement PLC',
+    po_ref_number: '4001726541',
+    po_date: '2026-09-20',
+    po_value_bdt: 337900,
+    item_description: 'ID Card Holder (1,500 pcs) & Pen Drive (500 pcs)',
+    investment_amount_bdt: 250000,
+    return_amount_bdt: 290000,
+    profit_bdt: 40000,
+    duration_days: 10,
+    start_date: '2026-09-20',
+    due_date: '2026-09-30',
+    return_date: '2026-09-30',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'PO Ref: 4001726541 / PR: 12000063114 (৳3,37,900 Gross PO value). Disbursed ৳2.50L via CityTouch on 20 Sep 2026. Return: ৳2.90L (+৳40k profit). Due date: 30 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-015-disbursement.png',
+    po_document_pdf: '/docs/msp-015-crown-cement-po.pdf',
+    due_note: 'Due Sep 30 (9 days left)',
+    tranche_info: 'Single Tranche: ৳2.50L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 250000,
+        date: '20 Sep 2026, 03:41 PM',
+        ref_no: '100012924065',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-015-disbursement.png',
+        note: 'Disbursed ৳2.50L via CityTouch by Faiz Ahmed to Aysha Siddika on 20 Sep 2026'
+      }
+    ]
+  },
+  {
+    id: 'wo-016',
+    order_code: 'MSP-016',
+    corporate_client: 'National Life Insurance PLC',
+    po_ref_number: 'NLIC-PO-078512',
+    po_date: '2026-09-20',
+    po_value_bdt: 520000,
+    item_description: 'Jute Shopping Bag (2,500 pcs)',
+    investment_amount_bdt: 450000,
+    return_amount_bdt: 505000,
+    profit_bdt: 55000,
+    duration_days: 10,
+    start_date: '2026-09-20',
+    due_date: '2026-09-30',
+    return_date: '2026-09-30',
+    status: 'Disbursed_Active',
+    payment_mode: 'City Bank Transfer (CityTouch)',
+    bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
+    notes: 'PO Ref: NLIC-PO-078512 (৳5,20,000 PO value). 2,500 pcs Jute Shopping Bags @ ৳208. Disbursed ৳4.50L via CityTouch on 20 Sep 2026. Return: ৳5.05L (+৳55k profit). Due date: 30 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-016-disbursement.png',
+    po_document_pdf: '/docs/msp-016-national-life-po.pdf',
+    due_note: 'Due Sep 30 (9 days left)',
+    tranche_info: 'Single Tranche: ৳4.50L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 450000,
+        date: '20 Sep 2026, 04:06 PM',
+        ref_no: '100012928876',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-016-disbursement.png',
+        note: 'Disbursed ৳4.50L via CityTouch by Faiz Ahmed to Aysha Siddika on 20 Sep 2026'
+      }
+    ]
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v12';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v14';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data
@@ -531,6 +724,14 @@ export async function getWorkOrders() {
       try {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // Reconcile with SEED_WORK_ORDERS for any newly added orders
+          const cachedCodes = new Set(parsed.map(o => o.order_code));
+          const missingSeeds = SEED_WORK_ORDERS.filter(s => !cachedCodes.has(s.order_code));
+          if (missingSeeds.length > 0) {
+            const merged = [...parsed, ...missingSeeds];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+            return merged;
+          }
           return parsed;
         }
       } catch (e) {}

@@ -6,12 +6,15 @@ import {
   Building2, Users, TrendingUp, FileText, CheckCircle2, ChevronRight, 
   ChevronLeft, Upload, Download, Copy, Check, ShieldCheck, AlertCircle, Loader2, Plus, Trash2, Globe
 } from 'lucide-react';
+import { formatLakhCrore } from '../../components/ui/CurrencyInput';
+import AsyncButton from '../../components/ui/AsyncButton';
 
 export default function CohortApplicationPage() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submittedApp, setSubmittedApp] = useState(null); // { ref_code, application_id }
   const [copiedRef, setCopiedRef] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
 
   // Smooth scroll to top on step transition
   const goToStep = (targetStep) => {
@@ -83,6 +86,7 @@ export default function CohortApplicationPage() {
         try {
           const parsed = JSON.parse(savedDraft);
           setForm(prev => ({ ...prev, ...parsed }));
+          setLastSaved('Loaded from draft');
         } catch (e) {
           console.warn('Failed to parse apply draft');
         }
@@ -96,6 +100,7 @@ export default function CohortApplicationPage() {
       const updated = { ...prev, [field]: value };
       if (typeof window !== 'undefined') {
         localStorage.setItem('gro10x_cohort_apply_draft', JSON.stringify(updated));
+        setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       }
       return updated;
     });
@@ -361,6 +366,12 @@ within 48 hours for your physical audit scheduling.
                   </span>
                 </div>
               ))}
+
+              {lastSaved && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '0.25rem 0.65rem', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.25)', marginLeft: 'auto' }}>
+                  <CheckCircle2 size={12} /> {lastSaved === 'Loaded from draft' ? 'Draft restored' : `Auto-saved at ${lastSaved}`}
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmitApplication}>
@@ -711,7 +722,14 @@ within 48 hours for your physical audit scheduling.
 
                   <div className="responsive-grid-2">
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Monthly Gross Revenue (BDT) *</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Monthly Gross Revenue (BDT) *</label>
+                        {form.monthly_gross_revenue_bdt > 0 && (
+                          <span style={{ color: '#D4AF37', fontSize: '0.78rem', fontWeight: '700', background: 'rgba(212,175,55,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            {formatLakhCrore(form.monthly_gross_revenue_bdt)}
+                          </span>
+                        )}
+                      </div>
                       <input 
                         type="number" 
                         value={form.monthly_gross_revenue_bdt}
@@ -722,7 +740,14 @@ within 48 hours for your physical audit scheduling.
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Monthly Net Profit (BDT) *</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Monthly Net Profit (BDT) *</label>
+                        {form.monthly_net_profit_bdt > 0 && (
+                          <span style={{ color: '#10b981', fontSize: '0.78rem', fontWeight: '700', background: 'rgba(16,185,129,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            {formatLakhCrore(form.monthly_net_profit_bdt)}
+                          </span>
+                        )}
+                      </div>
                       <input 
                         type="number" 
                         value={form.monthly_net_profit_bdt}
@@ -743,7 +768,14 @@ within 48 hours for your physical audit scheduling.
 
                   <div className="responsive-grid-3">
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Outstanding Debt (BDT)</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Outstanding Debt (BDT)</label>
+                        {form.existing_debt_bdt > 0 && (
+                          <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '700' }}>
+                            {formatLakhCrore(form.existing_debt_bdt)}
+                          </span>
+                        )}
+                      </div>
                       <input 
                         type="number" 
                         value={form.existing_debt_bdt}
@@ -752,7 +784,14 @@ within 48 hours for your physical audit scheduling.
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Asset Valuation (BDT)</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Asset Valuation (BDT)</label>
+                        {form.asset_valuation_bdt > 0 && (
+                          <span style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: '700' }}>
+                            {formatLakhCrore(form.asset_valuation_bdt)}
+                          </span>
+                        )}
+                      </div>
                       <input 
                         type="number" 
                         value={form.asset_valuation_bdt}
@@ -779,7 +818,14 @@ within 48 hours for your physical audit scheduling.
 
                   <div className="responsive-grid-2">
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Requested Funding Ask (BDT) *</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Requested Funding Ask (BDT) *</label>
+                        {form.requested_funding_bdt > 0 && (
+                          <span style={{ color: '#D4AF37', fontSize: '0.78rem', fontWeight: '800', background: 'rgba(212,175,55,0.15)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            {formatLakhCrore(form.requested_funding_bdt)}
+                          </span>
+                        )}
+                      </div>
                       <input 
                         type="number" 
                         value={form.requested_funding_bdt}

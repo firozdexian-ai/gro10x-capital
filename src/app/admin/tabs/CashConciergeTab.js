@@ -2,6 +2,7 @@
 import React from 'react';
 import { Send, FileText, PlusCircle, ShieldCheck, ArrowRight, Calendar, UserCheck, CheckCircle2 } from 'lucide-react';
 import { formatCurrency, CURRENCY_RATES } from '../../../lib/currency';
+import { formatLakhCrore } from '../../../components/ui/CurrencyInput';
 
 /** Shorthand Bengali/Crore currency formatter helper */
 function formatShorthand(val, curr = 'BDT') {
@@ -494,7 +495,14 @@ export default function CashConciergeTab({
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', marginBottom: '0.3rem' }}>Target Commitment Amount (BDT)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                <label style={{ color: '#94a3b8' }}>Target Commitment Amount (BDT)</label>
+                {adminTicketForm.ticket_amount_bdt && formatLakhCrore(adminTicketForm.ticket_amount_bdt) && (
+                  <span style={{ fontSize: '0.75rem', color: '#D4AF37', fontWeight: '700' }}>
+                    ≈ {formatLakhCrore(adminTicketForm.ticket_amount_bdt)}
+                  </span>
+                )}
+              </div>
               <input
                 type="number"
                 placeholder="e.g. 10000000 (= ৳1.0 Crore)"

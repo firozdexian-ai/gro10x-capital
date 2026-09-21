@@ -768,10 +768,22 @@ export const SEED_WORK_ORDERS = [
     status: 'Disbursed_Active',
     payment_mode: 'City Bank Transfer (CityTouch)',
     bank_account_info: 'AYSHA SIDDIKA (A/C: 2621519538001)',
-    notes: 'PO Ref: Sheltech/Combo/Brand/26-000192 (৳3,30,000 PO value). Thermal flux (700 pcs @ ৳450) + Ballpoint pen (1,000 pcs @ ৳15). Disbursed ৳2.75L on 21 Sep 2026. 5 days tenor. Expected Return: ৳3.15L (+৳40k profit). Due date: 26 Sep 2026.',
+    notes: 'PO Ref: Sheltech/Combo/Brand/26-000192 (৳3,30,000 PO value). Thermal flux (700 pcs @ ৳450) + Ballpoint pen (1,000 pcs @ ৳15). Disbursed ৳2.75L via CityTouch on 21 Sep 2026. 5 days tenor. Expected Return: ৳3.15L (+৳40k profit). Due date: 26 Sep 2026.',
+    disbursement_receipt_url: '/receipts/msp-017-disbursement.png',
     po_document_pdf: '/docs/msp-017-sheltech-po.pdf',
     due_note: 'Due Sep 26 (5 days left)',
-    tranche_info: 'Single Tranche: ৳2.75L CityTouch'
+    tranche_info: 'Single Tranche: ৳2.75L CityTouch',
+    disbursement_transfers: [
+      {
+        tranche_no: 1,
+        amount_bdt: 275000,
+        date: '21 Sep 2026, 04:28 PM',
+        ref_no: '100013089285',
+        method: 'City Bank Transfer (CityTouch)',
+        receipt_url: '/receipts/msp-017-disbursement.png',
+        note: 'Disbursed ৳2.75L via CityTouch by Faiz Ahmed to Aysha Siddika on 21 Sep 2026'
+      }
+    ]
   },
   {
     id: 'wo-018',
@@ -798,7 +810,7 @@ export const SEED_WORK_ORDERS = [
   }
 ];
 
-const STORAGE_KEY = 'gro10x_work_orders_cache_v17';
+const STORAGE_KEY = 'gro10x_work_orders_cache_v18';
 
 /**
  * Fetch all work orders with Supabase query + localStorage cache + fallback seed data

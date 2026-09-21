@@ -1046,6 +1046,56 @@ export function calculateLedgerMetrics(orders = []) {
 
   const totalClientProfitLifetime = totalClientProfitRealized + totalClientProfitPipeline;
 
+  // 4. Gross Margin, Markup & Overall Economic Value Created
+  const relevantOrders = orders.filter(o => o.status === 'Settled_Repaid' || o.status === 'Disbursed_Active');
+  const totalPoValueLifetime = relevantOrders.reduce((sum, o) => sum + Number(o.po_value_bdt || o.return_amount_bdt || 0), 0);
+  const totalGrossProfitLifetime = Math.max(0, totalPoValueLifetime - totalLifetimeDisbursed);
+  
+  const grossMarginPct = totalPoValueLifetime > 0 
+    ? ((totalGrossProfitLifetime / totalPoValueLifetime) * 100).toFixed(1) 
+    : '0.0';
+  const markupPct = totalLifetimeDisbursed > 0 
+    ? ((totalGrossProfitLifetime / totalLifetimeDisbursed) * 100).toFixed(1) 
+    : '0.0';
+
+  // 5. Apples-to-Apples Value Splits
+  const realizedTotalValue = totalFundProfitRealized + totalClientProfitRealized;
+  const realizedFundSharePct = realizedTotalValue > 0 ? ((totalFundProfitRealized / realizedTotalValue) * 100).toFixed(1) : '0.0';
+  const realizedClientSharePct = realizedTotalValue > 0 ? ((totalClientProfitRealized / realizedTotalValue) * 100).toFixed(1) : '0.0';
+
+  const lifetimeTotalValue = totalFundProfitLifetime + totalClientProfitLifetime;
+  const lifetimeFundSharePct = lifetimeTotalValue > 0 ? ((totalFundProfitLifetime / lifetimeTotalValue) * 100).toFixed(1) : '0.0';
+  const lifetimeClientSharePct = lifetimeTotalValue > 0 ? ((totalClientProfitLifetime / lifetimeTotalValue) * 100).toFixed(1) : '0.0';
+
+  // 6. Corporate Client Aggregated Impact Breakdown
+  const clientMap = {};
+  relevantOrders.forEach(o => {
+    const name = o.corporate_client?.trim() || 'Other';
+    if (!clientMap[name]) {
+      clientMap[name] = {
+        name,
+        orderCount: 0,
+        totalPoValue: 0,
+        totalDisbursed: 0,
+        fundProfit: 0,
+        clientProfit: 0
+      };
+    }
+    const inv = Number(o.investment_amount_bdt || 0);
+    const ret = Number(o.return_amount_bdt || 0);
+    const po = Number(o.po_value_bdt || ret || 0);
+    const fProfit = Number(o.profit_bdt || (ret - inv) || 0);
+    const cProfit = Math.max(0, po - ret);
+
+    clientMap[name].orderCount += 1;
+    clientMap[name].totalPoValue += po;
+    clientMap[name].totalDisbursed += inv;
+    clientMap[name].fundProfit += fProfit;
+    clientMap[name].clientProfit += cProfit;
+  });
+
+  const clientBreakdown = Object.values(clientMap).sort((a, b) => b.totalPoValue - a.totalPoValue);
+
   return {
     totalDisbursedActive,
     totalExpectedReturnActive,
@@ -1068,7 +1118,19 @@ export function calculateLedgerMetrics(orders = []) {
     totalFundProfitLifetime,
     totalClientProfitRealized,
     totalClientProfitPipeline,
-    totalClientProfitLifetime
+    totalClientProfitLifetime,
+    // Impact Analysis & Margins
+    totalPoValueLifetime,
+    totalGrossProfitLifetime,
+    grossMarginPct,
+    markupPct,
+    realizedTotalValue,
+    realizedFundSharePct,
+    realizedClientSharePct,
+    lifetimeTotalValue,
+    lifetimeFundSharePct,
+    lifetimeClientSharePct,
+    clientBreakdown
   };
 }
 

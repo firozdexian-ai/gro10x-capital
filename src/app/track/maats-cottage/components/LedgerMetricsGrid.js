@@ -6,6 +6,7 @@ import { MAATS_COTTAGE_PROFILE } from '../../../../lib/workOrders';
 
 export default function LedgerMetricsGrid({ metrics, orders = [], alertNode = null }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [splitScope, setSplitScope] = useState('lifetime');
   const fmtLakhs = (val) => `৳${(Number(val || 0) / 100000).toFixed(2)}L`;
 
   // Revolving Facility Metrics
@@ -81,7 +82,7 @@ export default function LedgerMetricsGrid({ metrics, orders = [], alertNode = nu
 
         </div>
 
-        {/* ── PARTNERSHIP WIN-WIN DYNAMICS STRIP ── */}
+        {/* ── PARTNERSHIP WIN-WIN DYNAMICS STRIP (APPLES-TO-APPLES) ── */}
         <div 
           style={{
             marginTop: '1.1rem',
@@ -96,11 +97,42 @@ export default function LedgerMetricsGrid({ metrics, orders = [], alertNode = nu
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#D4AF37', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Handshake size={14} /> Partnership Dynamics · Win-Win Value Created
+              <Handshake size={14} /> Partnership Dynamics · Apples-to-Apples Comparison
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-              Cumulative Lifetime Performance
-            </span>
+            
+            {/* View Scope Toggle */}
+            <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', padding: '0.15rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <button
+                onClick={() => setSplitScope('lifetime')}
+                style={{
+                  background: splitScope === 'lifetime' ? 'rgba(212,175,55,0.25)' : 'transparent',
+                  color: splitScope === 'lifetime' ? '#D4AF37' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.68rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Lifetime Total (৳71.25L)
+              </button>
+              <button
+                onClick={() => setSplitScope('realized')}
+                style={{
+                  background: splitScope === 'realized' ? 'rgba(16,185,129,0.25)' : 'transparent',
+                  color: splitScope === 'realized' ? '#10b981' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.68rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Settled Cash (৳10.00L)
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
@@ -108,39 +140,39 @@ export default function LedgerMetricsGrid({ metrics, orders = [], alertNode = nu
             {/* 1. Total Fund Given So Far */}
             <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem' }}>
-                Total Funded So Far
+                {splitScope === 'realized' ? 'Settled Capital' : 'Total Capital Funded'}
               </span>
               <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff', lineHeight: 1.1 }}>
-                {fmtLakhs(metrics.totalLifetimeDisbursed)}
+                {splitScope === 'realized' ? fmtLakhs(metrics.totalSettledCapital) : fmtLakhs(metrics.totalLifetimeDisbursed)}
               </div>
               <span style={{ color: '#64748b', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
-                {fmtLakhs(metrics.totalSettledCapital)} repaid + {fmtLakhs(metrics.totalDisbursedActive)} active
+                {splitScope === 'realized' ? '4 completed orders' : `${fmtLakhs(metrics.totalSettledCapital)} repaid + ${fmtLakhs(metrics.totalDisbursedActive)} active`}
               </span>
             </div>
 
             {/* 2. Fund Profit Earned */}
-            <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem' }}>
-                Fund Profit Earned
+            <div style={{ background: 'rgba(16,185,129,0.05)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(16,185,129,0.2)' }}>
+              <span style={{ color: '#10b981', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem', fontWeight: '700' }}>
+                Fund Profit ({splitScope === 'realized' ? metrics.realizedFundSharePct : metrics.lifetimeFundSharePct}%)
               </span>
               <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#10b981', lineHeight: 1.1 }}>
-                +৳{(metrics.totalFundProfitRealized / 1000).toFixed(0)}k <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#64748b' }}>Realized</span>
+                +৳{((splitScope === 'realized' ? metrics.totalFundProfitRealized : metrics.totalFundProfitLifetime) / 1000).toFixed(0)}k
               </div>
-              <span style={{ color: '#10b981', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
-                +৳{(metrics.totalFundProfitPipeline / 1000).toFixed(0)}k contracted in cycle
+              <span style={{ color: '#94a3b8', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
+                {splitScope === 'realized' ? '14.8% cash return in hand' : `${fmtLakhs(metrics.totalFundProfitRealized)} settled + ${fmtLakhs(metrics.totalFundProfitPipeline)} active`}
               </span>
             </div>
 
             {/* 3. Client Profit Earned */}
-            <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem' }}>
-                Client Profit Earned
+            <div style={{ background: 'rgba(212,175,55,0.05)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(212,175,55,0.2)' }}>
+              <span style={{ color: '#D4AF37', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem', fontWeight: '700' }}>
+                Client Profit ({splitScope === 'realized' ? metrics.realizedClientSharePct : metrics.lifetimeClientSharePct}%)
               </span>
               <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#D4AF37', lineHeight: 1.1 }}>
-                +৳{(metrics.totalClientProfitLifetime / 1000).toFixed(0)}k <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#64748b' }}>Retained</span>
+                +৳{((splitScope === 'realized' ? metrics.totalClientProfitRealized : metrics.totalClientProfitLifetime) / 1000).toFixed(0)}k
               </div>
-              <span style={{ color: '#D4AF37', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
-                Value generated for Maats Cottage
+              <span style={{ color: '#94a3b8', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
+                {splitScope === 'realized' ? '9.5% retained by Maats' : `${fmtLakhs(metrics.totalClientProfitRealized)} collected + ${fmtLakhs(metrics.totalClientProfitPipeline)} delivering`}
               </span>
             </div>
 

@@ -937,6 +937,30 @@ export function calculateLedgerMetrics(orders = []) {
     ? (activeOrders.reduce((sum, o) => sum + Number(o.duration_days || 7), 0) / activeOrders.length).toFixed(1)
     : '7.5';
 
+  // ── PARTNERSHIP WIN-WIN DYNAMICS METRICS ──
+  // 1. Total Fund Given So Far (Lifetime Cumulative Disbursed: Settled + Active)
+  const totalLifetimeDisbursed = totalSettledCapital + totalDisbursedActive;
+
+  // 2. Fund Earnings (What Gro10x / Partner Fund has earned)
+  const totalFundProfitRealized = totalSettledProfit;
+  const totalFundProfitPipeline = totalActiveProfit;
+  const totalFundProfitLifetime = totalFundProfitRealized + totalFundProfitPipeline;
+
+  // 3. Client Earnings (What Maats Cottage Ltd has earned from this partnership)
+  const totalClientProfitRealized = settledOrders.reduce((sum, o) => {
+    const poVal = Number(o.po_value_bdt || 0);
+    const retVal = Number(o.return_amount_bdt || 0);
+    return sum + (poVal > 0 ? Math.max(0, poVal - retVal) : 0);
+  }, 0);
+
+  const totalClientProfitPipeline = activeOrders.reduce((sum, o) => {
+    const poVal = Number(o.po_value_bdt || 0);
+    const retVal = Number(o.return_amount_bdt || 0);
+    return sum + (poVal > 0 ? Math.max(0, poVal - retVal) : 0);
+  }, 0);
+
+  const totalClientProfitLifetime = totalClientProfitRealized + totalClientProfitPipeline;
+
   return {
     totalDisbursedActive,
     totalExpectedReturnActive,
@@ -951,7 +975,15 @@ export function calculateLedgerMetrics(orders = []) {
     totalPendingProfit,
     totalSettledCapital,
     totalSettledProfit,
-    totalOrdersCount: orders.length
+    totalOrdersCount: orders.length,
+    // Partnership Win-Win Dynamics
+    totalLifetimeDisbursed,
+    totalFundProfitRealized,
+    totalFundProfitPipeline,
+    totalFundProfitLifetime,
+    totalClientProfitRealized,
+    totalClientProfitPipeline,
+    totalClientProfitLifetime
   };
 }
 

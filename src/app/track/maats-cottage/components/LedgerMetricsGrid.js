@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, TrendingUp, Clock, Sparkles, ShieldCheck, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, TrendingUp, Clock, Sparkles, ShieldCheck, CheckCircle2, ChevronDown, ChevronUp, Handshake, DollarSign } from 'lucide-react';
 import { MAATS_COTTAGE_PROFILE } from '../../../../lib/workOrders';
 
 export default function LedgerMetricsGrid({ metrics, orders = [], alertNode = null }) {
@@ -79,6 +79,72 @@ export default function LedgerMetricsGrid({ metrics, orders = [], alertNode = nu
             </div>
           </div>
 
+        </div>
+
+        {/* ── PARTNERSHIP WIN-WIN DYNAMICS STRIP ── */}
+        <div 
+          style={{
+            marginTop: '1.1rem',
+            padding: '0.85rem 1rem',
+            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '10px',
+            border: '1px solid rgba(212, 175, 55, 0.18)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.65rem'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#D4AF37', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Handshake size={14} /> Partnership Dynamics · Win-Win Value Created
+            </span>
+            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+              Cumulative Lifetime Performance
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+            
+            {/* 1. Total Fund Given So Far */}
+            <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem' }}>
+                Total Funded So Far
+              </span>
+              <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff', lineHeight: 1.1 }}>
+                {fmtLakhs(metrics.totalLifetimeDisbursed)}
+              </div>
+              <span style={{ color: '#64748b', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
+                {fmtLakhs(metrics.totalSettledCapital)} repaid + {fmtLakhs(metrics.totalDisbursedActive)} active
+              </span>
+            </div>
+
+            {/* 2. Fund Profit Earned */}
+            <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem' }}>
+                Fund Profit Earned
+              </span>
+              <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#10b981', lineHeight: 1.1 }}>
+                +৳{(metrics.totalFundProfitRealized / 1000).toFixed(0)}k <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#64748b' }}>Realized</span>
+              </div>
+              <span style={{ color: '#10b981', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
+                +৳{(metrics.totalFundProfitPipeline / 1000).toFixed(0)}k contracted in cycle
+              </span>
+            </div>
+
+            {/* 3. Client Profit Earned */}
+            <div style={{ background: 'rgba(0,0,0,0.35)', padding: '0.65rem 0.85rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '0.2rem' }}>
+                Client Profit Earned
+              </span>
+              <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#D4AF37', lineHeight: 1.1 }}>
+                +৳{(metrics.totalClientProfitLifetime / 1000).toFixed(0)}k <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#64748b' }}>Retained</span>
+              </div>
+              <span style={{ color: '#D4AF37', fontSize: '0.68rem', marginTop: '0.25rem', display: 'block' }}>
+                Value generated for Maats Cottage
+              </span>
+            </div>
+
+          </div>
         </div>
 
         {/* Toggle to reveal secondary stats (Turnaround, Pending, Revolving Facility) */}

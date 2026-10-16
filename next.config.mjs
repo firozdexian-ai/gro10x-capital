@@ -14,6 +14,8 @@ const nextConfig = {
       }
     ],
   },
+  poweredByHeader: false,
+  compress: true,
   async headers() {
     return [
       {
@@ -30,6 +32,10 @@ const nextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
           },
           {
             key: 'Content-Security-Policy',

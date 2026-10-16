@@ -137,7 +137,7 @@ export default function SettleOrderModal({
                 className="btn-outline" 
                 style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
               >
-                Quick Attach Delivery Challan
+                Quick Attach Verified Delivery Challan
               </button>
             </div>
             {challanFile && (

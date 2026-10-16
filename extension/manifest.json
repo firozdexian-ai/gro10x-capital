@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "GRO10X UI Auditor & Grand Audit Runner",
+  "version": "2.0.0",
+  "description": "8-Platform Grand Audit Runner & Full-Page Snapper for GRO10X OS with 800ms human pacing.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*.gro10x.com/*",
+    "https://gro10x.com/*",
+    "https://*.vercel.app/*",
+    "https://*.supabase.co/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://*.gro10x.com/*",
+        "https://gro10x.com/*",
+        "https://*.vercel.app/*"
+      ],
+      "js": ["bridge-main.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "bridge-main.js",
+        "suites/registry.js",
+        "suites/selector-engine.js",
+        "suites/runner.js"
+      ],
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://*.gro10x.com/*",
+        "https://gro10x.com/*",
+        "https://*.vercel.app/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "icons": {
+    "48": "icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "GRO10X Grand Auditor",
+    "default_icon": "icon.png"
+  }
+}

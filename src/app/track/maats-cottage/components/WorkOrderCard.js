@@ -94,8 +94,8 @@ export default function WorkOrderCard({
               </span>
             )}
             {isPending && (
-              <span className="status-badge status-badge--gold" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
-                Pending
+              <span className="status-badge status-badge--gold" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Clock size={11} /> Awaiting Partner Sign-off
               </span>
             )}
             {isSettled && (
@@ -146,13 +146,22 @@ export default function WorkOrderCard({
 
           {/* Primary Action Button (Only 1 button in compact mode) */}
           {isActive && (
-            <button 
-              onClick={() => onSettleOrder(order)}
-              className="btn-gold"
-              style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700', borderRadius: '7px' }}
-            >
-              <CheckSquare size={13} /> Settle
-            </button>
+            <>
+              <button 
+                onClick={() => onInspectDocs(order)}
+                className="btn-outline"
+                style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderRadius: '7px' }}
+              >
+                <FileText size={13} /> Audit Docs & PO
+              </button>
+              <button 
+                onClick={() => onSettleOrder(order)}
+                className="btn-gold"
+                style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: '700', borderRadius: '7px' }}
+              >
+                <CheckSquare size={13} /> Settle &amp; Close
+              </button>
+            </>
           )}
 
           {isPending && (

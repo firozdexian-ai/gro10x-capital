@@ -56,6 +56,26 @@ export default function TrackerOverviewPage() {
             <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#fff' }}>
               {fmtLakhs(metrics.totalDisbursedActive)} Deployed
             </div>
+            <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-005
+              </span>
+              <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-006
+              </span>
+              <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-007
+              </span>
+              <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-008
+              </span>
+              <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-009
+              </span>
+              <span style={{ fontSize: '0.65rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-010 · Sheltech
+              </span>
+            </div>
             <span style={{ color: '#94a3b8', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block' }}>
               Expected: {fmtLakhs(metrics.totalExpectedReturnActive)}
             </span>
@@ -119,6 +139,17 @@ export default function TrackerOverviewPage() {
             </div>
             <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#fff' }}>
               {fmtLakhs(metrics.totalSettledCapital)} Recovered
+            </div>
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.68rem', background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-001 · SETTLED
+              </span>
+              <span style={{ fontSize: '0.68rem', background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-002 · SETTLED
+              </span>
+              <span style={{ fontSize: '0.68rem', background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '700' }}>
+                MSP-003 · SETTLED
+              </span>
             </div>
             <span style={{ color: '#10b981', fontSize: '0.72rem', marginTop: '0.2rem', display: 'block', fontWeight: '600' }}>
               +৳{(metrics.totalSettledProfit / 1000).toFixed(0)}k Profit Realized

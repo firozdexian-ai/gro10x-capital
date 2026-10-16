@@ -38,10 +38,20 @@ export function useRealtimeNotifications(userId) {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isValidUuid = typeof userId === 'string' && UUID_REGEX.test(userId);
+
+      let query = supabase
         .from('notifications')
-        .select('*')
-        .or(`user_id.eq.${userId},user_id.is.null`)
+        .select('*');
+
+      if (isValidUuid) {
+        query = query.or(`user_id.eq.${userId},user_id.is.null`);
+      } else {
+        query = query.is('user_id', null);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(30);
 
@@ -127,11 +137,20 @@ export function useRealtimeNotifications(userId) {
   const markAllAsRead = useCallback(async () => {
     if (!userId || unreadCount === 0) return;
     try {
-      const { error } = await supabase
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isValidUuid = typeof userId === 'string' && UUID_REGEX.test(userId);
+
+      let updateQuery = supabase
         .from('notifications')
-        .update({ is_read: true })
-        .or(`user_id.eq.${userId},user_id.is.null`)
-        .eq('is_read', false);
+        .update({ is_read: true });
+
+      if (isValidUuid) {
+        updateQuery = updateQuery.or(`user_id.eq.${userId},user_id.is.null`);
+      } else {
+        updateQuery = updateQuery.is('user_id', null);
+      }
+
+      const { error } = await updateQuery.eq('is_read', false);
 
       if (error) throw error;
 

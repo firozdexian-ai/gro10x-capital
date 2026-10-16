@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/currency';
 
-export default function WealthStickySidebar({ fundData, onOpenBriefing }) {
+export default function WealthStickySidebar({ fundData, onOpenBriefing, onOpenBooking }) {
   const target = Number(fundData?.target_facility_bdt || fundData?.target_raise_bdt) || 200000000; // 20 Cr
   const raised = Number(fundData?.active_aum_bdt || fundData?.amount_raised_bdt) || 52500000;    // 5.25 Cr
   const booked = Number(fundData?.booked_amount_bdt) || 20000000;                               // 2.0 Cr
@@ -97,7 +97,7 @@ export default function WealthStickySidebar({ fundData, onOpenBriefing }) {
 
         {/* PRIMARY CTA */}
         <button
-          onClick={() => onOpenBriefing('Sticky Sidebar Primary CTA')}
+          onClick={onOpenBooking || (() => onOpenBriefing('Sticky Sidebar Primary CTA'))}
           className="btn-gold"
           style={{
             width: '100%',
@@ -113,14 +113,37 @@ export default function WealthStickySidebar({ fundData, onOpenBriefing }) {
             border: 'none',
             cursor: 'pointer',
             background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)',
-            color: '#070a14'
+            color: '#070a14',
+            marginBottom: '0.65rem'
           }}
         >
-          <Calendar size={17} /> Schedule Briefing with Faiz Ahmed
+          <TrendingUp size={17} /> Book Allocation
+        </button>
+
+        <button
+          onClick={() => onOpenBriefing('Sticky Sidebar Advisory')}
+          className="btn-outline"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            fontSize: '0.88rem',
+            fontWeight: '700',
+            justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            borderRadius: '8px',
+            border: '1px solid rgba(212,175,55,0.4)',
+            background: 'rgba(212,175,55,0.08)',
+            color: '#D4AF37',
+            cursor: 'pointer'
+          }}
+        >
+          <Calendar size={15} /> Schedule Briefing with Faiz Ahmed
         </button>
 
         <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.75rem', margin: '0.75rem 0 1.25rem' }}>
-          🔒 Direct discussion with fund leadership. Zero obligation.
+          🔒 Ring-fenced SPV security. Zero obligation.
         </p>
 
         {/* FACTSHEET LINK */}

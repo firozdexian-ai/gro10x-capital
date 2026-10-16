@@ -88,6 +88,22 @@ export default function KamDashboard() {
     }
   }, [selectedBusinessId]);
 
+  // Deep linking: read URL hash (#audits, #investors, #projects, #yields, #cash-pipeline)
+  useEffect(() => {
+    const syncTabFromUrl = () => {
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash.replace('#', '').toLowerCase();
+        const validTabs = ['audits', 'investors', 'projects', 'yields', 'cash-pipeline'];
+        if (validTabs.includes(hash)) {
+          setActiveTab(hash);
+        }
+      }
+    };
+    syncTabFromUrl();
+    window.addEventListener('hashchange', syncTabFromUrl);
+    return () => window.removeEventListener('hashchange', syncTabFromUrl);
+  }, []);
+
   const fetchKamData = async () => {
     try {
       setLoading(true);

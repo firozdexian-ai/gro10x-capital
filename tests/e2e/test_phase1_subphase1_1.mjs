@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-const ARTIFACTS_DIR = 'C:/Users/LeNoVo/.gemini/antigravity/brain/c1fa6959-bd14-4192-9e6a-505977d700d4/test_artifacts/phase1_admin';
+const ARTIFACTS_DIR = path.resolve(process.cwd(), 'tests/artifacts/' + path.basename('test_phase1_subphase1_1'));
 if (!fs.existsSync(ARTIFACTS_DIR)) {
   fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 }
@@ -11,7 +11,7 @@ const BASE_URL = 'http://localhost:3000';
 
 async function runSubPhase1_1() {
   console.log('🚀 Starting Sub-Phase 1.1: Core Operations & Deal Pipeline (Tabs 1–4)...');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 }
   });
@@ -171,3 +171,4 @@ async function runSubPhase1_1() {
 }
 
 runSubPhase1_1();
+

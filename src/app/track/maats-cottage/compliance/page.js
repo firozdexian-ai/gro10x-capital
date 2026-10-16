@@ -98,6 +98,17 @@ export default function ComplianceVaultPage() {
                 <span style={{ color: '#64748b' }}>Headquarters:</span>
                 <span style={{ color: '#94a3b8', textAlign: 'right', maxWidth: '200px' }}>{MAATS_COTTAGE_PROFILE.headquarters}</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ color: '#64748b' }}>Institutional Deck:</span>
+                <a 
+                  href={MAATS_COTTAGE_PROFILE.companyProfilePdf || '/docs/maats-company-profile.pdf'}
+                  target="_blank" 
+                  rel="noreferrer"
+                  style={{ color: '#38bdf8', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                >
+                  <FileText size={13} /> Company Profile Deck (PDF)
+                </a>
+              </div>
             </div>
           </div>
 
@@ -132,7 +143,7 @@ export default function ComplianceVaultPage() {
         <div className="glass-card" style={{ padding: '1.25rem', marginTop: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', color: '#fff', letterSpacing: '0.04em' }}>
-              Production &amp; Sample Catalog ({MAATS_COTTAGE_PROFILE.showroomGallery.length} Items)
+              Product Showroom &amp; Sample Catalog ({MAATS_COTTAGE_PROFILE.showroomGallery.length} Items)
             </span>
             <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
               Institutional Merchandise Portfolio

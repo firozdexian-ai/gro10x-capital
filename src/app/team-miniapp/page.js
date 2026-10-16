@@ -153,6 +153,10 @@ export default function TeamMiniAppPage() {
         }
       } else {
         // Fallback for browser testing
+        const urlRole = typeof window !== 'undefined' 
+          ? (new URLSearchParams(window.location.search).get('role') || window.localStorage.getItem('gro10x_test_role'))
+          : null;
+
         const { data: testUser } = await supabase
           .from('team')
           .select('*')
@@ -160,8 +164,11 @@ export default function TeamMiniAppPage() {
           .single();
 
         if (testUser) {
-          setUser(testUser);
-          await loadDashboardData(testUser);
+          const effectiveUser = urlRole 
+            ? { ...testUser, role: urlRole, team_type: urlRole } 
+            : testUser;
+          setUser(effectiveUser);
+          await loadDashboardData(effectiveUser);
         } else {
           setAuthError('No active session or mock user available');
         }

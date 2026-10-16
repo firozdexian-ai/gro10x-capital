@@ -15,7 +15,7 @@ export default function TrackerHeader({
   onOpenPinModal
 }) {
   const [copiedAccount, setCopiedAccount] = useState(false);
-  const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showBankDetails, setShowBankDetails] = useState(true);
   const [showOverflow, setShowOverflow] = useState(false);
 
   const handleCopyAccount = () => {
@@ -53,12 +53,29 @@ export default function TrackerHeader({
               <a href={`tel:${MAATS_COTTAGE_PROFILE.phone}`} style={{ color: '#10b981', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
                 <Phone size={11} /> {MAATS_COTTAGE_PROFILE.phone}
               </a>
+              <span style={{ color: '#334155' }}>•</span>
+              <span>Partner: <strong style={{ color: '#D4AF37' }}>{MAATS_COTTAGE_PROFILE.managingPartner?.name || 'Faiz Ahmed'}</strong> ({MAATS_COTTAGE_PROFILE.managingPartner?.phone || '01784397960'})</span>
             </p>
           </div>
 
           {/* RIGHT: Primary action + overflow menu */}
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
             
+            {/* Copy WhatsApp button (Visible on desktop) */}
+            <button 
+              onClick={onCopyWhatsApp}
+              className="btn-outline"
+              style={{ 
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem', 
+                padding: '0.55rem 0.9rem', fontSize: '0.82rem', fontWeight: '600', 
+                borderRadius: '8px', color: copiedWhatsApp ? '#10b981' : '#cbd5e1',
+                background: copiedWhatsApp ? 'rgba(16,185,129,0.1)' : 'transparent'
+              }}
+            >
+              {copiedWhatsApp ? <Check size={14} /> : <Copy size={14} />}
+              <span>{copiedWhatsApp ? 'Copied' : 'Copy WhatsApp Update'}</span>
+            </button>
+
             {/* Primary CTA */}
             <button 
               onClick={onOpenAddModal}

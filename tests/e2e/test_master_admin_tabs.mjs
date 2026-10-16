@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-const ARTIFACTS_DIR = 'C:/Users/LeNoVo/.gemini/antigravity/brain/c1fa6959-bd14-4192-9e6a-505977d700d4/test_artifacts/phase1_admin';
+const ARTIFACTS_DIR = path.resolve(process.cwd(), 'tests/artifacts/admin');
 if (!fs.existsSync(ARTIFACTS_DIR)) {
   fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 }
@@ -29,7 +29,10 @@ const ADMIN_TABS = [
 
 async function runMasterAdminTest() {
   console.log('🏛️ Starting Master Admin Command Center Browser Verification (All 14 Tabs + Modals)...');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ 
+    headless: true,
+    channel: 'chrome'
+  });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 }
   });

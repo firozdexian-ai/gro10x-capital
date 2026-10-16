@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "node tests/e2e/run_all_tests.mjs"
+    "test:e2e": "node tests/e2e/run_all_tests.mjs",
+    "check:supabase": "node scripts/check_supabase_health.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",

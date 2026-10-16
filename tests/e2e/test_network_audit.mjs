@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 
 async function auditNetwork() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   const page = await browser.newPage();
 
   const failedRequests = [];
@@ -47,3 +47,4 @@ async function auditNetwork() {
 }
 
 auditNetwork();
+

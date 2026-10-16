@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/currency';
 
-export default function WealthHero({ fundData, onOpenBriefing }) {
+export default function WealthHero({ fundData, onOpenBriefing, onOpenBooking }) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = () => {
@@ -179,7 +179,7 @@ export default function WealthHero({ fundData, onOpenBriefing }) {
       {/* ACTION STRIP */}
       <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <button
-          onClick={() => onOpenBriefing('Hero Primary CTA')}
+          onClick={onOpenBooking || (() => onOpenBriefing('Hero Primary CTA'))}
           className="btn-gold"
           style={{
             padding: '0.75rem 1.4rem',
@@ -197,7 +197,28 @@ export default function WealthHero({ fundData, onOpenBriefing }) {
             transition: 'transform 0.15s ease'
           }}
         >
-          <Calendar size={17} /> Schedule Briefing with Faiz Ahmed
+          <TrendingUp size={17} /> Book Allocation / Express Interest
+        </button>
+
+        <button
+          onClick={() => onOpenBriefing('Hero Secondary CTA')}
+          className="btn-outline"
+          style={{
+            padding: '0.75rem 1.25rem',
+            fontSize: '0.88rem',
+            fontWeight: '700',
+            borderRadius: '10px',
+            border: '1px solid rgba(212,175,55,0.4)',
+            background: 'rgba(212,175,55,0.08)',
+            color: '#D4AF37',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            transition: 'background 0.2s ease'
+          }}
+        >
+          <Calendar size={16} /> Schedule Briefing
         </button>
 
         <a

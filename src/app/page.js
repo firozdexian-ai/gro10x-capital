@@ -24,6 +24,29 @@ export default function Homepage() {
 
   useEffect(() => {
     fetchHomepageData();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      if (ref) {
+        const sanitized = ref.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32);
+        sessionStorage.setItem('gro10x_ref_code', sanitized);
+        localStorage.setItem('gro10x_ref_code', sanitized);
+
+        // Deduplicated lead visit attribution logging
+        const loggedKey = `gro10x_ref_logged_${sanitized}`;
+        if (!sessionStorage.getItem(loggedKey)) {
+          sessionStorage.setItem(loggedKey, 'true');
+          supabase.from('inquiry_leads').insert([{
+            full_name: 'Homepage Visitor',
+            inquiry_type: 'Investment Diligence',
+            notes: `Promoter referral visit for code: ${sanitized}`,
+            lead_status: 'Referral_Visit',
+            referral_code: sanitized
+          }]).then(() => {}).catch(() => {});
+        }
+      }
+    }
   }, []);
 
   const fetchHomepageData = async () => {
@@ -81,11 +104,11 @@ export default function Homepage() {
     <div style={{ background: '#070a14', color: '#f8fafc', minHeight: '100vh', overflowX: 'hidden' }}>
       
       {/* 1. HERO SECTION */}
-      <section className="hero-section-mobile" style={{ position: 'relative', padding: '5rem 1.5rem 4rem 1.5rem', textAlign: 'center', background: 'radial-gradient(circle at top center, rgba(212,175,55,0.15) 0%, rgba(7,10,20,1) 70%)' }}>
+      <section className="hero-section-mobile" data-testid="hero-section" style={{ position: 'relative', padding: '5rem 1.5rem 4rem 1.5rem', textAlign: 'center', background: 'radial-gradient(circle at top center, rgba(212,175,55,0.15) 0%, rgba(7,10,20,1) 70%)' }}>
         <div className="container" style={{ maxWidth: '950px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           
           <div className="badge-gold" style={{ marginBottom: '1.5rem', padding: '0.5rem 1.25rem', fontSize: '0.9rem', display: 'inline-flex' }}>
-            <ShieldCheck size={16} /> Asset-Backed Private Equity &amp; Yield Platform
+            <ShieldCheck size={16} /> GRO10X Asset-Backed Revenue-Share Platform
           </div>
 
           <h1 className="hero-h1" style={{ fontSize: '3.4rem', fontWeight: '900', lineHeight: '1.15', margin: '0 0 1.25rem 0', background: 'linear-gradient(180deg, #FFFFFF 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

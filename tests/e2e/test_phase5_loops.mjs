@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-const ARTIFACTS_DIR = 'C:/Users/LeNoVo/.gemini/antigravity/brain/c1fa6959-bd14-4192-9e6a-505977d700d4/test_artifacts/phase5_loops';
+const ARTIFACTS_DIR = path.resolve(process.cwd(), 'tests/artifacts/' + path.basename('test_phase5_loops'));
 if (!fs.existsSync(ARTIFACTS_DIR)) {
   fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 }
@@ -11,7 +11,7 @@ const BASE_URL = 'http://localhost:3000';
 
 async function runPhase5LoopsTests() {
   console.log('🔄 Starting Phase 5: Cross-Stakeholder End-to-End Loops & Telegram MiniApp Verification...');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   const context = await browser.newContext({
     viewport: { width: 375, height: 812 } // Telegram Mobile Viewport
   });
@@ -138,3 +138,4 @@ async function runPhase5LoopsTests() {
 }
 
 runPhase5LoopsTests();
+

@@ -7,6 +7,7 @@ import { formatLakhCrore } from '../../../../components/ui/CurrencyInput';
 export default function LogOrderModal({
   onClose,
   onSubmit,
+  onCreateOrder,
   defaultCode
 }) {
   const [formData, setFormData] = useState({
@@ -30,7 +31,8 @@ export default function LogOrderModal({
       alert('Please fill all required fields');
       return;
     }
-    onSubmit(formData);
+    const handler = onCreateOrder || onSubmit;
+    if (handler) handler(formData);
   };
 
   return (

@@ -71,7 +71,7 @@ export default function AdminMiniView({
         <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff', marginBottom: '0.85rem' }}>
           ⚡ Quick Operational Actions
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem', textAlign: 'center' }}>
           <button onClick={() => setActiveTab('leads')} style={actionCircleStyle}>
             <div style={{ ...circleIconStyle, background: 'rgba(59, 130, 246, 0.2)', color: STYLES.blue }}>
               <Users size={18} />
@@ -91,6 +91,13 @@ export default function AdminMiniView({
               <ShieldCheck size={18} />
             </div>
             <div style={circleLabelStyle}>KYC</div>
+          </button>
+
+          <button onClick={() => setShowSurveyModal?.(true)} style={actionCircleStyle}>
+            <div style={{ ...circleIconStyle, background: 'rgba(212, 175, 55, 0.2)', color: STYLES.gold }}>
+              <PlusCircle size={18} />
+            </div>
+            <div style={circleLabelStyle}>Survey</div>
           </button>
 
           <button onClick={handleRequestPinInChat} style={actionCircleStyle}>

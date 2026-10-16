@@ -5,7 +5,8 @@ import {
   Search, Filter, Info, AlertCircle, CheckCircle2, ChevronRight, Lock, Globe, Loader2
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
-import { supabase } from '../../lib/supabase';
+import { supabase, safeRpc } from '../../lib/supabase';
+import { sanitizeUuid } from '../../lib/uuid';
 import { useAuth } from '../../components/AuthProvider';
 import { useToast } from '../../components/Toast';
 import { useRealtimeSubscription } from '../../hooks';
@@ -203,35 +204,54 @@ export default function SecondaryMarketplace() {
         return;
       }
       
-      // 2. Create Secondary Booking
-      const { data: newBooking, error: bookingErr } = await supabase
-        .from('investment_bookings')
-        .insert([{
-          investor_id: invData.id,
-          project_id: selectedListing.investments?.funding_project_id,
-          amount_bdt: selectedListing.seller_price_bdt,
-          yield_option: 1, // Defaulting to Option 1 for secondary for now
-          booking_type: 'Secondary',
-          status: 'Pending_Proof' // Correct status conforming to DB constraint
-        }])
-        .select()
-        .single();
-        
-      if (bookingErr) throw bookingErr;
-      
-      // 3. Mark the secondary order as pending clearance with atomic concurrency lock
-      const { data: updatedOrder, error: updateErr } = await supabase
-        .from('secondary_orders')
-        .update({ status: 'Pending_Clearance', buyer_booking_id: newBooking.id })
-        .eq('id', selectedListing.id)
-        .eq('status', 'Active')
-        .select()
-        .single();
+      const safeOrderId = sanitizeUuid(selectedListing.id);
+      const safeBuyerId = sanitizeUuid(invData.id);
 
-      if (updateErr || !updatedOrder) {
-        // Rollback booking if order was already acquired by someone else
-        await supabase.from('investment_bookings').delete().eq('id', newBooking.id);
-        throw new Error('This listing was already acquired by another buyer.');
+      // 2. Try Atomic RPC Transaction first (PostgreSQL row lock FOR UPDATE)
+      let bookingRecord = null;
+      const { data: rpcResult, error: rpcErr, isRpcAvailable } = await safeRpc('rpc_acquire_secondary_share', {
+        p_order_id: safeOrderId,
+        p_buyer_investor_id: safeBuyerId
+      });
+
+      if (isRpcAvailable) {
+        if (rpcErr || (rpcResult && rpcResult.success === false)) {
+          throw new Error(rpcResult?.error || rpcErr?.message || 'Failed to acquire share listing');
+        }
+        bookingRecord = { id: rpcResult.booking_id, amount_bdt: rpcResult.amount_bdt };
+      } else {
+        // Fallback: Multi-step atomic conditional update
+        const { data: newBooking, error: bookingErr } = await supabase
+          .from('investment_bookings')
+          .insert([{
+            investor_id: invData.id,
+            project_id: selectedListing.investments?.funding_project_id,
+            amount_bdt: selectedListing.seller_price_bdt,
+            yield_option: 1, // Defaulting to Option 1 for secondary
+            booking_type: 'Secondary',
+            status: 'Pending_Proof'
+          }])
+          .select()
+          .single();
+          
+        if (bookingErr) throw bookingErr;
+        
+        // Mark the secondary order as pending clearance with atomic conditional lock
+        const { data: updatedOrder, error: updateErr } = await supabase
+          .from('secondary_orders')
+          .update({ status: 'Pending_Clearance', buyer_booking_id: newBooking.id })
+          .eq('id', selectedListing.id)
+          .eq('status', 'Active')
+          .select()
+          .single();
+
+        if (updateErr || !updatedOrder) {
+          // Rollback booking if order was already acquired by another buyer
+          await supabase.from('investment_bookings').delete().eq('id', newBooking.id);
+          throw new Error('This listing was already acquired by another buyer.');
+        }
+
+        bookingRecord = newBooking;
       }
 
       // Notify Admin of secondary acquisition intent

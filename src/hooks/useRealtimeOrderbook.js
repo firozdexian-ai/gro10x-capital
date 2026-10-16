@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, safeRpc } from '../lib/supabase';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 /**
@@ -147,11 +147,31 @@ export function useRealtimeOrderbook({ filterStatus = 'Active' } = {}) {
   /**
    * acquireOrderAtomic
    * Concurrency-safe, atomic acquisition of a secondary order.
-   * Enforces status === 'Active' condition to prevent race conditions between simultaneous buyers.
+   * Utilizes PostgreSQL RPC function `rpc_acquire_secondary_share` with row-level locking (FOR UPDATE),
+   * with automatic fallback to conditional atomic UPDATE if RPC is not yet present.
    */
   const acquireOrderAtomic = useCallback(async (orderId, { buyerInvestorId, projectId, amountBdt }) => {
     try {
-      // 1. Create the pending secondary investment booking
+      // 1. Attempt Atomic RPC Transaction first
+      const { data: rpcResult, error: rpcErr, isRpcAvailable } = await safeRpc('rpc_acquire_secondary_share', {
+        p_order_id: orderId,
+        p_buyer_investor_id: buyerInvestorId
+      });
+
+      if (isRpcAvailable) {
+        if (rpcErr || (rpcResult && rpcResult.success === false)) {
+          throw new Error(rpcResult?.error || rpcErr?.message || 'Failed to acquire order via transaction');
+        }
+        
+        // Optimistic local state update
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: 'Pending_Clearance', buyer_booking_id: rpcResult.booking_id } : o))
+        );
+
+        return { success: true, booking: { id: rpcResult.booking_id, amount_bdt: rpcResult.amount_bdt } };
+      }
+
+      // 2. Graceful Fallback: Multi-step atomic conditional update
       const { data: newBooking, error: bookingErr } = await supabase
         .from('investment_bookings')
         .insert([{
@@ -167,7 +187,7 @@ export function useRealtimeOrderbook({ filterStatus = 'Active' } = {}) {
 
       if (bookingErr) throw bookingErr;
 
-      // 2. Atomic conditional update: lock order only if still 'Active'
+      // Atomic conditional update: lock order only if still 'Active'
       const { data: updatedOrder, error: orderErr } = await supabase
         .from('secondary_orders')
         .update({

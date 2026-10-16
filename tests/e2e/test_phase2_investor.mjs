@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-const ARTIFACTS_DIR = 'C:/Users/LeNoVo/.gemini/antigravity/brain/c1fa6959-bd14-4192-9e6a-505977d700d4/test_artifacts/phase2_investor';
+const ARTIFACTS_DIR = path.resolve(process.cwd(), 'tests/artifacts/' + path.basename('test_phase2_investor'));
 if (!fs.existsSync(ARTIFACTS_DIR)) {
   fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 }
@@ -11,7 +11,7 @@ const BASE_URL = 'http://localhost:3000';
 
 async function runPhase2InvestorTests() {
   console.log('💎 Starting Phase 2: Investor Experience & Liquidity Desk Verification...');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 }
   });
@@ -125,3 +125,4 @@ async function runPhase2InvestorTests() {
 }
 
 runPhase2InvestorTests();
+

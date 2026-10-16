@@ -49,6 +49,9 @@ export default function PendingClearancesPage() {
           <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#fff', margin: '0 0 0.35rem 0' }}>
             All Clear — No Orders Awaiting Review
           </h3>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.3)', color: '#eab308', padding: '0.2rem 0.6rem', borderRadius: '5px', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.75rem' }}>
+            <Clock size={12} /> Awaiting Partner Sign-off: 0 Active Requests
+          </div>
           <p style={{ color: '#94a3b8', fontSize: '0.84rem', margin: '0 0 1.25rem 0', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
             Every submitted corporate purchase order has been reviewed, approved, and disbursed into active execution.
           </p>

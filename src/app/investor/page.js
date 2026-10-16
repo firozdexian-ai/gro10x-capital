@@ -71,16 +71,22 @@ export default function InvestorPortal() {
 
   // Deep linking: read query parameter (?tab=kyc) or URL hash (#kyc)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const queryTab = params.get('tab');
-      const hashTab = window.location.hash.replace('#', '');
-      const validTabs = ['portfolio', 'kyc', 'vault', 'ai-concierge', 'faq'];
-      const target = queryTab || hashTab;
-      if (target && validTabs.includes(target.toLowerCase())) {
-        setActiveTab(target.toLowerCase());
+    const syncTabFromUrl = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const queryTab = params.get('tab');
+        const hashTab = window.location.hash.replace('#', '');
+        const validTabs = ['portfolio', 'kyc', 'vault', 'ai-concierge', 'faq'];
+        const target = queryTab || hashTab;
+        if (target && validTabs.includes(target.toLowerCase())) {
+          setActiveTab(target.toLowerCase());
+        }
       }
-    }
+    };
+
+    syncTabFromUrl();
+    window.addEventListener('hashchange', syncTabFromUrl);
+    return () => window.removeEventListener('hashchange', syncTabFromUrl);
   }, []);
 
   const fetchInvestorData = async (authUserId) => {

@@ -6,6 +6,7 @@ import {
   ArrowRight, Calendar, FileText, Lock, Building2 
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/currency';
+import FAQAccordion from '../FAQAccordion';
 
 export default function WealthOverview({ fundData, onOpenBriefing, onNavigateTab }) {
   return (
@@ -151,6 +152,93 @@ export default function WealthOverview({ fundData, onOpenBriefing, onNavigateTab
           </button>
         </div>
       </div>
+
+      {/* 3. ACTIVE PORTFOLIO DEPLOYMENTS & ASSET ALLOCATION */}
+      <div className="glass-card" style={{ padding: '2rem', borderColor: 'rgba(212,175,55,0.25)', borderRadius: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Briefcase size={20} style={{ color: '#D4AF37' }} />
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                Active Portfolio Deployments &amp; Asset Allocation
+              </h3>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '0.82rem', margin: '0.3rem 0 0 0', lineHeight: 1.5 }}>
+              The fund deploys strictly into verified institutional receivables, rapid turnover SME purchase orders, and asset-backed retail facilities.
+            </p>
+          </div>
+          <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <ShieldCheck size={12} /> Institutional Collateral
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          {/* COMPANY 1: MAATS COTTAGE */}
+          <div style={{ background: 'rgba(7,10,20,0.7)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <span style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                  Portfolio Co. #01
+                </span>
+                <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ● Active Revolving
+                </span>
+              </div>
+              <h4 style={{ margin: '0 0 0.25rem 0', color: '#fff', fontSize: '1.05rem', fontWeight: '800' }}>
+                Maats Cottage Ltd.
+              </h4>
+              <p style={{ margin: '0 0 0.85rem 0', color: '#94a3b8', fontSize: '0.78rem' }}>
+                Solmaid, Vatara, Dhaka · Finished Leather Goods &amp; Export Jute Crafts
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', background: 'rgba(0,0,0,0.35)', padding: '0.75rem', borderRadius: '8px', marginBottom: '0.85rem', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Credit Facility</span>
+                  <strong style={{ color: '#D4AF37', fontSize: '0.92rem' }}>৳25,00,000</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Settlement History</span>
+                  <strong style={{ color: '#10b981', fontSize: '0.92rem' }}>5 Cycles (100% On-Time)</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Avg. Turnaround</span>
+                  <strong style={{ color: '#38bdf8', fontSize: '0.92rem' }}>7 – 10 Days</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Corporate Buyers</span>
+                  <strong style={{ color: '#cbd5e1', fontSize: '0.78rem' }}>Delta, Greenfield, Unique</strong>
+                </div>
+              </div>
+
+              <p style={{ margin: 0, color: '#64748b', fontSize: '0.72rem', lineHeight: '1.4' }}>
+                🔒 Backed by audited Purchase Orders, verified Delivery Challans, undated signed security cheques &amp; director CIB.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 RETURN STRUCTURES BADGES */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <span style={{ color: '#D4AF37', fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase' }}>Option 1</span>
+            <strong style={{ display: 'block', color: '#fff', fontSize: '0.95rem', margin: '0.2rem 0' }}>Monthly Return</strong>
+            <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '700' }}>18% p.a. Regular Cash Flow</span>
+          </div>
+          <div>
+            <span style={{ color: '#38bdf8', fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase' }}>Option 2</span>
+            <strong style={{ display: 'block', color: '#fff', fontSize: '0.95rem', margin: '0.2rem 0' }}>Semi-Annual</strong>
+            <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '700' }}>20% p.a. 6-Month Payout</span>
+          </div>
+          <div>
+            <span style={{ color: '#a855f7', fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase' }}>Option 3</span>
+            <strong style={{ display: 'block', color: '#fff', fontSize: '0.95rem', margin: '0.2rem 0' }}>Annual Return</strong>
+            <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: '700' }}>22% p.a. Compounded Maturity</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. FREQUENTLY ASKED INVESTOR QUESTIONS */}
+      <FAQAccordion type="wealth_management" />
 
     </div>
   );

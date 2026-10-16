@@ -25,3 +25,21 @@ export function getServiceSupabase() {
 }
 
 export const supabaseAdmin = typeof window === 'undefined' ? getServiceSupabase() : supabase;
+
+/**
+ * Executes a PostgreSQL RPC function safely.
+ * Returns { data, error, isRpcAvailable }.
+ * If the function does not exist in the database yet (PGRST202), isRpcAvailable is false.
+ */
+export async function safeRpc(functionName, params = {}, client = supabase) {
+  try {
+    const { data, error } = await client.rpc(functionName, params);
+    if (error) {
+      const isMissing = error.code === 'PGRST202' || error.message?.includes('function') || error.code === '42883';
+      return { data: null, error, isRpcAvailable: !isMissing };
+    }
+    return { data, error: null, isRpcAvailable: true };
+  } catch (err) {
+    return { data: null, error: err, isRpcAvailable: false };
+  }
+}

@@ -131,7 +131,8 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
 
   return (
     <div
-      className="glass-card"
+      className="glass-card roi-calculator"
+      data-testid="roi-calculator"
       style={{
         padding: '1.75rem',
         borderColor: 'rgba(212,175,55,0.35)',
@@ -291,7 +292,7 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
           <strong style={{ fontSize: '1.35rem', color: '#10b981', fontWeight: '800', display: 'block', margin: '0.2rem 0' }}>
             {formatCurrency(Math.round(currentAnnual), currency)}
           </strong>
-          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>~{annualYieldPercent}% p.a. yield</span>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>~{annualYieldPercent}% p.a. Yield</span>
         </div>
 
         <div style={{ background: 'rgba(7,10,20,0.8)', border: '1px solid rgba(255,255,255,0.08)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
@@ -308,25 +309,42 @@ export default function ROICalculator({ project, isPreviewMode = false, currency
         <p style={{ margin: 0, fontSize: '0.73rem', color: '#64748b', maxWidth: '480px' }}>
           ℹ Calculations use verified baseline monthly revenue ({formatCurrency(avgGross, currency)}/mo). Figures are illustrative; actual yield reflects monthly sales.
         </p>
-        <button
-          onClick={handleOpenLeadBot}
-          className="btn-gold"
-          style={{
-            padding: '0.65rem 1.25rem',
-            fontSize: '0.85rem',
-            fontWeight: '700',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)',
-            color: '#070a14',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem'
-          }}
-        >
-          <MessageSquare size={15} /> Book Call for {formatCurrency(investment, currency)} Ticket
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <a
+            href={`/showcase?ticket=${investment}&option=${selectedOption}`}
+            className="btn-gold"
+            style={{
+              padding: '0.65rem 1.25rem',
+              fontSize: '0.85rem',
+              fontWeight: '800',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)',
+              color: '#070a14',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            Invest in This Structure →
+          </a>
+          <button
+            onClick={handleOpenLeadBot}
+            className="btn-outline"
+            style={{
+              padding: '0.65rem 1.1rem',
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <MessageSquare size={15} /> Book Advisory Call
+          </button>
+        </div>
       </div>
 
       <style>{`

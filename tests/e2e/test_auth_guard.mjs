@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 
 async function testAuthGuards() {
   console.log("🔒 Starting Access Control & Security Guards Verification...");
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 
   // 1. Test unauthenticated visit to /admin in incognito context
   console.log("\n1. Testing unauthenticated visit to /admin...");
@@ -74,3 +74,4 @@ async function testAuthGuards() {
 }
 
 testAuthGuards();
+

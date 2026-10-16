@@ -17,14 +17,15 @@ import {
   revertOrderToPending,
   calculateLedgerMetrics, 
   generateWhatsAppBroadcast,
+  SEED_WORK_ORDERS,
   formatDisplayDate,
   computeDueStatus
 } from '../../../lib/workOrders';
 import { formatCurrency } from '../../../lib/currency';
 
 export default function WorkOrdersTab({ currency = 'BDT' }) {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(SEED_WORK_ORDERS);
+  const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);

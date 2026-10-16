@@ -20,6 +20,8 @@ import LiveWorkOrderPipeline from '../../../components/wealth/LiveWorkOrderPipel
 import SpvSecurityFramework from '../../../components/wealth/SpvSecurityFramework';
 import FundGovernance from '../../../components/wealth/FundGovernance';
 import WealthStickySidebar from '../../../components/wealth/WealthStickySidebar';
+import { useAuth } from '../../../components/AuthProvider';
+import PrimaryAllocationModal from './PrimaryAllocationModal';
 
 const SAFE_PLAN_PROJECT_DATA = {
   id: 'c3a2b3c4-d5e6-7890-abcd-ef1234567890',
@@ -78,6 +80,8 @@ function ProjectDetail() {
   const [copied,     setCopied]     = useState(false);
   const [activeTab,  setActiveTab]  = useState('overview');
   const [fundMetrics, setFundMetrics] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!projectId) return;
@@ -115,7 +119,7 @@ function ProjectDetail() {
       projectId === 'safe-home-fund';
 
     try {
-      const { data, error: err } = await supabase
+      const fetchPromise = supabase
         .from('funding_projects')
         .select(`
           *,
@@ -127,6 +131,12 @@ function ProjectDetail() {
         `)
         .eq('id', projectId)
         .single();
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Network timeout fetching project')), 1500)
+      );
+
+      const { data, error: err } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (isSafeHomeRoute || data?.project_title?.includes('National Grid') || data?.project_title?.includes('Safe Plan') || data?.project_title?.includes('Safe Home')) {
         setProject({
@@ -258,6 +268,7 @@ function ProjectDetail() {
         {/* WEALTH HERO & AT-A-GLANCE METRICS */}
         <WealthHero 
           fundData={project} 
+          onOpenBooking={() => setShowBookingModal(true)}
           onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Hero')} 
         />
 
@@ -307,7 +318,8 @@ function ProjectDetail() {
           {/* RIGHT COLUMN: STICKY DESKTOP CARD */}
           <WealthStickySidebar 
             fundData={project} 
-            onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Sticky Sidebar')}
+            onOpenBooking={() => setShowBookingModal(true)}
+            onOpenBriefing={(ctx) => openLeadBot(ctx || 'Wealth Sticky Sidebar')} 
           />
         </div>
 
@@ -318,13 +330,23 @@ function ProjectDetail() {
             <strong style={{ color: '#D4AF37' }}>{formatCurrency(project.min_otc_investment_bdt || 1000000, 'BDT')}</strong>
           </div>
           <button 
-            onClick={() => openLeadBot('Mobile Sticky Bar')} 
+            onClick={() => setShowBookingModal(true)} 
             className="btn-gold" 
             style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: '700', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14' }}
           >
-            Schedule Briefing
+            Book Allocation
           </button>
         </div>
+
+        {/* EMBEDDED PRIMARY ALLOCATION BOOKING MODAL */}
+        {showBookingModal && (
+          <PrimaryAllocationModal
+            project={project}
+            user={user}
+            refCode={refCode}
+            onClose={() => setShowBookingModal(false)}
+          />
+        )}
 
         <style>{`
           @media (min-width: 769px) { .mobile-cta-bar { display: none !important; } }
@@ -784,11 +806,11 @@ function ProjectDetail() {
 
             {/* CTA */}
             <button
-              onClick={openLeadBot}
+              onClick={() => setShowBookingModal(true)}
               className="btn-gold"
               style={{ width: '100%', padding: '1rem', fontSize: '0.95rem', fontWeight: '800', justifyContent: 'center', boxShadow: '0 4px 20px rgba(212,175,55,0.25)', display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '10px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14' }}
             >
-              <MessageSquare size={17} /> Express Interest / Book Call
+              <TrendingUp size={17} /> Book Allocation / Express Interest
             </button>
             <p style={{ textAlign: 'center', color: '#475569', fontSize: '0.75rem', margin: '0.75rem 0 0' }}>
               🔒 Zero obligation. Speak to a GRO10X advisor or schedule an outlet visit.
@@ -811,10 +833,20 @@ function ProjectDetail() {
           <span style={{ color: '#64748b', fontSize: '0.72rem', display: 'block' }}>Min Ticket</span>
           <strong style={{ color: '#D4AF37' }}>{formatCurrency(project.min_otc_investment_bdt || 500000, 'BDT')}</strong>
         </div>
-        <button onClick={openLeadBot} className="btn-gold" style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: '700', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14' }}>
-          Express Interest
+        <button onClick={() => setShowBookingModal(true)} className="btn-gold" style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: '700', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #D4AF37, #8A6D1B)', color: '#070a14' }}>
+          Book Allocation
         </button>
       </div>
+
+      {/* EMBEDDED PRIMARY ALLOCATION BOOKING MODAL */}
+      {showBookingModal && (
+        <PrimaryAllocationModal
+          project={project}
+          user={user}
+          refCode={refCode}
+          onClose={() => setShowBookingModal(false)}
+        />
+      )}
 
       <style>{`
         @media (min-width: 769px) { .mobile-cta-bar { display: none !important; } }

@@ -148,10 +148,35 @@ export function AuthProvider({ children }) {
       }
     });
 
+    const handlePersonaEvent = (e) => {
+      const persona = e.detail?.persona;
+      if (persona) {
+        try {
+          window.localStorage.setItem('gro10x_test_role', persona);
+          window.localStorage.setItem('gro10x_test_user_id', `test-${persona}-id`);
+        } catch (_) {}
+        if (isMountedRef.current) {
+          setUser({
+            id: `test-${persona}-id`,
+            email: `${persona}@gro10x.com`,
+            user_metadata: { full_name: `Test ${persona.toUpperCase()}`, role: persona }
+          });
+          setRole(persona);
+          setLoading(false);
+        }
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('gro10x:set-persona', handlePersonaEvent);
+    }
+
     authSubscription = data?.subscription;
 
     return () => {
       isMountedRef.current = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('gro10x:set-persona', handlePersonaEvent);
+      }
       if (authSubscription) {
         authSubscription.unsubscribe();
       }

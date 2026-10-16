@@ -10,11 +10,13 @@ import {
   Bot, MapPin, X, ChevronLeft
 } from 'lucide-react';
 import { CURRENCY_RATES, formatCurrency } from '../../lib/currency';
-import { supabase } from '../../lib/supabase';
+import { supabase, safeRpc } from '../../lib/supabase';
+import { sanitizeUuid } from '../../lib/uuid';
 import { useAuth } from '../../components/AuthProvider';
 import { useToast } from '../../components/Toast';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
+import dynamic from 'next/dynamic';
 import CommandCenterTab from './tabs/CommandCenterTab';
 import DealPipelineTab from './tabs/DealPipelineTab';
 import BusinessRegistryTab from './tabs/BusinessRegistryTab';
@@ -31,10 +33,12 @@ import AdminSettingsTab from './tabs/AdminSettingsTab';
 import SecondaryClearanceTab from './tabs/SecondaryClearanceTab';
 import WorkOrdersTab from './tabs/WorkOrdersTab';
 import { getWorkOrders } from '../../lib/workOrders';
-import CohortInspectionDrawer from './modals/CohortInspectionDrawer';
-import InvestorDetailDrawer from './modals/InvestorDetailDrawer';
-import ProjectFormModal from './modals/ProjectFormModal';
-import BusinessFormModal from './modals/BusinessFormModal';
+
+// Dynamically imported heavy modals & drawers (Code-Splitting for speed)
+const CohortInspectionDrawer = dynamic(() => import('./modals/CohortInspectionDrawer'), { ssr: false });
+const InvestorDetailDrawer = dynamic(() => import('./modals/InvestorDetailDrawer'), { ssr: false });
+const ProjectFormModal = dynamic(() => import('./modals/ProjectFormModal'), { ssr: false });
+const BusinessFormModal = dynamic(() => import('./modals/BusinessFormModal'), { ssr: false });
 
 const kanbanStages = [
   { id: 'Origination', title: '1. Origination & Pitch Review' },
@@ -238,204 +242,84 @@ export default function AdminPortal() {
     kam_notes: ''
   });
 
+  // CORE PHASE 1: Instant load for Command Center & KPIs
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch Businesses
-      const { data: bzData } = await supabase.from('businesses').select('*');
+
+      const safeQuery = async (queryPromise) => {
+        try {
+          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: [] }), 1500));
+          const res = await Promise.race([queryPromise, timeoutPromise]);
+          return res || { data: [] };
+        } catch (e) {
+          return { data: [] };
+        }
+      };
+
+      // Fast parallel fetch of critical Command Center entities
+      const [
+        { data: bzData },
+        { data: projData },
+        { data: kamsData },
+        { data: invsList },
+        { data: invsData },
+        { data: yieldData },
+        { data: notifData },
+        { data: settingsData }
+      ] = await Promise.all([
+        safeQuery(supabase.from('businesses').select('*')),
+        safeQuery(supabase.from('funding_projects').select(`*, businesses (brand_name)`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('team').select('*').in('team_type', ['kam', 'manager', 'admin']).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('investors').select('*').order('created_at', { ascending: false })),
+        safeQuery(supabase.from('investments').select(`*, investors(id, alias_name, user_id), funding_projects(project_title)`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('yield_disbursements').select(`*, funding_projects(project_title, businesses(brand_name))`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(20)),
+        safeQuery(supabase.from('platform_settings').select('*'))
+      ]);
+
       setBusinesses(bzData || []);
-
-      // Fetch Cohort Applications & Stakeholders
-      const { data: appData } = await supabase
-        .from('business_cohort_applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-      setCohortApplications(appData || []);
-
-      const { data: stkData } = await supabase.from('business_stakeholders').select('*');
-      setAllAppStakeholders(stkData || []);
-
-
-      // Fetch Projects
-      const { data: projData, error: projErr } = await supabase
-        .from('funding_projects')
-        .select(`*, businesses (brand_name)`)
-        .order('created_at', { ascending: false });
-      if (projErr) throw projErr;
       setProjects(projData || []);
-
-      // Fetch KAMs & Team Members from public.team
-      const { data: kamsData } = await supabase
-        .from('team')
-        .select('*')
-        .in('team_type', ['kam', 'manager', 'admin'])
-        .order('created_at', { ascending: false });
       setAllKams(kamsData || []);
-
-      // Fetch Promoters from public.team
-      const { data: promData } = await supabase
-        .from('team')
-        .select('*')
-        .eq('team_type', 'promoter')
-        .order('created_at', { ascending: false });
-      setAllPromoters(promData || []);
-
-      // Fetch Promoter Leads (CRM)
-      const { data: promLeadsData } = await supabase
-        .from('promoter_leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-      setPromoterLeads(promLeadsData || []);
-
-      // Fetch Promoter Commissions
-      const { data: commData } = await supabase
-        .from('promoter_commissions')
-        .select(`*, investments ( amount_invested_bdt, funding_projects ( project_title, businesses ( brand_name ) ) )`)
-        .order('created_at', { ascending: false });
-      setPromoterCommissions(commData || []);
-
-      // Fetch Promoter Targets (Gamified Tiers)
-      const { data: targetsData } = await supabase
-        .from('promoter_targets')
-        .select(`*, funding_projects ( project_title, businesses ( brand_name ) )`)
-        .order('created_at', { ascending: false });
-      setPromoterTargets(targetsData || []);
-
-      // Fetch All Investors with KAM & Promoter details
-      const { data: invsList } = await supabase
-        .from('investors')
-        .select('*')
-        .order('created_at', { ascending: false });
       setAllInvestors(invsList || []);
-
-      // Fetch Investor Notes
-      const { data: notesData } = await supabase
-        .from('investor_notes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      setAllInvestorNotes(notesData || []);
-
-      // Fetch All Investment Bookings
-      const { data: bookingsData } = await supabase
-        .from('investment_bookings')
-        .select(`
-          *,
-          investors ( alias_name, requires_anonymity ),
-          funding_projects ( project_title, businesses (brand_name) )
-        `)
-        .order('created_at', { ascending: false });
-      setAllBookings(bookingsData || []);
-
-      // Fetch Secondary Orders
-      const { data: secOrdersData } = await supabase
-        .from('secondary_orders')
-        .select(`*, investments(*, funding_projects(id, project_title, businesses(brand_name)))`)
-        .order('created_at', { ascending: false });
-      setSecondaryOrders(secOrdersData || []);
-
-      // Fetch Cash Tickets
-      const { data: cashData } = await supabase
-        .from('cash_tickets')
-        .select(`
-          *,
-          investors ( id, alias_name, phone, email, requires_anonymity, telegram_chat_id, kyc_level ),
-          funding_projects ( id, project_title, min_otc_investment_bdt, businesses ( brand_name ) )
-        `)
-        .order('created_at', { ascending: false });
-      setCashTickets(cashData || []);
-
-      // Fetch Payment Submissions
-      const { data: paymentData } = await supabase
-        .from('payment_submissions')
-        .select(`
-          *,
-          investment_bookings (
-            amount_bdt,
-            yield_option,
-            booking_type,
-            status,
-            investors ( alias_name ),
-            funding_projects ( project_title, businesses (brand_name) )
-          )
-        `)
-        .order('created_at', { ascending: false });
-      setPaymentSubmissions(paymentData || []);
-
-      // Fetch KYC Submissions
-      const { data: kycData } = await supabase
-        .from('kyc_submissions')
-        .select(`*, investors ( alias_name, user_id )`)
-        .order('created_at', { ascending: false });
-      setKycSubmissions(kycData || []);
-
-      // Fetch Payout Requests
-      const { data: payoutsData } = await supabase
-        .from('payout_requests')
-        .select(`*, promoters(id, alias_name, user_id)`)
-        .order('created_at', { ascending: false });
-      setPayoutRequests(payoutsData || []);
-
-      // Fetch Active Investments
-      const { data: invsData } = await supabase
-        .from('investments')
-        .select(`*, investors(id, alias_name, user_id), funding_projects(project_title)`)
-        .order('created_at', { ascending: false });
       setActiveInvestments(invsData || []);
-
-      // Fetch Inquiry Leads
-      const { data: leadsData } = await supabase
-        .from('inquiry_leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-      setInquiryLeads(leadsData || []);
-
-      // Fetch Notifications
-      const { data: notifData } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      setYieldDisbursements(yieldData || []);
       setRecentNotifications(notifData || []);
 
-      // Fetch Yield Disbursements
-      const { data: yieldData } = await supabase
-        .from('yield_disbursements')
-        .select(`*, funding_projects(project_title, businesses(brand_name))`)
-        .order('created_at', { ascending: false });
-      setYieldDisbursements(yieldData || []);
-
-      // Fetch Investor Yields (for per-batch drilldown)
-      const { data: invYieldsData } = await supabase
-        .from('investor_yields')
-        .select(`*, investors(alias_name, phone, email, requires_anonymity, telegram_chat_id)`)
-        .order('created_at', { ascending: false });
-      setAllInvestorYields(invYieldsData || []);
-
-      // Fetch POS Daily Sales / Monthly Reports
-      const { data: posData } = await supabase
-        .from('pos_daily_sales')
-        .select(`*, businesses(brand_name)`)
-        .order('created_at', { ascending: false });
-      setAllPosReports(posData || []);
-
-      // Fetch Platform Settings
-      const { data: settingsData } = await supabase
-        .from('platform_settings')
-        .select('*');
       if (settingsData && settingsData.length > 0) {
         const sMap = {};
         settingsData.forEach(item => {
-          if (item.setting_key) sMap[item.setting_key] = item.setting_value;
+          if (item?.setting_key) sMap[item.setting_key] = item.setting_value;
         });
         setPlatformSettings(sMap);
       }
 
-      // Fetch Work Orders (Safe Plan Fund / Maats Cottage)
-      try {
-        const woData = await getWorkOrders();
-        setWorkOrders(woData || []);
-      } catch (e) {}
+      // Fast initial count queries for alert dots & sidebar badges
+      const [
+        { data: kycData },
+        { data: paymentData },
+        { data: leadsData },
+        { data: cashData },
+        { data: secOrdersData },
+        { data: bookingsData }
+      ] = await Promise.all([
+        safeQuery(supabase.from('kyc_submissions').select(`*, investors ( alias_name, user_id )`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('payment_submissions').select(`*, investment_bookings ( amount_bdt, yield_option, booking_type, status, investors ( alias_name ), funding_projects ( project_title, businesses (brand_name) ) )`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('inquiry_leads').select('*').order('created_at', { ascending: false })),
+        safeQuery(supabase.from('cash_tickets').select(`*, investors ( id, alias_name, phone, email, requires_anonymity, telegram_chat_id, kyc_level ), funding_projects ( id, project_title, min_otc_investment_bdt, businesses ( brand_name ) )`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('secondary_orders').select(`*, investments(*, funding_projects(id, project_title, businesses(brand_name)))`).order('created_at', { ascending: false })),
+        safeQuery(supabase.from('investment_bookings').select(`*, investors ( alias_name, requires_anonymity ), funding_projects ( project_title, businesses (brand_name) )`).order('created_at', { ascending: false }))
+      ]);
+
+      setKycSubmissions(kycData || []);
+      setPaymentSubmissions(paymentData || []);
+      setInquiryLeads(leadsData || []);
+      setCashTickets(cashData || []);
+      setSecondaryOrders(secOrdersData || []);
+      setAllBookings(bookingsData || []);
+
+      // Non-blocking load for auxiliary work orders
+      getWorkOrders().then(woData => setWorkOrders(woData || [])).catch(() => {});
 
     } catch (err) {
       console.error('Error fetching admin data:', err);
@@ -443,6 +327,52 @@ export default function AdminPortal() {
       setLoading(false);
     }
   };
+
+  // PHASE 2: On-demand loader for specialized tabs
+  useEffect(() => {
+    if (role !== 'admin') return;
+
+    if (activeTab === 'business-registry' && cohortApplications.length === 0) {
+      Promise.all([
+        supabase.from('business_cohort_applications').select('*').order('created_at', { ascending: false }),
+        supabase.from('business_stakeholders').select('*')
+      ]).then(([{ data: appData }, { data: stkData }]) => {
+        setCohortApplications(appData || []);
+        setAllAppStakeholders(stkData || []);
+      });
+    }
+
+    if (activeTab === 'team-promoters' && allPromoters.length === 0) {
+      Promise.all([
+        supabase.from('team').select('*').eq('team_type', 'promoter').order('created_at', { ascending: false }),
+        supabase.from('promoter_leads').select('*').order('created_at', { ascending: false }),
+        supabase.from('promoter_commissions').select(`*, investments ( amount_invested_bdt, funding_projects ( project_title, businesses ( brand_name ) ) )`).order('created_at', { ascending: false }),
+        supabase.from('promoter_targets').select(`*, funding_projects ( project_title, businesses ( brand_name ) )`).order('created_at', { ascending: false }),
+        supabase.from('payout_requests').select(`*, promoters(id, alias_name, user_id)`).order('created_at', { ascending: false })
+      ]).then(([{ data: promData }, { data: promLeadsData }, { data: commData }, { data: targetsData }, { data: payoutsData }]) => {
+        setAllPromoters(promData || []);
+        setPromoterLeads(promLeadsData || []);
+        setPromoterCommissions(commData || []);
+        setPromoterTargets(targetsData || []);
+        setPayoutRequests(payoutsData || []);
+      });
+    }
+
+    if (activeTab === 'dividend' && allInvestorYields.length === 0) {
+      Promise.all([
+        supabase.from('investor_yields').select(`*, investors(alias_name, phone, email, requires_anonymity, telegram_chat_id)`).order('created_at', { ascending: false }),
+        supabase.from('pos_daily_sales').select(`*, businesses(brand_name)`).order('created_at', { ascending: false })
+      ]).then(([{ data: invYieldsData }, { data: posData }]) => {
+        setAllInvestorYields(invYieldsData || []);
+        setAllPosReports(posData || []);
+      });
+    }
+
+    if (activeTab === 'investors' && allInvestorNotes.length === 0) {
+      supabase.from('investor_notes').select('*').order('created_at', { ascending: false })
+        .then(({ data: notesData }) => setAllInvestorNotes(notesData || []));
+    }
+  }, [activeTab, role, cohortApplications.length, allPromoters.length, allInvestorYields.length, allInvestorNotes.length]);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -921,38 +851,71 @@ export default function AdminPortal() {
   const handleClearSecondaryOrder = async (order, approve) => {
     setIsClearingSecondary(true);
     try {
+      const safeOrderId = sanitizeUuid(order.id);
+
+      // 1. Attempt Atomic Director Settlement RPC first
+      const { data: rpcResult, error: rpcErr, isRpcAvailable } = await safeRpc('rpc_clear_secondary_transfer', {
+        p_order_id: safeOrderId,
+        p_approve: Boolean(approve)
+      });
+
+      if (isRpcAvailable) {
+        if (rpcErr || (rpcResult && rpcResult.success === false)) {
+          throw new Error(rpcResult?.error || rpcErr?.message || 'Failed to clear secondary transfer');
+        }
+      } else {
+        // Fallback: Multi-step mutation
+        if (approve) {
+          // Resolve buyer from linked booking
+          const buyerBooking = allBookings.find(b => b.id === order.buyer_booking_id);
+          const buyerInvestorId = buyerBooking?.investor_id;
+          if (!buyerInvestorId) {
+            throw new Error('No matched buyer booking found for this secondary order.');
+          }
+
+          // 1. Update secondary_orders status to Transferred
+          const { error: secErr } = await supabase
+            .from('secondary_orders')
+            .update({ status: 'Transferred' })
+            .eq('id', order.id);
+          if (secErr) throw secErr;
+
+          // 2. Transfer ownership in investments table to buyer
+          const { error: invErr } = await supabase
+            .from('investments')
+            .update({ investor_id: buyerInvestorId })
+            .eq('id', order.investment_id);
+          if (invErr) throw invErr;
+
+          // 3. Mark buyer booking as Approved
+          if (order.buyer_booking_id) {
+            await supabase
+              .from('investment_bookings')
+              .update({ status: 'Approved' })
+              .eq('id', order.buyer_booking_id);
+          }
+        } else {
+          // Reject / Cancel order
+          await supabase
+            .from('secondary_orders')
+            .update({ status: 'Cancelled' })
+            .eq('id', order.id);
+
+          if (order.buyer_booking_id) {
+            await supabase
+              .from('investment_bookings')
+              .update({ status: 'Rejected' })
+              .eq('id', order.buyer_booking_id);
+          }
+        }
+      }
+
       if (approve) {
-        // Resolve buyer from linked booking
         const buyerBooking = allBookings.find(b => b.id === order.buyer_booking_id);
         const buyerInvestorId = buyerBooking?.investor_id;
-        if (!buyerInvestorId) {
-          throw new Error('No matched buyer booking found for this secondary order.');
-        }
-
-        // 1. Update secondary_orders status to Transferred
-        const { error: secErr } = await supabase
-          .from('secondary_orders')
-          .update({ status: 'Transferred' })
-          .eq('id', order.id);
-        if (secErr) throw secErr;
-
-        // 2. Transfer ownership in investments table to buyer
-        const { error: invErr } = await supabase
-          .from('investments')
-          .update({ investor_id: buyerInvestorId })
-          .eq('id', order.investment_id);
-        if (invErr) throw invErr;
-
-        // 3. Mark buyer booking as Approved
-        if (order.buyer_booking_id) {
-          await supabase
-            .from('investment_bookings')
-            .update({ status: 'Approved' })
-            .eq('id', order.buyer_booking_id);
-        }
-
         const projectTitle = order.investments?.funding_projects?.project_title || 'Syndicate Deal';
         const dealAmount = Number(order.seller_price_bdt).toLocaleString();
+
 
         // 4. Notify Buyer via Telegram
         try {
@@ -989,19 +952,6 @@ export default function AdminPortal() {
         addToast('Secondary share transfer approved and settled!', 'success');
         logPlatformActivity('Secondary Transfer Cleared', `Share in ${projectTitle} transferred from seller to buyer.`, 'success');
       } else {
-        // Reject / Cancel order
-        await supabase
-          .from('secondary_orders')
-          .update({ status: 'Cancelled' })
-          .eq('id', order.id);
-
-        if (order.buyer_booking_id) {
-          await supabase
-            .from('investment_bookings')
-            .update({ status: 'Rejected' })
-            .eq('id', order.buyer_booking_id);
-        }
-
         addToast('Secondary order rejected / cancelled.', 'info');
         logPlatformActivity('Secondary Order Rejected', `Order #${order.id.slice(0, 8)} rejected.`, 'warning');
       }
@@ -2588,36 +2538,7 @@ export default function AdminPortal() {
     ...inquiryLeads.filter(l => (l.name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (l.phone || '').includes(globalSearchQuery)).slice(0, 3).map(l => ({ type: 'Lead', title: l.name, sub: l.phone || 'Inquiry Lead', tab: 'leads-marketing', item: l }))
   ];
 
-  if (authLoading) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#D4AF37' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <Loader2 className="animate-spin" size={36} />
-          <div style={{ fontWeight: '700', fontSize: '0.9rem', letterSpacing: '0.05em' }}>AUTHENTICATING ADMIN PRIVILEGES...</div>
-        </div>
-      </div>
-    );
-  }
 
-  if (!user || (role && role !== 'admin')) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#070a14', display: 'grid', placeItems: 'center', color: '#f8fafc' }}>
-        <div style={{ textAlign: 'center', padding: '2.5rem', maxWidth: '420px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(244, 63, 94, 0.3)', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
-          <ShieldAlert size={52} style={{ color: '#ef4444', margin: '0 auto 1rem auto' }} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '0.5rem' }}>Restricted Command Center</h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            Administrative security clearance required. Redirecting to authentication portal...
-          </p>
-          <button 
-            onClick={() => router.push('/auth')} 
-            style={{ background: '#D4AF37', color: '#000', fontWeight: '800', padding: '0.65rem 1.4rem', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-          >
-            Authenticate via Web PIN
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-shell">

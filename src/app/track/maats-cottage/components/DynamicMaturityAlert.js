@@ -53,7 +53,7 @@ export default function DynamicMaturityAlert({
   const color = isUrgent ? '#ef4444' : '#f59e0b';
   const Icon = isUrgent ? AlertTriangle : Clock;
   const label = isUrgent
-    ? `${targetAlertOrder.order_code} due TODAY`
+    ? `${targetAlertOrder.order_code} MATURING TODAY`
     : `${targetAlertOrder.order_code} — ${targetAlertOrder.daysRemaining}d left`;
 
   return (
